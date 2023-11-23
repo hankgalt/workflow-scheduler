@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package business.v1;
+
+option go_package = "github.com/comfforts/comff-biz/api/business_v1";
+
+message WorkflowRun {
+    string runId = 1;
+    string workflowId = 2;
+    string status = 3;
+}
+
+message RunResponse {
+    bool ok = 1;
+    WorkflowRun run = 2;
+}
+
+message RunRequest {
+    string runId = 1;
+    string workflowId = 2;
+    string requestedBy = 3;
+}
+
+message UpdateRunRequest {
+    string status = 1;
+    string runId = 2;
+    string workflowId = 3;
+}
+
+message DeleteRunRequest {
+    string id = 1;
+}
+
+message DeleteResponse {
+    bool ok = 1;
+}
+
+service Scheduler {
+    rpc CreateRun(RunRequest) returns (RunResponse) {}
+    rpc UpdateRun(UpdateRunRequest) returns (RunResponse) {}
+    rpc GetRun(RunRequest) returns (RunResponse) {}
+    rpc DeleteRun(DeleteRunRequest) returns (DeleteResponse) {}
+}
