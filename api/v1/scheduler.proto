@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package business.v1;
+package scheduler.v1;
 
-option go_package = "github.com/comfforts/comff-biz/api/business_v1";
+option go_package = "github.com/hankgalt/workflow-scheduler/api/scheduler_v1";
 
 message WorkflowRun {
     string runId = 1;

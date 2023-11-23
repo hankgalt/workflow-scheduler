@@ -45,7 +45,7 @@ func (bs *schedulerService) GetRun(ctx context.Context, params *models.RunUpdate
 	var wkflRun models.WorkflowRun
 	res := bs.db.WithContext(ctx).Where("run_id = ?", params.RunId).First(&wkflRun)
 	if res.Error != nil {
-		bs.logger.Error(ERR_RUN_FETCH, zap.Error(res.Error), zap.String("run_id", params.RunId))
+		bs.Error(ERR_RUN_FETCH, zap.Error(res.Error), zap.String("run_id", params.RunId))
 		return nil, errors.WrapError(res.Error, ERR_RUN_FETCH)
 	}
 	return &wkflRun, nil
@@ -61,7 +61,7 @@ func (bs *schedulerService) UpdateRun(ctx context.Context, params *models.RunUpd
 		Status: params.Status,
 	})
 	if res.Error != nil {
-		bs.logger.Error(ERR_RUN_UPDATE, zap.Error(res.Error))
+		bs.Error(ERR_RUN_UPDATE, zap.Error(res.Error))
 		return nil, err // retries?
 	}
 	return wkflRun, nil
@@ -70,9 +70,9 @@ func (bs *schedulerService) UpdateRun(ctx context.Context, params *models.RunUpd
 func (bs *schedulerService) DeleteRun(ctx context.Context, runId string) error {
 	res := bs.db.WithContext(ctx).Where("run_id = ?", runId).Unscoped().Delete(&models.WorkflowRun{})
 	if res.Error != nil {
-		bs.logger.Error(ERR_RUN_DELETE, zap.Error(res.Error), zap.String("run-id", runId))
+		bs.Error(ERR_RUN_DELETE, zap.Error(res.Error), zap.String("run-id", runId))
 		if driverErr, ok := res.Error.(*gomysql.MySQLError); ok {
-			bs.logger.Debug("mysql error", zap.Uint16("err-num", driverErr.Number), zap.String("err-msg", driverErr.Message))
+			bs.Debug("mysql error", zap.Uint16("err-num", driverErr.Number), zap.String("err-msg", driverErr.Message))
 		}
 		return errors.WrapError(res.Error, ERR_RUN_DELETE)
 	}

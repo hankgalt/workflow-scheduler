@@ -51,23 +51,23 @@ func NewServiceConfig(host, db, user, auth string, validate bool) (*serviceConfi
 }
 
 type schedulerService struct {
-	db     *mysqldb.MYSQLDBClient
-	cfg    *serviceConfig
-	logger *zap.Logger
+	db  *mysqldb.MYSQLDBClient
+	cfg *serviceConfig
+	*zap.Logger
 }
 
 // NewSchedulerService takes service config & logger
 // sets up database client with provided DB config & validates database setup
 // returns scheduler service instance or error
-func NewSchedulerService(cfg *serviceConfig, logger *zap.Logger) (*schedulerService, error) {
-	db, err := mysqldb.NewMYSQLClient(cfg.DBConfig, logger)
+func NewSchedulerService(cfg *serviceConfig, l *zap.Logger) (*schedulerService, error) {
+	db, err := mysqldb.NewMYSQLClient(cfg.DBConfig, l)
 	if err != nil {
-		logger.Error("error creating mysql db client", zap.Error(err))
+		l.Error("error creating mysql db client", zap.Error(err))
 		return nil, err
 	}
 
 	bs := &schedulerService{
-		logger: logger,
+		Logger: l,
 		cfg:    cfg,
 		db:     db,
 	}
@@ -75,7 +75,7 @@ func NewSchedulerService(cfg *serviceConfig, logger *zap.Logger) (*schedulerServ
 	if cfg.validateSetup {
 		err = bs.setupDatabase()
 		if err != nil {
-			logger.Error(ERR_DB_SETUP, zap.Error(err))
+			l.Error(ERR_DB_SETUP, zap.Error(err))
 			return nil, errors.WrapError(err, ERR_DB_SETUP)
 		}
 	}
@@ -87,7 +87,7 @@ func NewSchedulerService(cfg *serviceConfig, logger *zap.Logger) (*schedulerServ
 func (bs *schedulerService) Close() error {
 	err := bs.db.Close()
 	if err != nil {
-		bs.logger.Error("error closing scheduler service", zap.Error(err))
+		bs.Error("error closing scheduler service", zap.Error(err))
 		return err
 	}
 	return nil
@@ -109,7 +109,7 @@ func (bs *schedulerService) setupDatabase() error {
 	if !ok {
 		err := bs.db.AutoMigrate(models.WorkflowRun{})
 		if err != nil {
-			bs.logger.Error(ERR_DB_RUN_INIT, zap.Error(err))
+			bs.Error(ERR_DB_RUN_INIT, zap.Error(err))
 			return errors.WrapError(err, ERR_DB_RUN_INIT)
 		}
 	}
@@ -122,7 +122,7 @@ func (ss *schedulerService) resetWorkflowRun() error {
 	if ok {
 		err := ss.db.Migrator().DropTable(models.WorkflowRun{})
 		if err != nil {
-			ss.logger.Error(ERR_DB_RUN_CLEANUP, zap.Error(err))
+			ss.Error(ERR_DB_RUN_CLEANUP, zap.Error(err))
 			return errors.WrapError(err, ERR_DB_RUN_CLEANUP)
 		}
 	}

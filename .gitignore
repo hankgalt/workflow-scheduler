@@ -5,3 +5,7 @@ go.sum
 data
 */*/*.env
 env
+
+*/*/certs
+*/*/policies
+*/*/logs

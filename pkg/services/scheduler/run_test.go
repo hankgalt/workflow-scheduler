@@ -2,7 +2,9 @@ package scheduler_test
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,8 +19,9 @@ import (
 const TEST_DIR = "data"
 
 func TestWorkflowCRUD(t *testing.T) {
+	setupEnv(t)
 
-	logger := logger.NewTestAppZapLogger(TEST_DIR)
+	l := logger.NewTestAppZapLogger(TEST_DIR)
 
 	for scenario, fn := range map[string]func(
 		t *testing.T,
@@ -27,7 +30,7 @@ func TestWorkflowCRUD(t *testing.T) {
 		"workflow run CRUD, succeeds": testWorkflowRunCRUD,
 	} {
 		t.Run(scenario, func(t *testing.T) {
-			ss, teardown := setupAPITests(t, logger)
+			ss, teardown := setupAPITests(t, l)
 			defer teardown()
 			fn(t, ss)
 		})
@@ -37,7 +40,23 @@ func TestWorkflowCRUD(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func setupAPITests(t *testing.T, logger *zap.Logger) (
+func setupEnv(t *testing.T) {
+	t.Helper()
+
+	cPath := os.Getenv("CERTS_PATH")
+	if cPath != "" && !strings.Contains(cPath, "../../../") {
+		cPath = fmt.Sprintf("../%s", cPath)
+	}
+	pPath := os.Getenv("POLICY_PATH")
+	if pPath != "" && !strings.Contains(pPath, "../../../") {
+		pPath = fmt.Sprintf("../%s", pPath)
+	}
+
+	os.Setenv("CERTS_PATH", cPath)
+	os.Setenv("POLICY_PATH", pPath)
+}
+
+func setupAPITests(t *testing.T, l *zap.Logger) (
 	ss scheduler.SchedulerService,
 	teardown func(),
 ) {
@@ -46,7 +65,7 @@ func setupAPITests(t *testing.T, logger *zap.Logger) (
 	serviceCfg, err := scheduler.NewServiceConfig("localhost", "", "", "", false)
 	require.NoError(t, err)
 
-	ss, err = scheduler.NewSchedulerService(serviceCfg, logger)
+	ss, err = scheduler.NewSchedulerService(serviceCfg, l)
 	require.NoError(t, err)
 
 	return ss, func() {

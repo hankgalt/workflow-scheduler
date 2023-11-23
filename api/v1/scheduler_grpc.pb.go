@@ -4,7 +4,7 @@
 // - protoc             v4.22.0
 // source: api/v1/scheduler.proto
 
-package business_v1
+package scheduler_v1
 
 import (
 	context "context"
@@ -38,7 +38,7 @@ func NewSchedulerClient(cc grpc.ClientConnInterface) SchedulerClient {
 
 func (c *schedulerClient) CreateRun(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunResponse, error) {
 	out := new(RunResponse)
-	err := c.cc.Invoke(ctx, "/business.v1.Scheduler/CreateRun", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/scheduler.v1.Scheduler/CreateRun", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (c *schedulerClient) CreateRun(ctx context.Context, in *RunRequest, opts ..
 
 func (c *schedulerClient) UpdateRun(ctx context.Context, in *UpdateRunRequest, opts ...grpc.CallOption) (*RunResponse, error) {
 	out := new(RunResponse)
-	err := c.cc.Invoke(ctx, "/business.v1.Scheduler/UpdateRun", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/scheduler.v1.Scheduler/UpdateRun", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (c *schedulerClient) UpdateRun(ctx context.Context, in *UpdateRunRequest, o
 
 func (c *schedulerClient) GetRun(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunResponse, error) {
 	out := new(RunResponse)
-	err := c.cc.Invoke(ctx, "/business.v1.Scheduler/GetRun", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/scheduler.v1.Scheduler/GetRun", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (c *schedulerClient) GetRun(ctx context.Context, in *RunRequest, opts ...gr
 
 func (c *schedulerClient) DeleteRun(ctx context.Context, in *DeleteRunRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
 	out := new(DeleteResponse)
-	err := c.cc.Invoke(ctx, "/business.v1.Scheduler/DeleteRun", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/scheduler.v1.Scheduler/DeleteRun", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func _Scheduler_CreateRun_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/business.v1.Scheduler/CreateRun",
+		FullMethod: "/scheduler.v1.Scheduler/CreateRun",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SchedulerServer).CreateRun(ctx, req.(*RunRequest))
@@ -140,7 +140,7 @@ func _Scheduler_UpdateRun_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/business.v1.Scheduler/UpdateRun",
+		FullMethod: "/scheduler.v1.Scheduler/UpdateRun",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SchedulerServer).UpdateRun(ctx, req.(*UpdateRunRequest))
@@ -158,7 +158,7 @@ func _Scheduler_GetRun_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/business.v1.Scheduler/GetRun",
+		FullMethod: "/scheduler.v1.Scheduler/GetRun",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SchedulerServer).GetRun(ctx, req.(*RunRequest))
@@ -176,7 +176,7 @@ func _Scheduler_DeleteRun_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/business.v1.Scheduler/DeleteRun",
+		FullMethod: "/scheduler.v1.Scheduler/DeleteRun",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SchedulerServer).DeleteRun(ctx, req.(*DeleteRunRequest))
@@ -188,7 +188,7 @@ func _Scheduler_DeleteRun_Handler(srv interface{}, ctx context.Context, dec func
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Scheduler_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "business.v1.Scheduler",
+	ServiceName: "scheduler.v1.Scheduler",
 	HandlerType: (*SchedulerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
