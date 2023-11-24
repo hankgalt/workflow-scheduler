@@ -30,11 +30,13 @@ import (
 var _ api.SchedulerServer = (*grpcServer)(nil)
 
 const (
-	objectWildcard  = "*"
-	createRunAction = "create-run"
-	updateRunAction = "update-run"
-	getRunAction    = "get-run"
-	deleteRunAction = "delete-run"
+	objectWildcard     = "*"
+	createRunAction    = "create-run"
+	updateRunAction    = "update-run"
+	getRunAction       = "get-run"
+	deleteRunAction    = "delete-run"
+	addEntityAction    = "add-entity"
+	deleteEntityAction = "delete-entity"
 )
 
 type subjectContextKey struct{}
