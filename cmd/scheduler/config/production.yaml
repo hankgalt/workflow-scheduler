@@ -1,0 +1,45 @@
+# config for sample
+domain: "scheduler-domain"
+service: "cadence-frontend"
+host: "scheduler-cadence-1:7833"
+# config for emitting metrics
+#prometheus:
+#  listenAddress: "127.0.0.1:9098"
+persistence:
+  advancedVisibilityStore: es-visibility
+  datastores:
+    es-visibility:
+      elasticsearch:
+        disableSniff: true
+        version: "v7"
+        username: "admin"
+        password: "admin"
+        tls:
+          enabled: true
+        url:
+          scheme: "https"
+          host: "scheduler-elasticsearch-1:9200"
+        indices:
+          visibility: cadence-visibility-dev
+
+kafka:
+  tls:
+    enabled: false
+  clusters:
+    test:
+      brokers:
+        - scheduler-kafka-1:9092
+  topics:
+    cadence-visibility-dev:
+      cluster: test
+    cadence-visibility-dev-dlq:
+      cluster: test
+  applications:
+    visibility:
+      topic: cadence-visibility-dev
+      dlq-topic: cadence-visibility-dev-dlq
+
+dynamicconfig:
+  client: filebased
+  filebased:
+    filepath: "config/dynamicconfig/development_es.yaml"
