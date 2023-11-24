@@ -17,8 +17,8 @@ import (
 
 const TEST_DIR = "data"
 
-func TestBusinessClient(t *testing.T) {
-	logger := logger.NewTestAppLogger(TEST_DIR)
+func TestSchedulerClient(t *testing.T) {
+	l := logger.NewTestAppLogger(TEST_DIR)
 
 	cPath := os.Getenv("CERTS_PATH")
 	if cPath != "" && !strings.Contains(cPath, "../../../") {
@@ -33,23 +33,23 @@ func TestBusinessClient(t *testing.T) {
 		"test workflow CRUD, succeeds": testWorkflowCRUD,
 	} {
 		t.Run(scenario, func(t *testing.T) {
-			bc, teardown := setup(t, logger)
+			bc, teardown := setup(t, l)
 			defer teardown()
 			fn(t, bc)
 		})
 	}
 }
 
-func setup(t *testing.T, logger logger.AppLogger) (
+func setup(t *testing.T, l logger.AppLogger) (
 	bc scheduler.Client,
 	teardown func(),
 ) {
 	t.Helper()
 
 	clientOpts := scheduler.NewDefaultClientOption()
-	clientOpts.Caller = "business-client-test"
+	clientOpts.Caller = "scheduler-client-test"
 
-	dc, err := scheduler.NewClient(logger, clientOpts)
+	dc, err := scheduler.NewClient(l, clientOpts)
 	require.NoError(t, err)
 
 	return dc, func() {
