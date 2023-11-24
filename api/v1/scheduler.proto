@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+import "api/google/rpc/status.proto";
+
 package scheduler.v1;
 
 option go_package = "github.com/hankgalt/workflow-scheduler/api/scheduler_v1";
@@ -8,6 +10,12 @@ message WorkflowRun {
     string runId = 1;
     string workflowId = 2;
     string status = 3;
+}
+
+message FileRequest {
+    string requestedBy = 1;
+    string fileName = 2;
+    string org = 3;
 }
 
 message RunResponse {
@@ -35,9 +43,91 @@ message DeleteResponse {
     bool ok = 1;
 }
 
+enum EntityType {
+    AGENT = 0;
+    PRINCIPAL = 1;
+    FILING = 2;
+}
+
+message BusinessAgent {
+    string id = 1;
+    uint64 entityId = 2;
+    string name = 3;
+    string org = 4;
+    string firstName = 5;
+    string middleName = 6;
+    string lastName = 7;
+    string address = 8;
+    string agentType = 9;
+}
+
+message BusinessPrincipal {
+    string id = 1;
+    uint64 entityId = 2;
+    string name = 3;
+    string org = 4;
+    string firstName = 5;
+    string middleName = 6;
+    string lastName = 7;
+    string address = 8;
+    string positionType = 9;
+}
+
+message BusinessFiling {
+    string id = 1;
+    uint64 entityId = 2;
+    string name = 3;
+    uint64 initialFilingDate = 4;
+    string jurisdiction = 5;
+    string status = 6;
+    string sos = 7;
+    string type = 8;
+    string filingType = 9;
+    string foreignName = 10;
+    string ftb = 11;
+    string vcfcf = 12;
+    uint64 suspensionDate = 13;
+    string lastFiledNum = 14;
+    uint64 lastFiledDate = 15;
+    string principalAddress = 16;
+    string mailingAddress = 17;
+    string localAddress = 18;
+    string managementStructure = 19;
+    string businessType = 20;
+}
+
+message AddEntityRequest {
+    map<string, string> fields = 1;
+    EntityType type = 2;
+}
+
+message DeleteEntityRequest {
+    string id = 1;
+    EntityType type = 2;
+}
+
+message AddEntityResponse {
+    bool ok = 1;    
+    oneof test_oneof {
+        BusinessAgent agent = 2;
+        BusinessPrincipal principal = 3;
+        BusinessFiling filing = 4;
+    }
+}
+
+message StreamAddEntityResponse {
+    oneof test_oneof {
+        AddEntityResponse entityResponse = 1;
+        google.rpc.Status error = 2;
+    }
+}
+
 service Scheduler {
     rpc CreateRun(RunRequest) returns (RunResponse) {}
     rpc UpdateRun(UpdateRunRequest) returns (RunResponse) {}
     rpc GetRun(RunRequest) returns (RunResponse) {}
     rpc DeleteRun(DeleteRunRequest) returns (DeleteResponse) {}
+    rpc AddEntity(AddEntityRequest) returns (AddEntityResponse) {}
+    rpc DeleteEntity(DeleteEntityRequest) returns (DeleteResponse) {}
+    rpc AddBusinessEntities(stream AddEntityRequest) returns (stream StreamAddEntityResponse) {}
 }

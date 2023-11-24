@@ -17,6 +17,7 @@ import (
 )
 
 const TEST_DIR = "data"
+const CADENCE_CONFIG = "../../../cmd/scheduler/config/development.yaml"
 
 func TestWorkflowCRUD(t *testing.T) {
 	setupEnv(t)
@@ -62,7 +63,7 @@ func setupAPITests(t *testing.T, l *zap.Logger) (
 ) {
 	t.Helper()
 
-	serviceCfg, err := scheduler.NewServiceConfig("localhost", "", "", "", false)
+	serviceCfg, err := scheduler.NewServiceConfig("localhost", "", "", "", CADENCE_CONFIG, false)
 	require.NoError(t, err)
 
 	ss, err = scheduler.NewSchedulerService(serviceCfg, l)

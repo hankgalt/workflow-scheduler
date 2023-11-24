@@ -16,6 +16,7 @@ import (
 )
 
 const TEST_DIR = "data"
+const CADENCE_CONFIG = "../../../cmd/scheduler/config/development.yaml"
 
 func TestSchedulerService(t *testing.T) {
 	setupEnv(t)
@@ -51,9 +52,14 @@ func setupEnv(t *testing.T) {
 	if pPath != "" && !strings.Contains(pPath, "../../../") {
 		pPath = fmt.Sprintf("../%s", pPath)
 	}
+	crPath := os.Getenv("CREDS_PATH")
+	if crPath != "" && !strings.Contains(crPath, "../../../") {
+		crPath = fmt.Sprintf("../%s", crPath)
+	}
 
 	os.Setenv("CERTS_PATH", cPath)
 	os.Setenv("POLICY_PATH", pPath)
+	os.Setenv("CREDS_PATH", crPath)
 }
 
 func setup(t *testing.T, l *zap.Logger) (
@@ -62,7 +68,7 @@ func setup(t *testing.T, l *zap.Logger) (
 ) {
 	t.Helper()
 
-	serviceCfg, err := NewServiceConfig("localhost", "", "", "", false)
+	serviceCfg, err := NewServiceConfig("localhost", "", "", "", CADENCE_CONFIG, false)
 	require.NoError(t, err)
 
 	bs, err = NewSchedulerService(serviceCfg, l)
@@ -80,11 +86,11 @@ func setup(t *testing.T, l *zap.Logger) (
 
 func testServiceConfig(t *testing.T) {
 	host := "localhost"
-	srvCfg, err := NewServiceConfig(host, "", "", "", false)
+	srvCfg, err := NewServiceConfig(host, "", "", "", CADENCE_CONFIG, false)
 	require.NoError(t, err)
 	require.Equal(t, srvCfg.DBConfig.Host, host)
 
-	_, err = NewServiceConfig("", "", "", "", false)
+	_, err = NewServiceConfig("", "", "", "", CADENCE_CONFIG, false)
 	require.Error(t, err)
 	require.Equal(t, err, mysqldb.ErrMissingRequired)
 }
@@ -93,6 +99,9 @@ func testDatabaseSetup(t *testing.T, ss *schedulerService) {
 	t.Helper()
 
 	testWorkflowRunMigration(t, ss)
+	testAgentsMigration(t, ss)
+	testPrincipalsMigration(t, ss)
+	testFilingsMigration(t, ss)
 }
 
 func testWorkflowRunMigration(t *testing.T, ss *schedulerService) {
@@ -105,5 +114,44 @@ func testWorkflowRunMigration(t *testing.T, ss *schedulerService) {
 	}
 
 	err := ss.db.AutoMigrate(models.WorkflowRun{})
+	require.NoError(t, err)
+}
+
+func testAgentsMigration(t *testing.T, ss *schedulerService) {
+	t.Helper()
+
+	ok := ss.db.Migrator().HasTable(models.BusinessAgent{})
+	if ok {
+		err := ss.db.Migrator().DropTable(models.BusinessAgent{})
+		require.NoError(t, err)
+	}
+
+	err := ss.db.AutoMigrate(models.BusinessAgent{})
+	require.NoError(t, err)
+}
+
+func testPrincipalsMigration(t *testing.T, ss *schedulerService) {
+	t.Helper()
+
+	ok := ss.db.Migrator().HasTable(models.BusinessPrincipal{})
+	if ok {
+		err := ss.db.Migrator().DropTable(models.BusinessPrincipal{})
+		require.NoError(t, err)
+	}
+
+	err := ss.db.AutoMigrate(models.BusinessPrincipal{})
+	require.NoError(t, err)
+}
+
+func testFilingsMigration(t *testing.T, ss *schedulerService) {
+	t.Helper()
+
+	ok := ss.db.Migrator().HasTable(models.BusinessFiling{})
+	if ok {
+		err := ss.db.Migrator().DropTable(models.BusinessFiling{})
+		require.NoError(t, err)
+	}
+
+	err := ss.db.AutoMigrate(models.BusinessFiling{})
 	require.NoError(t, err)
 }

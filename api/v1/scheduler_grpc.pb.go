@@ -26,6 +26,9 @@ type SchedulerClient interface {
 	UpdateRun(ctx context.Context, in *UpdateRunRequest, opts ...grpc.CallOption) (*RunResponse, error)
 	GetRun(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunResponse, error)
 	DeleteRun(ctx context.Context, in *DeleteRunRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	AddEntity(ctx context.Context, in *AddEntityRequest, opts ...grpc.CallOption) (*AddEntityResponse, error)
+	DeleteEntity(ctx context.Context, in *DeleteEntityRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	AddBusinessEntities(ctx context.Context, opts ...grpc.CallOption) (Scheduler_AddBusinessEntitiesClient, error)
 }
 
 type schedulerClient struct {
@@ -72,6 +75,55 @@ func (c *schedulerClient) DeleteRun(ctx context.Context, in *DeleteRunRequest, o
 	return out, nil
 }
 
+func (c *schedulerClient) AddEntity(ctx context.Context, in *AddEntityRequest, opts ...grpc.CallOption) (*AddEntityResponse, error) {
+	out := new(AddEntityResponse)
+	err := c.cc.Invoke(ctx, "/scheduler.v1.Scheduler/AddEntity", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *schedulerClient) DeleteEntity(ctx context.Context, in *DeleteEntityRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, "/scheduler.v1.Scheduler/DeleteEntity", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *schedulerClient) AddBusinessEntities(ctx context.Context, opts ...grpc.CallOption) (Scheduler_AddBusinessEntitiesClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Scheduler_ServiceDesc.Streams[0], "/scheduler.v1.Scheduler/AddBusinessEntities", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &schedulerAddBusinessEntitiesClient{stream}
+	return x, nil
+}
+
+type Scheduler_AddBusinessEntitiesClient interface {
+	Send(*AddEntityRequest) error
+	Recv() (*StreamAddEntityResponse, error)
+	grpc.ClientStream
+}
+
+type schedulerAddBusinessEntitiesClient struct {
+	grpc.ClientStream
+}
+
+func (x *schedulerAddBusinessEntitiesClient) Send(m *AddEntityRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *schedulerAddBusinessEntitiesClient) Recv() (*StreamAddEntityResponse, error) {
+	m := new(StreamAddEntityResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // SchedulerServer is the server API for Scheduler service.
 // All implementations must embed UnimplementedSchedulerServer
 // for forward compatibility
@@ -80,6 +132,9 @@ type SchedulerServer interface {
 	UpdateRun(context.Context, *UpdateRunRequest) (*RunResponse, error)
 	GetRun(context.Context, *RunRequest) (*RunResponse, error)
 	DeleteRun(context.Context, *DeleteRunRequest) (*DeleteResponse, error)
+	AddEntity(context.Context, *AddEntityRequest) (*AddEntityResponse, error)
+	DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteResponse, error)
+	AddBusinessEntities(Scheduler_AddBusinessEntitiesServer) error
 	mustEmbedUnimplementedSchedulerServer()
 }
 
@@ -98,6 +153,15 @@ func (UnimplementedSchedulerServer) GetRun(context.Context, *RunRequest) (*RunRe
 }
 func (UnimplementedSchedulerServer) DeleteRun(context.Context, *DeleteRunRequest) (*DeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteRun not implemented")
+}
+func (UnimplementedSchedulerServer) AddEntity(context.Context, *AddEntityRequest) (*AddEntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddEntity not implemented")
+}
+func (UnimplementedSchedulerServer) DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteEntity not implemented")
+}
+func (UnimplementedSchedulerServer) AddBusinessEntities(Scheduler_AddBusinessEntitiesServer) error {
+	return status.Errorf(codes.Unimplemented, "method AddBusinessEntities not implemented")
 }
 func (UnimplementedSchedulerServer) mustEmbedUnimplementedSchedulerServer() {}
 
@@ -184,6 +248,68 @@ func _Scheduler_DeleteRun_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Scheduler_AddEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddEntityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SchedulerServer).AddEntity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/scheduler.v1.Scheduler/AddEntity",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SchedulerServer).AddEntity(ctx, req.(*AddEntityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Scheduler_DeleteEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteEntityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SchedulerServer).DeleteEntity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/scheduler.v1.Scheduler/DeleteEntity",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SchedulerServer).DeleteEntity(ctx, req.(*DeleteEntityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Scheduler_AddBusinessEntities_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(SchedulerServer).AddBusinessEntities(&schedulerAddBusinessEntitiesServer{stream})
+}
+
+type Scheduler_AddBusinessEntitiesServer interface {
+	Send(*StreamAddEntityResponse) error
+	Recv() (*AddEntityRequest, error)
+	grpc.ServerStream
+}
+
+type schedulerAddBusinessEntitiesServer struct {
+	grpc.ServerStream
+}
+
+func (x *schedulerAddBusinessEntitiesServer) Send(m *StreamAddEntityResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *schedulerAddBusinessEntitiesServer) Recv() (*AddEntityRequest, error) {
+	m := new(AddEntityRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Scheduler_ServiceDesc is the grpc.ServiceDesc for Scheduler service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -207,7 +333,22 @@ var Scheduler_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "DeleteRun",
 			Handler:    _Scheduler_DeleteRun_Handler,
 		},
+		{
+			MethodName: "AddEntity",
+			Handler:    _Scheduler_AddEntity_Handler,
+		},
+		{
+			MethodName: "DeleteEntity",
+			Handler:    _Scheduler_DeleteEntity_Handler,
+		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "AddBusinessEntities",
+			Handler:       _Scheduler_AddBusinessEntities_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "api/v1/scheduler.proto",
 }
