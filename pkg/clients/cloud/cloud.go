@@ -29,6 +29,7 @@ var (
 type Client interface {
 	DownloadFile(ctx context.Context, filePath, bucket string) error
 	UploadFile(ctx context.Context, filePath, bucket string) error
+	DeleteFile(ctx context.Context, filePath, bucket string) error
 	Close() error
 }
 
@@ -114,7 +115,13 @@ func (cl *gcpCloudClient) DownloadFile(ctx context.Context, filePath, bucket str
 		cl.logger.Error("error downloading file", zap.Error(err), zap.String("filepath", filePath))
 		return err
 	}
-	cl.logger.Info("downloaded file", zap.String("file", filepath.Base(localFilePath)), zap.String("path", filepath.Dir(localFilePath)), zap.Int64("bytes", n))
+	cl.logger.Info(
+		"downloaded file",
+		zap.String("data-dir", cl.cfg.DataPath),
+		zap.String("rm-dir", filepath.Dir(filePath)),
+		zap.String("rm-file", filepath.Base(filePath)),
+		zap.String("local-file", localFilePath),
+		zap.Int64("bytes", n))
 	return nil
 }
 
@@ -150,7 +157,32 @@ func (cl *gcpCloudClient) UploadFile(ctx context.Context, filePath, bucket strin
 		cl.logger.Error("error uploading file", zap.Error(err))
 		return err
 	}
-	cl.logger.Info("uploaded file", zap.String("file", filepath.Base(filePath)), zap.String("path", filepath.Dir(filePath)), zap.Int64("bytes", n))
+	cl.logger.Info(
+		"uploaded file",
+		zap.String("data-dir", cl.cfg.DataPath),
+		zap.String("rm-dir", filepath.Dir(filePath)),
+		zap.String("rm-file", filepath.Base(filePath)),
+		zap.String("local-file", localFilePath),
+		zap.Int64("bytes", n))
+	return nil
+}
+
+func (cl *gcpCloudClient) DeleteFile(ctx context.Context, filePath, bucket string) error {
+	cfr, err := cloudstorage.NewCloudFileRequest(bucket, filepath.Base(filePath), filepath.Dir(filePath), 0)
+	if err != nil {
+		cl.logger.Error("error creating delete request", zap.Error(err), zap.String("filepath", filePath))
+		return err
+	}
+
+	err = cl.CloudStorage.DeleteObject(ctx, cfr)
+	if err != nil {
+		cl.logger.Error("error deleting file", zap.Error(err))
+		return err
+	}
+	cl.logger.Info(
+		"file deleted",
+		zap.String("file", filepath.Base(filePath)),
+		zap.String("path", filepath.Dir(filePath)))
 	return nil
 }
 

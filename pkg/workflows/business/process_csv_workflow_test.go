@@ -20,7 +20,7 @@ func (s *BusinessWorkflowTestSuite) Test_ProcessCSVWorkflow_Agent() {
 	l := logger.NewTestAppZapLogger(TEST_DIR)
 
 	reqstr := "process-csv-workflow-test@gmail.com"
-	filePath := fmt.Sprintf("%s/%s", "data", "Agents.csv")
+	filePath := fmt.Sprintf("%s/%s", DATA_PATH, "Agents-sm.csv")
 	req := &models.CSVInfo{
 		FileName:    filePath,
 		RequestedBy: reqstr,
@@ -108,7 +108,7 @@ func (s *BusinessWorkflowTestSuite) Test_ProcessCSVWorkflow_Principal() {
 	l := logger.NewTestAppZapLogger(TEST_DIR)
 
 	reqstr := "process-csv-workflow-test@gmail.com"
-	filePath := fmt.Sprintf("%s/%s", "data", "Principals.csv")
+	filePath := fmt.Sprintf("%s/%s", DATA_PATH, "Principals-sm.csv")
 	req := &models.CSVInfo{
 		FileName:    filePath,
 		RequestedBy: reqstr,
@@ -196,7 +196,7 @@ func (s *BusinessWorkflowTestSuite) Test_ProcessCSVWorkflow_Filing() {
 	l := logger.NewTestAppZapLogger(TEST_DIR)
 
 	reqstr := "process-csv-workflow-test@gmail.com"
-	filePath := fmt.Sprintf("%s/%s", "data", "filings.csv")
+	filePath := fmt.Sprintf("%s/%s", DATA_PATH, "filings-sm.csv")
 	req := &models.CSVInfo{
 		FileName:    filePath,
 		RequestedBy: reqstr,

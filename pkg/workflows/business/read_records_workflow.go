@@ -9,14 +9,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/comfforts/errors"
-	"github.com/comfforts/logger"
-	api "github.com/hankgalt/workflow-scheduler/api/v1"
-	"github.com/hankgalt/workflow-scheduler/pkg/models"
-	"github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
+
+	"github.com/comfforts/errors"
+	"github.com/comfforts/logger"
+
+	api "github.com/hankgalt/workflow-scheduler/api/v1"
+	"github.com/hankgalt/workflow-scheduler/pkg/models"
+	"github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 )
 
 const (
@@ -58,16 +60,16 @@ func ReadCSVRecordsWorkflow(ctx workflow.Context, req *models.ReadRecordsParams)
 			case common.ERR_SESSION_CTX:
 				resp, err = readCSVRecords(ctx, resp)
 				continue
-			case ERR_WRONG_HOST:
+			case common.ERR_WRONG_HOST:
 				configErr = true
 				return req, err
-			case ERR_MISSING_FILE_NAME:
+			case common.ERR_MISSING_FILE_NAME:
 				configErr = true
 				return req, err
-			case ERR_MISSING_REQSTR:
+			case common.ERR_MISSING_REQSTR:
 				configErr = true
 				return req, err
-			case ERR_MISSING_FILE:
+			case common.ERR_MISSING_FILE:
 				configErr = true
 				return req, err
 			case ERR_UNKNOW_ENTITY_TYPE:
@@ -125,17 +127,17 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 	// check for same host
 	if hostId != HostID {
 		logWrongHostError(req, hostId, HostID, l)
-		return req, cadence.NewCustomError(ERR_WRONG_HOST, ErrWrongHost)
+		return req, cadence.NewCustomError(common.ERR_WRONG_HOST, common.ErrWrongHost)
 	}
 
 	if req.FileName == "" {
-		l.Error(ERR_MISSING_FILE_NAME)
-		return nil, cadence.NewCustomError(ERR_MISSING_FILE_NAME, ErrMissingFileName)
+		l.Error(common.ERR_MISSING_FILE_NAME)
+		return nil, cadence.NewCustomError(common.ERR_MISSING_FILE_NAME, common.ErrMissingFileName)
 	}
 
 	if req.RequestedBy == "" {
-		l.Error(ERR_MISSING_REQSTR)
-		return nil, cadence.NewCustomError(ERR_MISSING_REQSTR, ErrMissingReqstr)
+		l.Error(common.ERR_MISSING_REQSTR)
+		return nil, cadence.NewCustomError(common.ERR_MISSING_REQSTR, common.ErrMissingReqstr)
 	}
 
 	// build local file path
@@ -148,8 +150,8 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 	// get file
 	file, err := os.Open(localFilePath)
 	if err != nil {
-		l.Error(ERR_MISSING_FILE)
-		return req, cadence.NewCustomError(ERR_MISSING_FILE, err)
+		l.Error(common.ERR_MISSING_FILE)
+		return req, cadence.NewCustomError(common.ERR_MISSING_FILE, err)
 	}
 	defer func() {
 		err := file.Close()
@@ -291,23 +293,7 @@ func addEntityAndSignal(
 	record []string,
 	l logger.AppLogger,
 ) {
-	// // send result signal
-	// if sigErr := sendCSVRecordSignal(ctx, req, req.Start+offset, size, record, nil); sigErr != nil {
-	// 	logCSVResultSigError(sigErr, req, req.Start+offset, size, l)
-	// } else {
-	// 	// logCSVResultSig(req, req.Start+offset, size, l)
-	// 	req.ResultCount++
-	// }
-
 	if fields, err := mapToInterface(req.Headers.Headers, record); err == nil {
-		// // send result signal
-		// if sigErr := sendCSVRecordSignal(ctx, req, start, end, record, nil); sigErr != nil {
-		// 	logCSVResultSigError(sigErr, req, start, end, l)
-		// } else {
-		// 	// logCSVResultSig(req, start, end, l)
-		// 	req.ResultCount++
-		// }
-
 		var activityErr error
 		if req.Type == api.EntityType_AGENT {
 			_, activityErr = ExecuteAddAgentActivity(ctx, fields)
@@ -330,8 +316,6 @@ func addEntityAndSignal(
 				req.ErrCount++
 			}
 		} else {
-			// l.Info("ReadCSVRecordsWorkflow entity added", zap.Any("type", req.Type), zap.Uint64("entity", entityId))
-
 			// send result signal
 			if sigErr := sendCSVRecordSignal(ctx, req, start, end, record, nil); sigErr != nil {
 				logCSVResultSigError(sigErr, req, start, end, l)

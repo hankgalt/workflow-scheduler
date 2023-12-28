@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/comfforts/errors"
 	"github.com/comfforts/logger"
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/worker"
@@ -56,14 +55,14 @@ func main() {
 
 	credsPath := os.Getenv("CREDS_PATH")
 	if credsPath == "" {
-		l.Error("environment missing creds path")
-		panic(errors.NewAppError("environment missing creds path"))
+		l.Error(file.ERR_MISSING_CLOUD_CRED)
+		panic(file.ErrMissingCloudCred)
 	}
 
 	bucket := os.Getenv("BUCKET")
 	if bucket == "" {
-		l.Error("environment missing cloud bucket name")
-		panic(errors.NewAppError("environment missing cloud bucket name"))
+		l.Error(file.ERR_MISSING_CLOUD_BUCKET)
+		panic(file.ErrMissingCloudBucket)
 	}
 
 	configData, err := os.ReadFile(cfgPath)
@@ -104,25 +103,25 @@ func main() {
 
 	cloudCfg, err := cloud.NewCloudConfig(credsPath, dataPath)
 	if err != nil {
-		l.Error("error initializing cloud client config", zap.Error(err))
+		l.Error(file.ERR_CLOUD_CFG_INIT, zap.Error(err))
 		panic(err)
 	}
 
 	cloudClient, err := cloud.NewGCPCloudClient(cloudCfg, l)
 	if err != nil {
-		l.Error("error initializing cloud client", zap.Error(err))
+		l.Error(file.ERR_CLOUD_CLIENT_INIT, zap.Error(err))
 		panic(err)
 	}
 
-	bizClOpts := scheduler.CalleeClientOptions(host)
-	bizClient, err := scheduler.NewClient(l, bizClOpts)
+	schClOpts := scheduler.CalleeClientOptions(host)
+	schClient, err := scheduler.NewClient(l, schClOpts)
 	if err != nil {
-		l.Error("error initializing business grpc client", zap.Error(err))
+		l.Error(common.ERR_SCH_CLIENT_INIT, zap.Error(err))
 		panic(err)
 	}
 
 	bgCtx := context.WithValue(context.Background(), cloud.CloudClientContextKey, cloudClient)
-	bgCtx = context.WithValue(bgCtx, scheduler.SchedulerClientContextKey, bizClient)
+	bgCtx = context.WithValue(bgCtx, scheduler.SchedulerClientContextKey, schClient)
 	bgCtx = context.WithValue(bgCtx, cloud.CloudBucketContextKey, bucket)
 	bgCtx = context.WithValue(bgCtx, file.DataPathContextKey, dataPath)
 
@@ -161,15 +160,13 @@ func main() {
 func registerFileWorkflow(worker worker.Worker) {
 	// register file processing workflow
 	worker.RegisterWorkflow(file.DownloadFileWorkflow)
-	worker.RegisterWorkflow(file.FileProcessingWorkflow)
+	worker.RegisterWorkflow(file.UploadFileWorkflow)
+	worker.RegisterWorkflow(file.DeleteFileWorkflow)
 
 	// register file processing activities
 	worker.RegisterActivityWithOptions(common.CreateRunActivity, activity.RegisterOptions{Name: common.CreateRunActivityName})
 	worker.RegisterActivityWithOptions(common.UpdateRunActivity, activity.RegisterOptions{Name: common.UpdateRunActivityName})
 	worker.RegisterActivityWithOptions(file.DownloadFileActivity, activity.RegisterOptions{Name: file.DownloadFileActivityName})
-	worker.RegisterActivityWithOptions(file.DryRunActivity, activity.RegisterOptions{Name: file.DryRunActivityName})
-
-	worker.RegisterActivityWithOptions(file.CreateFileActivity, activity.RegisterOptions{Name: file.CreateFileActivityName})
-	worker.RegisterActivityWithOptions(file.SaveFileActivity, activity.RegisterOptions{Name: file.SaveFileActivityName})
+	worker.RegisterActivityWithOptions(file.UploadFileActivity, activity.RegisterOptions{Name: file.UploadFileActivityName})
 	worker.RegisterActivityWithOptions(file.DeleteFileActivity, activity.RegisterOptions{Name: file.DeleteFileActivityName})
 }

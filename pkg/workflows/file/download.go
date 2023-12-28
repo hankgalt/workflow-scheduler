@@ -1,78 +1,127 @@
 package file
 
 import (
+	"fmt"
 	"time"
 
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 
-	"github.com/comfforts/errors"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
+	"github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 )
 
-// ApplicationName is the task list for this workflow
-const DownloadFileWorkflowName = "github.com/hankgalt/workflow-scheduler/pkg/workflows/file.DownloadFileWorkflow"
-
 // DownloadFileWorkflow workflow decider
-func DownloadFileWorkflow(ctx workflow.Context, filePath string) error {
-	// setup activity options
-	ao := workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Second * 5,
-		StartToCloseTimeout:    time.Minute,
-		HeartbeatTimeout:       time.Second * 2, // such a short timeout to make sample fail over very fast
-		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:          time.Second,
-			BackoffCoefficient:       2.0,
-			MaximumInterval:          time.Minute,
-			ExpirationInterval:       time.Minute * 10,
-			NonRetriableErrorReasons: []string{"bad-error"},
-		},
-	}
-	ctx = workflow.WithActivityOptions(ctx, ao)
-	logger := workflow.GetLogger(ctx)
-	logger.Info("DownloadFileWorkflow started.")
+func DownloadFileWorkflow(ctx workflow.Context, req *models.RequestInfo) (*models.RequestInfo, error) {
+	l := workflow.GetLogger(ctx)
+	l.Info(
+		"DownloadFileWorkflow started",
+		zap.String("file", req.FileName),
+		zap.String("reqstr", req.RequestedBy))
 
-	// Retry the whole sequence from the first activity on any error
-	// to retry it on a different host. In a real application it might be reasonable to
-	// retry individual activities and the whole sequence discriminating between different types of errors.
-	// See the retryactivity sample for a more sophisticated retry implementation.
-	var err error
-	for i := 1; i < 3; i++ {
-		err = downloadFile(ctx, filePath)
-		if err == nil {
-			break
+	count := 0
+	configErr := false
+	resp, err := downloadFile(ctx, req)
+	for err != nil && count < 10 && !configErr {
+		count++
+		switch wkflErr := err.(type) {
+		case *workflow.GenericError:
+			l.Error("cadence generic error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+			configErr = true
+			return req, err
+		case *workflow.TimeoutError:
+			l.Error("time out error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+			configErr = true
+			return req, err
+		case *cadence.CustomError:
+			l.Error("cadence custom error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+			switch wkflErr.Reason() {
+			case common.ERR_SESSION_CTX:
+				resp, err = downloadFile(ctx, resp)
+				continue
+			case common.ERR_WRONG_HOST:
+				configErr = true
+				return req, err
+			case common.ERR_MISSING_SCHEDULER_CLIENT:
+				configErr = true
+				return req, err
+			case common.ERR_MISSING_FILE_NAME:
+				configErr = true
+				return req, err
+			case common.ERR_MISSING_REQSTR:
+				configErr = true
+				return req, err
+			case common.ERR_MISSING_FILE:
+				configErr = true
+				return req, err
+			case ERR_FILE_DOWNLOAD:
+				configErr = true
+				return req, err
+			default:
+				resp, err = downloadFile(ctx, resp)
+				continue
+			}
+		case *workflow.PanicError:
+			l.Error("cadence panic error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+			configErr = true
+			return resp, err
+		case *cadence.CanceledError:
+			l.Error("cadence canceled error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+			configErr = true
+			return resp, err
+		default:
+			l.Error("other error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+			resp, err = downloadFile(ctx, resp)
 		}
 	}
 
 	if err != nil {
-		logger.Error("DownloadFileWorkflow failed.", zap.String("Error", err.Error()))
-		return err
+		l.Error(
+			"DownloadFileWorkflow failed",
+			zap.String("err-msg", err.Error()),
+			zap.Int("tries", count),
+			zap.Bool("config-err", configErr),
+		)
+		return resp, cadence.NewCustomError("DownloadFileWorkflow failed", err)
 	}
 
-	logger.Info("DownloadFileWorkflow completed.")
-	return nil
+	l.Info(
+		"DownloadFileWorkflow completed",
+		zap.String("file", req.FileName),
+		zap.String("reqstr", req.RequestedBy))
+	return resp, nil
 }
 
-func downloadFile(ctx workflow.Context, filePath string) error {
-	logger := workflow.GetLogger(ctx)
-	so := &workflow.SessionOptions{
-		CreationTimeout:  time.Minute,
-		ExecutionTimeout: time.Minute,
-	}
+func downloadFile(ctx workflow.Context, req *models.RequestInfo) (*models.RequestInfo, error) {
+	l := workflow.GetLogger(ctx)
 
+	// set execution duration
+	executionDuration := 5 * time.Minute
+
+	// build session context
+	so := &workflow.SessionOptions{
+		CreationTimeout:  10 * time.Minute,
+		ExecutionTimeout: executionDuration,
+	}
 	sessionCtx, err := workflow.CreateSession(ctx, so)
 	if err != nil {
-		logger.Error("downloadFile failed - error getting session context", zap.String("Error", err.Error()))
-		return errors.WrapError(err, "downloadFile failed - error getting session context")
+		l.Error(common.ERR_SESSION_CTX, zap.Error(err))
+		return req, cadence.NewCustomError(common.ERR_SESSION_CTX, err)
 	}
+	sessionCtx = workflow.WithStartToCloseTimeout(sessionCtx, executionDuration)
 	defer workflow.CompleteSession(sessionCtx)
 
-	var reqInfo *models.RequestInfo
-	err = workflow.ExecuteActivity(sessionCtx, DownloadFileActivity, filePath).Get(sessionCtx, &reqInfo)
+	// setup workflow & run references
+	req.RunId = workflow.GetInfo(ctx).WorkflowExecution.RunID
+	req.WorkflowId = workflow.GetInfo(ctx).WorkflowExecution.ID
+
+	// get csv header
+	req, err = ExecuteDownloadFileActivity(sessionCtx, req)
 	if err != nil {
-		logger.Error("downloadFile failed - error processing activity", zap.String("Error", err.Error()))
-		return errors.WrapError(err, "downloadFile failed - error  processing activity")
+		l.Error("DownloadFileWorkflow - error dowloading file", zap.String("error", err.Error()))
+		return req, err
 	}
-	return nil
+	l.Info("DownloadFileWorkflow file downloaded", zap.Any("file", req.FileName))
+	return req, nil
 }

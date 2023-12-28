@@ -41,13 +41,13 @@ func ReadCSVWorkflow(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo
 			case common.ERR_SESSION_CTX:
 				resp, err = readCSV(ctx, resp)
 				continue
-			case ERR_WRONG_HOST:
+			case common.ERR_WRONG_HOST:
 				configErr = true
 				return req, err
-			case ERR_MISSING_FILE_NAME:
+			case common.ERR_MISSING_FILE_NAME:
 				configErr = true
 				return req, err
-			case ERR_MISSING_REQSTR:
+			case common.ERR_MISSING_REQSTR:
 				configErr = true
 				return req, err
 			case ERR_MISSING_OFFSETS:
@@ -97,7 +97,6 @@ func readCSV(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, error)
 	}
 
 	// l.Info("readCSV", zap.String("hostId", hostId), zap.String("HostID", HostID))
-
 	// check for same host
 	if hostId != HostID {
 		l.Error("readCSV - running on wrong host",
@@ -105,17 +104,17 @@ func readCSV(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, error)
 			zap.String("req-host", hostId),
 			zap.String("curr-host", HostID))
 
-		return req, cadence.NewCustomError(ERR_WRONG_HOST, ErrWrongHost)
+		return req, cadence.NewCustomError(common.ERR_WRONG_HOST, common.ErrWrongHost)
 	}
 
 	if req.FileName == "" {
-		l.Error(ERR_MISSING_FILE_NAME)
-		return nil, cadence.NewCustomError(ERR_MISSING_FILE_NAME, ErrMissingFileName)
+		l.Error(common.ERR_MISSING_FILE_NAME)
+		return nil, cadence.NewCustomError(common.ERR_MISSING_FILE_NAME, common.ErrMissingFileName)
 	}
 
 	if req.RequestedBy == "" {
-		l.Error(ERR_MISSING_REQSTR)
-		return nil, cadence.NewCustomError(ERR_MISSING_REQSTR, ErrMissingReqstr)
+		l.Error(common.ERR_MISSING_REQSTR)
+		return nil, cadence.NewCustomError(common.ERR_MISSING_REQSTR, common.ErrMissingReqstr)
 	}
 
 	if len(req.OffSets) < 1 {
@@ -145,34 +144,23 @@ func readCSV(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, error)
 	}
 	cwCtx := workflow.WithChildOptions(sessionCtx, scwo)
 
+	// for each offset in CSV state, start ReadCSVRecordsWorkflow child workflow
 	for i, offset := range req.OffSets {
-		var readReReq models.ReadRecordsParams
+		readReReq := models.ReadRecordsParams{
+			FileName:    req.FileName,
+			RequestedBy: req.RequestedBy,
+			HostID:      req.HostID,
+			RunId:       req.RunId,
+			WorkflowId:  req.WorkflowId,
+			Type:        req.Type,
+			Headers:     req.Headers,
+			BatchIndex:  i,
+			Start:       offset,
+		}
 		if i >= len(req.OffSets)-1 {
-			readReReq = models.ReadRecordsParams{
-				FileName:    req.FileName,
-				RequestedBy: req.RequestedBy,
-				HostID:      req.HostID,
-				RunId:       req.RunId,
-				WorkflowId:  req.WorkflowId,
-				Type:        req.Type,
-				Headers:     req.Headers,
-				BatchIndex:  i,
-				Start:       offset,
-				End:         req.FileSize,
-			}
+			readReReq.End = req.FileSize
 		} else {
-			readReReq = models.ReadRecordsParams{
-				FileName:    req.FileName,
-				RequestedBy: req.RequestedBy,
-				HostID:      req.HostID,
-				RunId:       req.RunId,
-				WorkflowId:  req.WorkflowId,
-				Type:        req.Type,
-				Headers:     req.Headers,
-				BatchIndex:  i,
-				Start:       offset,
-				End:         req.OffSets[i+1],
-			}
+			readReReq.End = req.OffSets[i+1]
 		}
 
 		future := workflow.ExecuteChildWorkflow(cwCtx, ReadCSVRecordsWorkflow, &readReReq)

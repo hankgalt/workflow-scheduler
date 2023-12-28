@@ -12,35 +12,38 @@ import (
 	"github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 )
 
-// UploadFileWorkflow workflow processer
-func UploadFileWorkflow(ctx workflow.Context, req *models.RequestInfo) (*models.RequestInfo, error) {
+// DeleteFileWorkflow workflow processor
+func DeleteFileWorkflow(ctx workflow.Context, req *models.RequestInfo) (*models.RequestInfo, error) {
 	l := workflow.GetLogger(ctx)
 	l.Info(
-		"UploadFileWorkflow started",
+		"DeleteFileWorkflow started",
 		zap.String("file", req.FileName),
 		zap.String("reqstr", req.RequestedBy))
 
 	count := 0
 	configErr := false
-	resp, err := uploadFile(ctx, req)
+	resp, err := deleteFile(ctx, req)
 	for err != nil && count < 10 && !configErr {
 		count++
 		switch wkflErr := err.(type) {
 		case *workflow.GenericError:
-			l.Error("cadence generic error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+			l.Error("DeleteFileWorkflow cadence generic error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
 			configErr = true
 			return req, err
 		case *workflow.TimeoutError:
-			l.Error("time out error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+			l.Error("DeleteFileWorkflow time out error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
 			configErr = true
 			return req, err
 		case *cadence.CustomError:
-			l.Error("cadence custom error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+			l.Error("DeleteFileWorkflow cadence custom error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
 			switch wkflErr.Reason() {
 			case common.ERR_SESSION_CTX:
-				resp, err = uploadFile(ctx, resp)
+				resp, err = deleteFile(ctx, resp)
 				continue
 			case common.ERR_WRONG_HOST:
+				configErr = true
+				return req, err
+			case common.ERR_MISSING_SCHEDULER_CLIENT:
 				configErr = true
 				return req, err
 			case common.ERR_MISSING_FILE_NAME:
@@ -52,45 +55,45 @@ func UploadFileWorkflow(ctx workflow.Context, req *models.RequestInfo) (*models.
 			case common.ERR_MISSING_FILE:
 				configErr = true
 				return req, err
-			case common.ERR_MISSING_SCHEDULER_CLIENT:
+			case ERR_FILE_DELETE:
 				configErr = true
 				return req, err
 			default:
-				resp, err = uploadFile(ctx, resp)
+				resp, err = deleteFile(ctx, resp)
 				continue
 			}
 		case *workflow.PanicError:
-			l.Error("cadence panic error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+			l.Error("DeleteFileWorkflow cadence panic error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
 			configErr = true
 			return resp, err
 		case *cadence.CanceledError:
-			l.Error("cadence canceled error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+			l.Error("DeleteFileWorkflow cadence canceled error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
 			configErr = true
 			return resp, err
 		default:
-			l.Error("other error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
-			resp, err = uploadFile(ctx, resp)
+			l.Error("DeleteFileWorkflow other error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+			resp, err = deleteFile(ctx, resp)
 		}
 	}
 
 	if err != nil {
 		l.Error(
-			"UploadFileWorkflow failed",
+			"DeleteFileWorkflow failed",
 			zap.String("err-msg", err.Error()),
 			zap.Int("tries", count),
 			zap.Bool("config-err", configErr),
 		)
-		return resp, cadence.NewCustomError("UploadFileWorkflow failed", err)
+		return resp, cadence.NewCustomError("DeleteFileWorkflow failed", err)
 	}
 
 	l.Info(
-		"UploadFileWorkflow completed",
+		"DeleteFileWorkflow completed",
 		zap.String("file", req.FileName),
 		zap.String("reqstr", req.RequestedBy))
 	return resp, nil
 }
 
-func uploadFile(ctx workflow.Context, req *models.RequestInfo) (*models.RequestInfo, error) {
+func deleteFile(ctx workflow.Context, req *models.RequestInfo) (*models.RequestInfo, error) {
 	l := workflow.GetLogger(ctx)
 
 	// set execution duration
@@ -113,12 +116,12 @@ func uploadFile(ctx workflow.Context, req *models.RequestInfo) (*models.RequestI
 	req.RunId = workflow.GetInfo(ctx).WorkflowExecution.RunID
 	req.WorkflowId = workflow.GetInfo(ctx).WorkflowExecution.ID
 
-	// get csv header
-	req, err = ExecuteUploadFileActivity(sessionCtx, req)
+	// delete file
+	req, err = ExecuteDeleteFileActivity(sessionCtx, req)
 	if err != nil {
-		l.Error("UploadFileWorkflow - error uploading file", zap.String("error", err.Error()))
+		l.Error("DeleteFileWorkflow - error deleting file", zap.String("error", err.Error()))
 		return req, err
 	}
-	l.Info("UploadFileWorkflow file uploaded", zap.Any("file", req.FileName))
+	l.Info("DeleteFileWorkflow file deleted", zap.Any("file", req.FileName))
 	return req, nil
 }

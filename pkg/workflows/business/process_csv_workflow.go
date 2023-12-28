@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	ERR_MISSING_FILE   = "error missing file"
 	ERR_STORAGE_CLIENT = "error storage client"
 	ERR_READING_FILE   = "error reading file"
 )
@@ -52,16 +51,16 @@ func ProcessCSVWorkflow(ctx workflow.Context, req *models.CSVInfo) (*models.CSVI
 			case common.ERR_SESSION_CTX:
 				resp, err = processCSV(ctx, resp)
 				continue
-			case ERR_WRONG_HOST:
+			case common.ERR_WRONG_HOST:
 				configErr = true
 				return req, err
-			case ERR_MISSING_FILE_NAME:
+			case common.ERR_MISSING_FILE_NAME:
 				configErr = true
 				return req, err
-			case ERR_MISSING_REQSTR:
+			case common.ERR_MISSING_REQSTR:
 				configErr = true
 				return req, err
-			case ERR_MISSING_FILE:
+			case common.ERR_MISSING_FILE:
 				configErr = true
 				return req, err
 			case ERR_MISSING_START_OFFSET:

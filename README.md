@@ -16,3 +16,5 @@
 - https://github.com/uber/cadence-idl
 
 - ReadAt reads len(b) bytes from the File starting at byte offset off. It returns the number of bytes read and the error, if any. ReadAt always returns a non-nil error when n < len(b). At end of file, that error is io.EOF. n < len(b) when line ends earlier.
+
+- `export GOPRIVATE=github.com/comfforts/comff-config`
