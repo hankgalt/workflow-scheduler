@@ -41,6 +41,7 @@ type Client interface {
 	UpdateRun(ctx context.Context, req *api.UpdateRunRequest, opts ...grpc.CallOption) (*api.RunResponse, error)
 	GetRun(ctx context.Context, req *api.RunRequest, opts ...grpc.CallOption) (*api.RunResponse, error)
 	DeleteRun(ctx context.Context, req *api.DeleteRunRequest, opts ...grpc.CallOption) (*api.DeleteResponse, error)
+	SearchRuns(ctx context.Context, req *api.SearchRunRequest, opts ...grpc.CallOption) (*api.RunsResponse, error)
 	AddEntity(ctx context.Context, req *api.AddEntityRequest, opts ...grpc.CallOption) (*api.AddEntityResponse, error)
 	Close() error
 }
@@ -149,6 +150,18 @@ func (bc *schedulerClient) DeleteRun(ctx context.Context, req *api.DeleteRunRequ
 	resp, err := bc.client.DeleteRun(ctx, req)
 	if err != nil {
 		bc.logger.Error("error deleting workflow run", zap.Error(err))
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (bc *schedulerClient) SearchRuns(ctx context.Context, req *api.SearchRunRequest, opts ...grpc.CallOption) (*api.RunsResponse, error) {
+	ctx, cancel := bc.contextWithOptions(ctx, bc.opts)
+	defer cancel()
+
+	resp, err := bc.client.SearchRuns(ctx, req)
+	if err != nil {
+		bc.logger.Error("error searching workflow run", zap.Error(err))
 		return nil, err
 	}
 	return resp, nil

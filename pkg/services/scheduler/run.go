@@ -21,12 +21,14 @@ var (
 	ErrDuplicateRun = errors.NewAppError(ERR_DUPLICATE_RUN)
 )
 
-func (bs *schedulerService) CreateRun(ctx context.Context, params *models.RunUpdateParams) (*models.WorkflowRun, error) {
+func (bs *schedulerService) CreateRun(ctx context.Context, params *models.RunParams) (*models.WorkflowRun, error) {
 	wkflRun := models.WorkflowRun{
-		WorkflowId: params.WorkflowId,
-		RunId:      params.RunId,
-		Status:     string(models.STARTED),
-		CreatedBy:  params.RequestedBy,
+		WorkflowId:  params.WorkflowId,
+		RunId:       params.RunId,
+		Status:      string(models.STARTED),
+		Type:        params.Type,
+		ExternalRef: params.ExternalRef,
+		CreatedBy:   params.RequestedBy,
 	}
 
 	res := bs.db.WithContext(ctx).Create(&wkflRun)
@@ -41,7 +43,7 @@ func (bs *schedulerService) CreateRun(ctx context.Context, params *models.RunUpd
 	return &wkflRun, nil
 }
 
-func (bs *schedulerService) GetRun(ctx context.Context, params *models.RunUpdateParams) (*models.WorkflowRun, error) {
+func (bs *schedulerService) GetRun(ctx context.Context, params *models.RunParams) (*models.WorkflowRun, error) {
 	var wkflRun models.WorkflowRun
 	res := bs.db.WithContext(ctx).Where("run_id = ?", params.RunId).First(&wkflRun)
 	if res.Error != nil {
@@ -51,7 +53,7 @@ func (bs *schedulerService) GetRun(ctx context.Context, params *models.RunUpdate
 	return &wkflRun, nil
 }
 
-func (bs *schedulerService) UpdateRun(ctx context.Context, params *models.RunUpdateParams) (*models.WorkflowRun, error) {
+func (bs *schedulerService) UpdateRun(ctx context.Context, params *models.RunParams) (*models.WorkflowRun, error) {
 	wkflRun, err := bs.GetRun(ctx, params)
 	if err != nil {
 		return nil, err
@@ -78,4 +80,35 @@ func (bs *schedulerService) DeleteRun(ctx context.Context, runId string) error {
 	}
 
 	return nil
+}
+
+func (bs *schedulerService) SearchRuns(ctx context.Context, searchBy *models.RunParams) ([]*models.WorkflowRun, error) {
+	tx := bs.db.WithContext(ctx)
+
+	var runs []*models.WorkflowRun
+
+	if searchBy.Type != "" {
+		tx = tx.Where("type = ?", searchBy.Type)
+	}
+	if searchBy.Status != "" {
+		tx = tx.Where("status = ?", searchBy.Status)
+	} else {
+		tx = tx.Not("status = ?", string(models.COMPLETED))
+	}
+	if searchBy.RunId != "" {
+		tx = tx.Where("run_id = ?", searchBy.RunId)
+	}
+	if searchBy.WorkflowId != "" {
+		tx = tx.Where("workflow_id = ?", searchBy.WorkflowId)
+	}
+	if searchBy.ExternalRef != "" {
+		tx = tx.Where("external_ref = ?", searchBy.ExternalRef)
+	}
+
+	res := tx.Find(&runs)
+	if res.Error != nil {
+		bs.Error(ERR_RUN_FETCH, zap.Error(res.Error))
+		return nil, errors.WrapError(res.Error, ERR_RUN_FETCH)
+	}
+	return runs, nil
 }

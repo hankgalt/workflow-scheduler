@@ -10,6 +10,9 @@ message WorkflowRun {
     string runId = 1;
     string workflowId = 2;
     string status = 3;
+    string requestedBy = 4;
+    string type = 5;
+    string externalRef = 6;
 }
 
 message FileRequest {
@@ -27,6 +30,8 @@ message RunRequest {
     string runId = 1;
     string workflowId = 2;
     string requestedBy = 3;
+    string type = 4;
+    string externalRef = 5;
 }
 
 message UpdateRunRequest {
@@ -37,6 +42,19 @@ message UpdateRunRequest {
 
 message DeleteRunRequest {
     string id = 1;
+}
+
+message SearchRunRequest {
+    string runId = 1;
+    string workflowId = 2;
+    string status = 3;
+    string type = 4;
+    string externalRef = 5;
+}
+
+message RunsResponse {
+    bool ok = 1;
+    repeated WorkflowRun runs = 2;
 }
 
 message DeleteResponse {
@@ -127,6 +145,7 @@ service Scheduler {
     rpc UpdateRun(UpdateRunRequest) returns (RunResponse) {}
     rpc GetRun(RunRequest) returns (RunResponse) {}
     rpc DeleteRun(DeleteRunRequest) returns (DeleteResponse) {}
+    rpc SearchRuns(SearchRunRequest) returns (RunsResponse) {}
     rpc AddEntity(AddEntityRequest) returns (AddEntityResponse) {}
     rpc DeleteEntity(DeleteEntityRequest) returns (DeleteResponse) {}
     rpc AddBusinessEntities(stream AddEntityRequest) returns (stream StreamAddEntityResponse) {}

@@ -17,9 +17,9 @@ type BusinessAgent struct {
 	EntityName      string
 	EntityID        uint64 `gorm:"primary_key;not null"`
 	OrgName         string
-	FirstName       string
+	FirstName       string `gorm:"primary_key;not null"`
 	MiddleName      string
-	LastName        string
+	LastName        string `gorm:"primary_key;not null"`
 	PhysicalAddress string
 	AgentType       string
 }

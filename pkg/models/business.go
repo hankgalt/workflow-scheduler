@@ -11,16 +11,18 @@ type CSVBatchResult struct {
 }
 
 type CSVInfo struct {
-	FileName    string
-	RequestedBy string
-	HostID      string
-	RunId       string
-	WorkflowId  string
-	FileSize    int64
-	Headers     *HeadersInfo
-	OffSets     []int64
-	Results     map[int64]*CSVBatchResult
-	Type        api.EntityType
+	FileName          string
+	RequestedBy       string
+	HostID            string
+	RunId             string
+	WorkflowId        string
+	ProcessRunId      string
+	ProcessWorkflowId string
+	FileSize          int64
+	Headers           *HeadersInfo
+	OffSets           []int64
+	Results           map[int64]*CSVBatchResult
+	Type              api.EntityType
 }
 
 type HeadersInfo struct {

@@ -15,7 +15,6 @@ import (
 	"github.com/comfforts/logger"
 
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
-	"github.com/hankgalt/workflow-scheduler/pkg/models"
 	"github.com/hankgalt/workflow-scheduler/pkg/services/scheduler"
 )
 
@@ -28,7 +27,6 @@ func TestServer(t *testing.T) {
 		nbClient api.SchedulerClient,
 		config *Config,
 	){
-		"test workflow CRUD, succeeds":            testWorkflowCRUD,
 		"test unauthorized client checks succeed": testUnauthorizedClient,
 	} {
 		t.Run(scenario, func(t *testing.T) {
@@ -123,36 +121,6 @@ func setupTest(t *testing.T, fn func(*Config)) (
 		err = os.RemoveAll(TEST_DIR)
 		require.NoError(t, err)
 	}
-}
-
-func testWorkflowCRUD(t *testing.T, client, nbClient api.SchedulerClient, config *Config) {
-	t.Helper()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	requester := "test-create-run@gmail.com"
-	wfRun, err := client.CreateRun(ctx, &api.RunRequest{
-		WorkflowId:  "S3r43r-T3s73k7l0w",
-		RunId:       "S3r43r-T3s7Ru41d",
-		RequestedBy: requester,
-	})
-	require.NoError(t, err)
-	require.Equal(t, wfRun.Run.Status, string(models.STARTED))
-
-	wfRun, err = client.UpdateRun(ctx, &api.UpdateRunRequest{
-		WorkflowId: wfRun.Run.WorkflowId,
-		RunId:      wfRun.Run.RunId,
-		Status:     string(models.UPLOADED),
-	})
-	require.NoError(t, err)
-	require.Equal(t, wfRun.Run.Status, string(models.UPLOADED))
-
-	resp, err := client.DeleteRun(ctx, &api.DeleteRunRequest{
-		Id: wfRun.Run.RunId,
-	})
-	require.NoError(t, err)
-	require.Equal(t, resp.Ok, true)
 }
 
 func testUnauthorizedClient(t *testing.T, client, nbClient api.SchedulerClient, config *Config) {

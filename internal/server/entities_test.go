@@ -1,8 +1,9 @@
-package server
+package server_test
 
 import (
 	"context"
 	"io"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -10,17 +11,26 @@ import (
 	"testing"
 
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
-	"github.com/stretchr/testify/require"
+	"github.com/hankgalt/workflow-scheduler/internal/server"
+	"github.com/hankgalt/workflow-scheduler/pkg/services/scheduler"
 
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
+	config "github.com/comfforts/comff-config"
 	"github.com/comfforts/errors"
+	"github.com/comfforts/logger"
 )
+
+const TEST_DIR = "data"
 
 func TestEntities(t *testing.T) {
 	for scenario, fn := range map[string]func(
 		t *testing.T,
 		client api.SchedulerClient,
 		nbClient api.SchedulerClient,
-		config *Config,
+		config *server.Config,
 	){
 		"test Principal CRUD, succeeds":           testPrincipalCRUD,
 		"test Principal Streaming CRUD, succeeds": testAddBusinessEntities,
@@ -36,7 +46,90 @@ func TestEntities(t *testing.T) {
 	}
 }
 
-func testAddBusinessEntities(t *testing.T, client, nbClient api.SchedulerClient, config *Config) {
+func setupTest(t *testing.T, fn func(*server.Config)) (
+	client api.SchedulerClient,
+	nbClient api.SchedulerClient,
+	cfg *server.Config,
+	teardown func(),
+) {
+	t.Helper()
+
+	lis, err := net.Listen("tcp", "127.0.0.1:65051")
+	require.NoError(t, err)
+
+	// grpc client
+	newClient := func(target config.ConfigurationTarget) (*grpc.ClientConn, api.SchedulerClient, []grpc.DialOption) {
+		// Client TLS config
+		tlsConfig, err := config.SetupTLSConfig(&config.ConfigOpts{Target: target})
+		require.NoError(t, err)
+
+		tlsCreds := credentials.NewTLS(tlsConfig)
+		opts := []grpc.DialOption{grpc.WithTransportCredentials(tlsCreds)}
+		addr := lis.Addr().String()
+		conn, err := grpc.Dial(addr, opts...)
+		require.NoError(t, err)
+		client = api.NewSchedulerClient(conn)
+		return conn, client, opts
+	}
+
+	cc, client, _ := newClient(config.CLIENT)
+	nbcc, nbClient, _ := newClient(config.NOBODY_CLIENT)
+
+	l := logger.NewTestAppZapLogger(TEST_DIR)
+	serviceCfg, err := scheduler.NewServiceConfig("localhost", "", "", "", "", true)
+	require.NoError(t, err)
+
+	ps, err := scheduler.NewSchedulerService(serviceCfg, l)
+	require.NoError(t, err)
+
+	authorizer, err := config.SetupAuthorizer(l)
+	require.NoError(t, err)
+
+	cfg = &server.Config{
+		SchedulerService: ps,
+		Authorizer:       authorizer,
+		Logger:           l,
+	}
+	if fn != nil {
+		fn(cfg)
+	}
+
+	// Server TLS config
+	srvTLSConfig, err := config.SetupTLSConfig(&config.ConfigOpts{
+		Target: config.SERVER,
+		Addr:   lis.Addr().String(),
+	})
+	require.NoError(t, err)
+	srvCreds := credentials.NewTLS(srvTLSConfig)
+
+	// grpc server
+	server, err := server.NewGRPCServer(cfg, grpc.Creds(srvCreds))
+	require.NoError(t, err)
+
+	go func() {
+		err := server.Serve(lis)
+		require.NoError(t, err)
+	}()
+
+	client = api.NewSchedulerClient(cc)
+
+	return client, nbClient, cfg, func() {
+		server.Stop()
+		err := cc.Close()
+		require.NoError(t, err)
+
+		err = nbcc.Close()
+		require.NoError(t, err)
+
+		err = ps.Close()
+		require.NoError(t, err)
+
+		err = os.RemoveAll(TEST_DIR)
+		require.NoError(t, err)
+	}
+}
+
+func testAddBusinessEntities(t *testing.T, client, nbClient api.SchedulerClient, config *server.Config) {
 	t.Helper()
 
 	// build id & entityId
@@ -211,7 +304,7 @@ func asynClientBiDirectBusinessEntitiesProcessing(
 	<-doneCh
 }
 
-func testPrincipalCRUD(t *testing.T, client, nbClient api.SchedulerClient, config *Config) {
+func testPrincipalCRUD(t *testing.T, client, nbClient api.SchedulerClient, config *server.Config) {
 	t.Helper()
 
 	// build id & entityId

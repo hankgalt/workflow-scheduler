@@ -151,7 +151,7 @@ func AddFilingActivity(ctx context.Context, fields map[string]string) (string, e
 // resolves file path using configured/default data directory path
 func GetCSVHeadersActivity(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo, error) {
 	l := activity.GetLogger(ctx).With(zap.String("hostID", HostID))
-	l.Info("GetCSVHeadersActivity - started", zap.Any("file", req.FileName))
+	l.Debug("GetCSVHeadersActivity - started", zap.String("file", req.FileName))
 
 	// return if headers already build
 	if req.Headers != nil {

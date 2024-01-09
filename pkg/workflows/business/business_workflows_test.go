@@ -3,70 +3,92 @@ package business_test
 import (
 	"context"
 	"fmt"
-	"testing"
+	"os"
 
 	"github.com/comfforts/logger"
+	"github.com/hankgalt/workflow-scheduler/pkg/clients/cloud"
 	"github.com/hankgalt/workflow-scheduler/pkg/clients/scheduler"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
 	bizwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/business"
 	"github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
-	"github.com/stretchr/testify/suite"
+	fiwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/file"
 	"go.uber.org/cadence/activity"
-	"go.uber.org/cadence/testsuite"
 	"go.uber.org/cadence/worker"
 	"go.uber.org/zap"
 )
 
 const TEST_DIR = "data"
 
-type BusinessWorkflowTestSuite struct {
-	suite.Suite
-	testsuite.WorkflowTestSuite
-
-	env *testsuite.TestWorkflowEnvironment
-}
-
 func (s *BusinessWorkflowTestSuite) SetupTest() {
+	l := logger.NewTestAppZapLogger(TEST_DIR)
 	s.env = s.NewTestWorkflowEnvironment()
 
 	s.env.RegisterWorkflow(bizwkfl.AddAgentSignalWorkflow)
 	s.env.RegisterWorkflow(bizwkfl.ProcessCSVWorkflow)
 	s.env.RegisterWorkflow(bizwkfl.ReadCSVWorkflow)
 	s.env.RegisterWorkflow(bizwkfl.ReadCSVRecordsWorkflow)
+	s.env.RegisterWorkflow(bizwkfl.ProcessFileSignalWorkflow)
 
+	s.env.RegisterActivityWithOptions(common.CreateRunActivity, activity.RegisterOptions{
+		Name: common.CreateRunActivityName,
+	})
+	s.env.RegisterActivityWithOptions(common.UpdateRunActivity, activity.RegisterOptions{
+		Name: common.UpdateRunActivityName,
+	})
+	s.env.RegisterActivityWithOptions(common.SearchRunActivity, activity.RegisterOptions{
+		Name: common.SearchRunActivityName,
+	})
+	s.env.RegisterActivityWithOptions(fiwkfl.DownloadFileActivity, activity.RegisterOptions{
+		Name: fiwkfl.DownloadFileActivityName,
+	})
 	s.env.RegisterActivityWithOptions(bizwkfl.AddAgentActivity, activity.RegisterOptions{
 		Name: bizwkfl.AddAgentActivityName,
 	})
-
 	s.env.RegisterActivityWithOptions(bizwkfl.AddPrincipalActivity, activity.RegisterOptions{
 		Name: bizwkfl.AddPrincipalActivityName,
 	})
-
 	s.env.RegisterActivityWithOptions(bizwkfl.AddFilingActivity, activity.RegisterOptions{
 		Name: bizwkfl.AddFilingActivityName,
 	})
-
 	s.env.RegisterActivityWithOptions(bizwkfl.GetCSVHeadersActivity, activity.RegisterOptions{
 		Name: bizwkfl.GetCSVHeadersActivityName,
 	})
-
 	s.env.RegisterActivityWithOptions(bizwkfl.GetCSVOffsetsActivity, activity.RegisterOptions{
 		Name: bizwkfl.GetCSVOffsetsActivityName,
 	})
-
 	s.env.RegisterActivityWithOptions(bizwkfl.ReadCSVActivity, activity.RegisterOptions{
 		Name: bizwkfl.ReadCSVActivityName,
 	})
 
-	l := logger.NewTestAppZapLogger(TEST_DIR)
+	cloudCfg, err := cloud.NewCloudConfig("", TEST_DIR)
+	if err != nil {
+		l.Error(fiwkfl.ERR_CLOUD_CFG_INIT, zap.Error(err))
+		panic(err)
+	}
+
+	cloudClient, err := cloud.NewGCPCloudClient(cloudCfg, l)
+	if err != nil {
+		l.Error(fiwkfl.ERR_CLOUD_CLIENT_INIT, zap.Error(err))
+		panic(err)
+	}
+
+	bucket := os.Getenv("BUCKET")
+	if bucket == "" {
+		l.Error(fiwkfl.ERR_MISSING_CLOUD_BUCKET)
+		panic(err)
+	}
 
 	schClient, err := scheduler.NewClient(l, scheduler.NewDefaultClientOption())
 	if err != nil {
-		l.Error("error initializing business grpc client", zap.Error(err))
+		l.Error("error initializing scheduler grpc client", zap.Error(err))
 		panic(err)
 	}
 
 	ctx := context.WithValue(context.Background(), scheduler.SchedulerClientContextKey, schClient)
+	ctx = context.WithValue(ctx, cloud.CloudClientContextKey, cloudClient)
+	ctx = context.WithValue(ctx, cloud.CloudBucketContextKey, bucket)
+	ctx = context.WithValue(ctx, fiwkfl.DataPathContextKey, TEST_DIR)
+
 	s.env.SetWorkerOptions(worker.Options{
 		BackgroundActivityContext: ctx,
 	})
@@ -79,10 +101,6 @@ func (s *BusinessWorkflowTestSuite) TearDownTest() {
 
 	// err := os.RemoveAll(TEST_DIR)
 	// s.NoError(err)
-}
-
-func TestUnitTestSuite(t *testing.T) {
-	suite.Run(t, new(BusinessWorkflowTestSuite))
 }
 
 func (s *BusinessWorkflowTestSuite) Test_AddAgentSignalWorkflow() {

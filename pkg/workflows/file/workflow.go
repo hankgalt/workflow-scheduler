@@ -12,10 +12,13 @@ const ApplicationName = "FileProcessingGroup"
 var HostID = ApplicationName + "_" + uuid.New().String()
 
 // UploadFileWorkflowName is the task list for file upload workflow
-const UploadFileWorkflowName = "github.com/hankgalt/workflow-scheduler/pkg/workflows/file.UploadFileWorkflow"
+const UploadFileWorkflowName string = "github.com/hankgalt/workflow-scheduler/pkg/workflows/file.UploadFileWorkflow"
 
 // DownloadFileWorkflowName is the task list for file download workflow
-const DownloadFileWorkflowName = "github.com/hankgalt/workflow-scheduler/pkg/workflows/file.DownloadFileWorkflow"
+const DownloadFileWorkflowName string = "github.com/hankgalt/workflow-scheduler/pkg/workflows/file.DownloadFileWorkflow"
 
 // DeleteFileWorkflowName is the task list for delete file workflow
-const DeleteFileWorkflowName = "github.com/hankgalt/workflow-scheduler/pkg/workflows/file.DeleteFileWorkflow"
+const DeleteFileWorkflowName string = "github.com/hankgalt/workflow-scheduler/pkg/workflows/file.DeleteFileWorkflow"
+
+// FileSignalWorkflowName is the task list for file signal workflow
+const FileSignalWorkflowName string = "github.com/hankgalt/workflow-scheduler/pkg/workflows/file.FileSignalWorkflow"

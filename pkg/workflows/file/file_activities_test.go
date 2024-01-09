@@ -29,7 +29,7 @@ const (
 const ERR_BUILD_REQ_CTX string = "error building file worker request context"
 const DATA_PATH string = "scheduler"
 const MISSING_FILE_NAME string = "geo.csv"
-const LIVE_FILE_NAME string = "geo.json"
+const LIVE_FILE_NAME string = "Agents-sm.csv"
 
 type Teardown func()
 

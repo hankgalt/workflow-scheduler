@@ -1,15 +1,17 @@
 package common
 
 import (
+	"fmt"
 	"time"
 
+	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
 	"go.uber.org/cadence"
 	"go.uber.org/cadence/workflow"
 )
 
 type ActivityParams struct {
-	RunId, WkflId, Reqstr string
+	RunId, WkflId, Reqstr, Type, Status string
 }
 
 type RunActivityParams struct {
@@ -52,18 +54,14 @@ func GetRunWorkflowIds(ctx workflow.Context, runId, wkflId string) (string, stri
 	return runId, wkflId
 }
 
-func ExecuteCreateRunActivity(ctx workflow.Context, params *RunActivityParams) (*models.RequestInfo, error) {
+func ExecuteCreateRunActivity(ctx workflow.Context, params *models.RunParams) (*models.RequestInfo, error) {
 	// setup activity options
 	ao := DefaultActivityOptions()
 
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
 	var resp *models.RequestInfo
-	err := workflow.ExecuteActivity(ctx, CreateRunActivityName, &models.RequestInfo{
-		RunId:       params.RunId,
-		WorkflowId:  params.WkflId,
-		RequestedBy: params.Reqstr,
-	}).Get(ctx, &resp)
+	err := workflow.ExecuteActivity(ctx, CreateRunActivityName, params).Get(ctx, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -71,19 +69,14 @@ func ExecuteCreateRunActivity(ctx workflow.Context, params *RunActivityParams) (
 	return resp, nil
 }
 
-func ExecuteUpdateRunActivity(ctx workflow.Context, params *RunActivityParams) (*models.RequestInfo, error) {
+func ExecuteUpdateRunActivity(ctx workflow.Context, params *models.RunParams) (*models.RequestInfo, error) {
 	// setup activity options
 	ao := DefaultActivityOptions()
 
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
 	var resp *models.RequestInfo
-	err := workflow.ExecuteActivity(ctx, UpdateRunActivityName, &models.RequestInfo{
-		RunId:       params.RunId,
-		WorkflowId:  params.WkflId,
-		Status:      params.Status,
-		RequestedBy: params.Reqstr,
-	}).Get(ctx, &resp)
+	err := workflow.ExecuteActivity(ctx, UpdateRunActivityName, params).Get(ctx, &resp)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +84,7 @@ func ExecuteUpdateRunActivity(ctx workflow.Context, params *RunActivityParams) (
 	return resp, nil
 }
 
-func ExecuteUpdateFileRunActivity(ctx workflow.Context, req *models.RequestInfo) (*models.RequestInfo, error) {
+func ExecuteUpdateFileRunActivity(ctx workflow.Context, req *models.RunParams) (*models.RequestInfo, error) {
 	// setup activity options
 	ao := DefaultActivityOptions()
 
@@ -104,4 +97,31 @@ func ExecuteUpdateFileRunActivity(ctx workflow.Context, req *models.RequestInfo)
 	}
 
 	return resp, nil
+}
+
+func ExecuteSearchRunActivity(ctx workflow.Context, params *models.RunParams) ([]*api.WorkflowRun, error) {
+	fmt.Println("ExecuteSearchRunActivity started, params", params)
+	// setup activity options
+	ao := DefaultActivityOptions()
+	ao.RetryPolicy = &cadence.RetryPolicy{
+		InitialInterval:    time.Second,
+		BackoffCoefficient: 2.0,
+		MaximumInterval:    time.Minute,
+		ExpirationInterval: time.Minute * 2,
+		MaximumAttempts:    10,
+		NonRetriableErrorReasons: []string{
+			ERR_MISSING_SCHEDULER_CLIENT,
+			ERR_SEARCH_RUN,
+		},
+	}
+
+	ctx = workflow.WithActivityOptions(ctx, ao)
+
+	var runs []*api.WorkflowRun
+	err := workflow.ExecuteActivity(ctx, SearchRunActivityName, params).Get(ctx, &runs)
+	if err != nil {
+		return nil, err
+	}
+
+	return runs, nil
 }

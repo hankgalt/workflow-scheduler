@@ -29,10 +29,11 @@ var (
 
 type SchedulerService interface {
 	// workflow run
-	CreateRun(ctx context.Context, params *models.RunUpdateParams) (*models.WorkflowRun, error)
-	UpdateRun(ctx context.Context, params *models.RunUpdateParams) (*models.WorkflowRun, error)
-	GetRun(ctx context.Context, params *models.RunUpdateParams) (*models.WorkflowRun, error)
+	CreateRun(ctx context.Context, params *models.RunParams) (*models.WorkflowRun, error)
+	UpdateRun(ctx context.Context, params *models.RunParams) (*models.WorkflowRun, error)
+	GetRun(ctx context.Context, params *models.RunParams) (*models.WorkflowRun, error)
 	DeleteRun(ctx context.Context, runId string) error
+	SearchRuns(ctx context.Context, searchBy *models.RunParams) ([]*models.WorkflowRun, error)
 	// entities
 	AddAgent(ctx context.Context, ba *models.BusinessAgent) (*models.BusinessAgent, error)
 	DeleteAgent(ctx context.Context, id string) error

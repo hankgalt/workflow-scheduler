@@ -2,8 +2,6 @@ package scheduler
 
 import (
 	"context"
-	"encoding/base64"
-	"math"
 
 	"github.com/comfforts/errors"
 	gomysql "github.com/go-sql-driver/mysql"
@@ -34,38 +32,13 @@ func (bs *schedulerService) AddAgent(ctx context.Context, ba *models.BusinessAge
 	if res.Error != nil {
 		if driverErr, ok := res.Error.(*gomysql.MySQLError); ok {
 			if driverErr.Number == 1062 {
-				ba.ID = encodeAgentEntityId(ctx, ba)
-				res = bs.db.WithContext(ctx).Create(ba)
-
-				if res.Error != nil {
-					if driverErr, ok = res.Error.(*gomysql.MySQLError); ok {
-						if driverErr.Number == 1062 {
-							return nil, ErrDuplicateAgent
-						}
-					}
-				} else {
-					return ba, nil
-				}
+				return nil, ErrDuplicateAgent
 			}
 		}
 
 		return nil, errors.WrapError(res.Error, ERR_AGENT_ADD)
 	}
 	return ba, nil
-}
-
-func encodeAgentEntityId(ctx context.Context, ba *models.BusinessAgent) string {
-	tag := ""
-	if ba.FirstName != "" {
-		tag = tag + ba.FirstName
-	}
-
-	if ba.AgentType != "" {
-		tag = tag + ba.AgentType
-	}
-
-	encoded := base64.StdEncoding.EncodeToString([]byte(tag))
-	return ba.ID + encoded
 }
 
 func (bs *schedulerService) DeleteAgent(ctx context.Context, id string) error {
@@ -85,37 +58,12 @@ func (bs *schedulerService) AddPrincipal(ctx context.Context, bp *models.Busines
 	if res.Error != nil {
 		if driverErr, ok := res.Error.(*gomysql.MySQLError); ok {
 			if driverErr.Number == 1062 {
-				bp.ID = encodePrincipalEntityId(ctx, bp)
-				res := bs.db.WithContext(ctx).Create(bp)
-
-				if res.Error != nil {
-					if driverErr, ok := res.Error.(*gomysql.MySQLError); ok {
-						if driverErr.Number == 1062 {
-							return nil, ErrDuplicatePrincipal
-						}
-					}
-				} else {
-					return bp, nil
-				}
+				return nil, ErrDuplicatePrincipal
 			}
 		}
 		return nil, errors.WrapError(res.Error, ERR_PRINCIPAL_ADD)
 	}
 	return bp, nil
-}
-
-func encodePrincipalEntityId(ctx context.Context, bp *models.BusinessPrincipal) string {
-	tag := ""
-	if bp.FirstName != "" {
-		tag = tag + bp.FirstName
-	}
-
-	if bp.PositionType != "" {
-		tag = tag + bp.PositionType
-	}
-
-	encoded := base64.StdEncoding.EncodeToString([]byte(tag))
-	return bp.ID + encoded
 }
 
 func (bs *schedulerService) DeletePrincipal(ctx context.Context, id string) error {
@@ -135,34 +83,12 @@ func (bs *schedulerService) AddFiling(ctx context.Context, bf *models.BusinessFi
 	if res.Error != nil {
 		if driverErr, ok := res.Error.(*gomysql.MySQLError); ok {
 			if driverErr.Number == 1062 {
-				bf.ID = encodeFilingEntityId(ctx, bf)
-				res = bs.db.WithContext(ctx).Create(bf)
-
-				if res.Error != nil {
-					if driverErr, ok = res.Error.(*gomysql.MySQLError); ok {
-						if driverErr.Number == 1062 {
-							return nil, ErrDuplicateFiling
-						}
-					}
-				} else {
-					return bf, nil
-				}
+				return nil, ErrDuplicateFiling
 			}
 		}
 		return nil, errors.WrapError(res.Error, ERR_FILING_ADD)
 	}
 	return bf, nil
-}
-
-func encodeFilingEntityId(ctx context.Context, bf *models.BusinessFiling) string {
-	tag := ""
-	if bf.EntityName != "" {
-		n := math.Min(float64(len(bf.EntityName)), 10)
-		tag = tag + bf.EntityName[:int(n)]
-	}
-
-	encoded := base64.StdEncoding.EncodeToString([]byte(tag))
-	return bf.ID + encoded
 }
 
 func (bs *schedulerService) DeleteFiling(ctx context.Context, id string) error {

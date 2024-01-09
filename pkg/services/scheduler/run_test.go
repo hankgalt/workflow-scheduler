@@ -28,7 +28,8 @@ func TestWorkflowCRUD(t *testing.T) {
 		t *testing.T,
 		ss scheduler.SchedulerService,
 	){
-		"workflow run CRUD, succeeds": testWorkflowRunCRUD,
+		"workflow run CRUD, succeeds":   testWorkflowRunCRUD,
+		"workflow run search, succeeds": testWorkflowRunSearch,
 	} {
 		t.Run(scenario, func(t *testing.T) {
 			ss, teardown := setupAPITests(t, l)
@@ -86,7 +87,7 @@ func testWorkflowRunCRUD(t *testing.T, ss scheduler.SchedulerService) {
 	defer cancel1()
 
 	requester := "test-create-run@gmail.com"
-	wfRun, err := ss.CreateRun(ctx, &models.RunUpdateParams{
+	wfRun, err := ss.CreateRun(ctx, &models.RunParams{
 		WorkflowId:  "T3s73k7l0w",
 		RunId:       "T3s7Ru41d",
 		RequestedBy: requester,
@@ -94,7 +95,7 @@ func testWorkflowRunCRUD(t *testing.T, ss scheduler.SchedulerService) {
 	require.NoError(t, err)
 	require.Equal(t, wfRun.Status, string(models.STARTED))
 
-	wfRun, err = ss.UpdateRun(ctx, &models.RunUpdateParams{
+	wfRun, err = ss.UpdateRun(ctx, &models.RunParams{
 		WorkflowId:  wfRun.WorkflowId,
 		RunId:       wfRun.RunId,
 		Status:      string(models.UPLOADED),
@@ -104,5 +105,49 @@ func testWorkflowRunCRUD(t *testing.T, ss scheduler.SchedulerService) {
 	require.Equal(t, wfRun.Status, string(models.UPLOADED))
 
 	err = ss.DeleteRun(ctx, wfRun.RunId)
+	require.NoError(t, err)
+}
+
+func testWorkflowRunSearch(t *testing.T, ss scheduler.SchedulerService) {
+	t.Helper()
+
+	ctx, cancel1 := context.WithCancel(context.Background())
+	defer cancel1()
+
+	requester := "test-search-run@gmail.com"
+	wfRun, err := ss.CreateRun(ctx, &models.RunParams{
+		WorkflowId:  "T3s73k7l0w",
+		RunId:       "T3s7Ru41d",
+		RequestedBy: requester,
+	})
+	require.NoError(t, err)
+	require.Equal(t, wfRun.Status, string(models.STARTED))
+
+	runType := "fileSignalWorkflow"
+	fileWfRun, err := ss.CreateRun(ctx, &models.RunParams{
+		WorkflowId:  "N3s73k7l0w",
+		RunId:       "N3s7Ru41d",
+		RequestedBy: requester,
+		Type:        runType,
+	})
+	require.NoError(t, err)
+	require.Equal(t, wfRun.Status, string(models.STARTED))
+
+	runs, err := ss.SearchRuns(ctx, &models.RunParams{
+		WorkflowId: wfRun.WorkflowId,
+	})
+	require.NoError(t, err)
+	require.Equal(t, len(runs), 1)
+
+	runs, err = ss.SearchRuns(ctx, &models.RunParams{
+		Type: runType,
+	})
+	require.NoError(t, err)
+	require.Equal(t, len(runs), 1)
+
+	err = ss.DeleteRun(ctx, wfRun.RunId)
+	require.NoError(t, err)
+
+	err = ss.DeleteRun(ctx, fileWfRun.RunId)
 	require.NoError(t, err)
 }

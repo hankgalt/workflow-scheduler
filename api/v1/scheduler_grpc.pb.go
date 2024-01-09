@@ -26,6 +26,7 @@ type SchedulerClient interface {
 	UpdateRun(ctx context.Context, in *UpdateRunRequest, opts ...grpc.CallOption) (*RunResponse, error)
 	GetRun(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunResponse, error)
 	DeleteRun(ctx context.Context, in *DeleteRunRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	SearchRuns(ctx context.Context, in *SearchRunRequest, opts ...grpc.CallOption) (*RunsResponse, error)
 	AddEntity(ctx context.Context, in *AddEntityRequest, opts ...grpc.CallOption) (*AddEntityResponse, error)
 	DeleteEntity(ctx context.Context, in *DeleteEntityRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	AddBusinessEntities(ctx context.Context, opts ...grpc.CallOption) (Scheduler_AddBusinessEntitiesClient, error)
@@ -69,6 +70,15 @@ func (c *schedulerClient) GetRun(ctx context.Context, in *RunRequest, opts ...gr
 func (c *schedulerClient) DeleteRun(ctx context.Context, in *DeleteRunRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
 	out := new(DeleteResponse)
 	err := c.cc.Invoke(ctx, "/scheduler.v1.Scheduler/DeleteRun", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *schedulerClient) SearchRuns(ctx context.Context, in *SearchRunRequest, opts ...grpc.CallOption) (*RunsResponse, error) {
+	out := new(RunsResponse)
+	err := c.cc.Invoke(ctx, "/scheduler.v1.Scheduler/SearchRuns", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +142,7 @@ type SchedulerServer interface {
 	UpdateRun(context.Context, *UpdateRunRequest) (*RunResponse, error)
 	GetRun(context.Context, *RunRequest) (*RunResponse, error)
 	DeleteRun(context.Context, *DeleteRunRequest) (*DeleteResponse, error)
+	SearchRuns(context.Context, *SearchRunRequest) (*RunsResponse, error)
 	AddEntity(context.Context, *AddEntityRequest) (*AddEntityResponse, error)
 	DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteResponse, error)
 	AddBusinessEntities(Scheduler_AddBusinessEntitiesServer) error
@@ -153,6 +164,9 @@ func (UnimplementedSchedulerServer) GetRun(context.Context, *RunRequest) (*RunRe
 }
 func (UnimplementedSchedulerServer) DeleteRun(context.Context, *DeleteRunRequest) (*DeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteRun not implemented")
+}
+func (UnimplementedSchedulerServer) SearchRuns(context.Context, *SearchRunRequest) (*RunsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SearchRuns not implemented")
 }
 func (UnimplementedSchedulerServer) AddEntity(context.Context, *AddEntityRequest) (*AddEntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddEntity not implemented")
@@ -248,6 +262,24 @@ func _Scheduler_DeleteRun_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Scheduler_SearchRuns_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchRunRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SchedulerServer).SearchRuns(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/scheduler.v1.Scheduler/SearchRuns",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SchedulerServer).SearchRuns(ctx, req.(*SearchRunRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Scheduler_AddEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AddEntityRequest)
 	if err := dec(in); err != nil {
@@ -332,6 +364,10 @@ var Scheduler_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteRun",
 			Handler:    _Scheduler_DeleteRun_Handler,
+		},
+		{
+			MethodName: "SearchRuns",
+			Handler:    _Scheduler_SearchRuns_Handler,
 		},
 		{
 			MethodName: "AddEntity",

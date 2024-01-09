@@ -95,7 +95,6 @@ require (
 )
 
 require (
-	github.com/comfforts/localstorage v0.1.10
 	github.com/m3db/prometheus_client_golang v0.8.1
 	github.com/m3db/prometheus_client_model v0.1.0 // indirect
 	github.com/m3db/prometheus_common v0.1.0 // indirect

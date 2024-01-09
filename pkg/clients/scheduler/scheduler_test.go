@@ -28,20 +28,21 @@ func TestSchedulerClient(t *testing.T) {
 
 	for scenario, fn := range map[string]func(
 		t *testing.T,
-		bc scheduler.Client,
+		sc scheduler.Client,
 	){
-		"test workflow CRUD, succeeds": testWorkflowCRUD,
+		"test workflow CRUD, succeeds":   testWorkflowCRUD,
+		"test workflow search, succeeds": testWorkflowSearch,
 	} {
 		t.Run(scenario, func(t *testing.T) {
-			bc, teardown := setup(t, l)
+			sc, teardown := setup(t, l)
 			defer teardown()
-			fn(t, bc)
+			fn(t, sc)
 		})
 	}
 }
 
 func setup(t *testing.T, l logger.AppLogger) (
-	bc scheduler.Client,
+	sc scheduler.Client,
 	teardown func(),
 ) {
 	t.Helper()
@@ -49,24 +50,24 @@ func setup(t *testing.T, l logger.AppLogger) (
 	clientOpts := scheduler.NewDefaultClientOption()
 	clientOpts.Caller = "scheduler-client-test"
 
-	dc, err := scheduler.NewClient(l, clientOpts)
+	sc, err := scheduler.NewClient(l, clientOpts)
 	require.NoError(t, err)
 
-	return dc, func() {
+	return sc, func() {
 		t.Logf(" %s ended, will close deliveries client", t.Name())
-		err := dc.Close()
+		err := sc.Close()
 		require.NoError(t, err)
 	}
 }
 
-func testWorkflowCRUD(t *testing.T, bc scheduler.Client) {
+func testWorkflowCRUD(t *testing.T, sc scheduler.Client) {
 	t.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	requester := "test-create-run@gmail.com"
-	wfRun, err := bc.CreateRun(ctx, &api.RunRequest{
+	wfRun, err := sc.CreateRun(ctx, &api.RunRequest{
 		WorkflowId:  "S3r43r-T3s73k7l0w",
 		RunId:       "S3r43r-T3s7Ru41d",
 		RequestedBy: requester,
@@ -74,7 +75,7 @@ func testWorkflowCRUD(t *testing.T, bc scheduler.Client) {
 	require.NoError(t, err)
 	require.Equal(t, wfRun.Run.Status, "STARTED")
 
-	wfRun, err = bc.UpdateRun(ctx, &api.UpdateRunRequest{
+	wfRun, err = sc.UpdateRun(ctx, &api.UpdateRunRequest{
 		WorkflowId: wfRun.Run.WorkflowId,
 		RunId:      wfRun.Run.RunId,
 		Status:     "UPLOADED",
@@ -82,14 +83,63 @@ func testWorkflowCRUD(t *testing.T, bc scheduler.Client) {
 	require.NoError(t, err)
 	require.Equal(t, wfRun.Run.Status, string("UPLOADED"))
 
-	wfRun, err = bc.GetRun(ctx, &api.RunRequest{
+	wfRun, err = sc.GetRun(ctx, &api.RunRequest{
 		RunId: wfRun.Run.RunId,
 	})
 	require.NoError(t, err)
 	require.Equal(t, wfRun.Run.Status, string("UPLOADED"))
 
-	resp, err := bc.DeleteRun(ctx, &api.DeleteRunRequest{
+	resp, err := sc.DeleteRun(ctx, &api.DeleteRunRequest{
 		Id: wfRun.Run.RunId,
+	})
+	require.NoError(t, err)
+	require.Equal(t, resp.Ok, true)
+}
+
+func testWorkflowSearch(t *testing.T, sc scheduler.Client) {
+	t.Helper()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	requester := "test-search-run@gmail.com"
+	wfRun, err := sc.CreateRun(ctx, &api.RunRequest{
+		WorkflowId:  "S3r43r-T3s73k7l0w",
+		RunId:       "S3r43r-T3s7Ru41d",
+		RequestedBy: requester,
+	})
+	require.NoError(t, err)
+	require.Equal(t, wfRun.Run.Status, "STARTED")
+
+	rsResp, err := sc.SearchRuns(ctx, &api.SearchRunRequest{
+		WorkflowId: wfRun.Run.WorkflowId,
+	})
+	require.NoError(t, err)
+	require.Equal(t, len(rsResp.Runs), 1)
+
+	runType := "fileSignalWorkflow"
+	rResp, err := sc.CreateRun(ctx, &api.RunRequest{
+		WorkflowId:  "N3s73k7l0w",
+		RunId:       "N3s7Ru41d",
+		RequestedBy: requester,
+		Type:        runType,
+	})
+	require.NoError(t, err)
+
+	rsResp, err = sc.SearchRuns(ctx, &api.SearchRunRequest{
+		Type: runType,
+	})
+	require.NoError(t, err)
+	require.Equal(t, len(rsResp.Runs), 1)
+
+	resp, err := sc.DeleteRun(ctx, &api.DeleteRunRequest{
+		Id: wfRun.Run.RunId,
+	})
+	require.NoError(t, err)
+	require.Equal(t, resp.Ok, true)
+
+	resp, err = sc.DeleteRun(ctx, &api.DeleteRunRequest{
+		Id: rResp.Run.RunId,
 	})
 	require.NoError(t, err)
 	require.Equal(t, resp.Ok, true)

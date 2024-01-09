@@ -27,8 +27,6 @@ type FileWorkflowTestSuite struct {
 	testsuite.WorkflowTestSuite
 
 	env *testsuite.TestWorkflowEnvironment
-
-	cloudClient cloud.Client
 }
 
 func TestFileWorkflowTestSuite(t *testing.T) {
@@ -41,12 +39,16 @@ func (s *FileWorkflowTestSuite) SetupTest() {
 	s.env.RegisterWorkflow(fiwkfl.UploadFileWorkflow)
 	s.env.RegisterWorkflow(fiwkfl.DownloadFileWorkflow)
 	s.env.RegisterWorkflow(fiwkfl.DeleteFileWorkflow)
+	s.env.RegisterWorkflow(fiwkfl.FileSignalWorkflow)
 
 	s.env.RegisterActivityWithOptions(common.CreateRunActivity, activity.RegisterOptions{
 		Name: common.CreateRunActivityName,
 	})
 	s.env.RegisterActivityWithOptions(common.UpdateRunActivity, activity.RegisterOptions{
 		Name: common.UpdateRunActivityName,
+	})
+	s.env.RegisterActivityWithOptions(common.SearchRunActivity, activity.RegisterOptions{
+		Name: common.SearchRunActivityName,
 	})
 	s.env.RegisterActivityWithOptions(fiwkfl.UploadFileActivity, activity.RegisterOptions{
 		Name: fiwkfl.UploadFileActivityName,
@@ -70,7 +72,6 @@ func (s *FileWorkflowTestSuite) SetupTest() {
 		l.Error(fiwkfl.ERR_CLOUD_CLIENT_INIT, zap.Error(err))
 		panic(err)
 	}
-	s.cloudClient = cloudClient
 
 	bucket := os.Getenv("BUCKET")
 	if bucket == "" {
@@ -95,9 +96,6 @@ func (s *FileWorkflowTestSuite) SetupTest() {
 
 func (s *FileWorkflowTestSuite) TearDownTest() {
 	s.env.AssertExpectations(s.T())
-
-	err := s.cloudClient.Close()
-	s.NoError(err)
 
 	// err := os.RemoveAll(TEST_DIR)
 	// s.NoError(err)

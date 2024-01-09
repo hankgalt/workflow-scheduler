@@ -116,7 +116,7 @@ func downloadFile(ctx workflow.Context, req *models.RequestInfo) (*models.Reques
 	req.RunId = workflow.GetInfo(ctx).WorkflowExecution.RunID
 	req.WorkflowId = workflow.GetInfo(ctx).WorkflowExecution.ID
 
-	// get csv header
+	// download file
 	req, err = ExecuteDownloadFileActivity(sessionCtx, req)
 	if err != nil {
 		l.Error("DownloadFileWorkflow - error dowloading file", zap.String("error", err.Error()))
