@@ -27,6 +27,7 @@ const (
 	ERR_MISSING_SCHEDULER_CLIENT = "workflow context missing scheduler grpc client"
 	ERR_SCH_CLIENT_INIT          = "error initializing scheduler client"
 	ERR_SCH_CLIENT_CLOSE         = "error closing scheduler client"
+	ERR_QUERY_HANDLER            = "error setiing up state query handler"
 )
 
 var (

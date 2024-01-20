@@ -30,6 +30,8 @@ type SchedulerClient interface {
 	AddEntity(ctx context.Context, in *AddEntityRequest, opts ...grpc.CallOption) (*AddEntityResponse, error)
 	DeleteEntity(ctx context.Context, in *DeleteEntityRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	AddBusinessEntities(ctx context.Context, opts ...grpc.CallOption) (Scheduler_AddBusinessEntitiesClient, error)
+	ProcessFileSignalWorkflow(ctx context.Context, in *FileSignalRequest, opts ...grpc.CallOption) (*RunResponse, error)
+	QueryWorkflowState(ctx context.Context, in *QueryWorkflowRequest, opts ...grpc.CallOption) (*QueryWorkflowResponse, error)
 }
 
 type schedulerClient struct {
@@ -134,6 +136,24 @@ func (x *schedulerAddBusinessEntitiesClient) Recv() (*StreamAddEntityResponse, e
 	return m, nil
 }
 
+func (c *schedulerClient) ProcessFileSignalWorkflow(ctx context.Context, in *FileSignalRequest, opts ...grpc.CallOption) (*RunResponse, error) {
+	out := new(RunResponse)
+	err := c.cc.Invoke(ctx, "/scheduler.v1.Scheduler/ProcessFileSignalWorkflow", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *schedulerClient) QueryWorkflowState(ctx context.Context, in *QueryWorkflowRequest, opts ...grpc.CallOption) (*QueryWorkflowResponse, error) {
+	out := new(QueryWorkflowResponse)
+	err := c.cc.Invoke(ctx, "/scheduler.v1.Scheduler/QueryWorkflowState", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SchedulerServer is the server API for Scheduler service.
 // All implementations must embed UnimplementedSchedulerServer
 // for forward compatibility
@@ -146,6 +166,8 @@ type SchedulerServer interface {
 	AddEntity(context.Context, *AddEntityRequest) (*AddEntityResponse, error)
 	DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteResponse, error)
 	AddBusinessEntities(Scheduler_AddBusinessEntitiesServer) error
+	ProcessFileSignalWorkflow(context.Context, *FileSignalRequest) (*RunResponse, error)
+	QueryWorkflowState(context.Context, *QueryWorkflowRequest) (*QueryWorkflowResponse, error)
 	mustEmbedUnimplementedSchedulerServer()
 }
 
@@ -176,6 +198,12 @@ func (UnimplementedSchedulerServer) DeleteEntity(context.Context, *DeleteEntityR
 }
 func (UnimplementedSchedulerServer) AddBusinessEntities(Scheduler_AddBusinessEntitiesServer) error {
 	return status.Errorf(codes.Unimplemented, "method AddBusinessEntities not implemented")
+}
+func (UnimplementedSchedulerServer) ProcessFileSignalWorkflow(context.Context, *FileSignalRequest) (*RunResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessFileSignalWorkflow not implemented")
+}
+func (UnimplementedSchedulerServer) QueryWorkflowState(context.Context, *QueryWorkflowRequest) (*QueryWorkflowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method QueryWorkflowState not implemented")
 }
 func (UnimplementedSchedulerServer) mustEmbedUnimplementedSchedulerServer() {}
 
@@ -342,6 +370,42 @@ func (x *schedulerAddBusinessEntitiesServer) Recv() (*AddEntityRequest, error) {
 	return m, nil
 }
 
+func _Scheduler_ProcessFileSignalWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FileSignalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SchedulerServer).ProcessFileSignalWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/scheduler.v1.Scheduler/ProcessFileSignalWorkflow",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SchedulerServer).ProcessFileSignalWorkflow(ctx, req.(*FileSignalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Scheduler_QueryWorkflowState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SchedulerServer).QueryWorkflowState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/scheduler.v1.Scheduler/QueryWorkflowState",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SchedulerServer).QueryWorkflowState(ctx, req.(*QueryWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Scheduler_ServiceDesc is the grpc.ServiceDesc for Scheduler service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -376,6 +440,14 @@ var Scheduler_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteEntity",
 			Handler:    _Scheduler_DeleteEntity_Handler,
+		},
+		{
+			MethodName: "ProcessFileSignalWorkflow",
+			Handler:    _Scheduler_ProcessFileSignalWorkflow_Handler,
+		},
+		{
+			MethodName: "QueryWorkflowState",
+			Handler:    _Scheduler_QueryWorkflowState_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

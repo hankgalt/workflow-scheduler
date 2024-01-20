@@ -11,7 +11,6 @@ import (
 
 	"github.com/comfforts/logger"
 
-	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
 	bizwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/business"
 )
@@ -24,7 +23,7 @@ func (s *BusinessWorkflowTestSuite) Test_ProcessCSVWorkflow_Agent() {
 	req := &models.CSVInfo{
 		FileName:    filePath,
 		RequestedBy: reqstr,
-		Type:        api.EntityType_AGENT,
+		Type:        models.AGENT,
 	}
 
 	expectedCall := []string{
@@ -112,7 +111,7 @@ func (s *BusinessWorkflowTestSuite) Test_ProcessCSVWorkflow_Principal() {
 	req := &models.CSVInfo{
 		FileName:    filePath,
 		RequestedBy: reqstr,
-		Type:        api.EntityType_PRINCIPAL,
+		Type:        models.PRINCIPAL,
 	}
 
 	expectedCall := []string{
@@ -200,7 +199,7 @@ func (s *BusinessWorkflowTestSuite) Test_ProcessCSVWorkflow_Filing() {
 	req := &models.CSVInfo{
 		FileName:    filePath,
 		RequestedBy: reqstr,
-		Type:        api.EntityType_FILING,
+		Type:        models.FILING,
 	}
 
 	expectedCall := []string{

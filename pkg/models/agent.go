@@ -9,6 +9,15 @@ import (
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
 )
 
+type EntityType string
+
+const (
+	AGENT     EntityType = "AGENT"
+	PRINCIPAL EntityType = "PRINCIPAL"
+	FILING    EntityType = "FILING"
+	UNKNOWN   EntityType = "UNKNOWN"
+)
+
 type BusinessAgent struct {
 	ID              string `gorm:"primary_key;not null"`
 	CreatedAt       time.Time
@@ -76,5 +85,31 @@ func MapAgentModelToProto(ag *BusinessAgent) *api.BusinessAgent {
 		LastName:   ag.LastName,
 		Address:    ag.PhysicalAddress,
 		AgentType:  ag.AgentType,
+	}
+}
+
+func MapEntityTypeToProto(et EntityType) api.EntityType {
+	switch et {
+	case AGENT:
+		return 0
+	case PRINCIPAL:
+		return 1
+	case FILING:
+		return 2
+	default:
+		return 3
+	}
+}
+
+func MapProtoToEntityType(et api.EntityType) EntityType {
+	switch et {
+	case api.EntityType_AGENT:
+		return AGENT
+	case api.EntityType_PRINCIPAL:
+		return PRINCIPAL
+	case api.EntityType_FILING:
+		return FILING
+	default:
+		return UNKNOWN
 	}
 }

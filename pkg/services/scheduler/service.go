@@ -41,6 +41,9 @@ type SchedulerService interface {
 	DeletePrincipal(ctx context.Context, id string) error
 	AddFiling(ctx context.Context, bf *models.BusinessFiling) (*models.BusinessFiling, error)
 	DeleteFiling(ctx context.Context, id string) error
+	// workflows
+	ProcessFileSignalWorkflow(ctx context.Context, params *models.FileSignalParams) (*models.WorkflowRun, error)
+	QueryWorkflowState(ctx context.Context, params *models.WorkflowQueryParams) (interface{}, error)
 	Close() error
 }
 

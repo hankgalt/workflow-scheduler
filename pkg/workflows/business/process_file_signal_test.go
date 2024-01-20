@@ -40,7 +40,7 @@ func (s *BusinessWorkflowTestSuite) TestProcessFileSignalWorkflow() {
 	req := &models.CSVInfo{
 		FileName:    filePath,
 		RequestedBy: reqstr,
-		Type:        api.EntityType_AGENT,
+		Type:        models.AGENT,
 	}
 
 	expectedCall := []string{
@@ -150,7 +150,7 @@ func (s *BusinessWorkflowTestSuite) TestFileSignalWorkflowExistingRun() {
 	req := &models.CSVInfo{
 		FileName:    filePath,
 		RequestedBy: reqstr,
-		Type:        api.EntityType_AGENT,
+		Type:        models.AGENT,
 	}
 
 	sOpts := scheduler.NewDefaultClientOption()
@@ -257,6 +257,16 @@ func (s *BusinessWorkflowTestSuite) TestFileSignalWorkflowExistingRun() {
 	}()
 
 	s.env.ExecuteWorkflow(bizwkfl.ProcessFileSignalWorkflow, req)
+
+	result, err := s.env.QueryWorkflow("state")
+	s.NoError(err)
+	var state models.CSVInfo
+	err = result.Get(&state)
+	s.NoError(err)
+	// require.Equal(t, expectedState, state)
+	fmt.Println()
+	l.Debug("Test_FileSignalWorkflow_ExistingRun state", zap.Any("state", state))
+	fmt.Println()
 
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())

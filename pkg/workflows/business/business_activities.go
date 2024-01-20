@@ -210,7 +210,7 @@ func GetCSVHeadersActivity(ctx context.Context, req *models.CSVInfo) (*models.CS
 	if err != nil {
 		return req, cadence.NewCustomError(common.ERR_MISSING_FILE, err)
 	}
-	req.FileSize = fs.Size()
+	req.FileSize = int64(fs.Size())
 
 	csvReader := csv.NewReader(file)
 	csvReader.Comma = '|'
@@ -436,7 +436,7 @@ func ReadCSVActivity(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo,
 							l.Info("adding business entity", zap.Any("type", req.Type), zap.Any("fields", fields))
 							if _, err := schClient.AddEntity(ctx, &api.AddEntityRequest{
 								Fields: fields,
-								Type:   req.Type,
+								Type:   models.MapEntityTypeToProto(req.Type),
 							}); err == nil {
 								// l.Info("business entity added", zap.Any("type", req.Type), zap.Any("agent", resp.GetAgent()))
 								resultCount++

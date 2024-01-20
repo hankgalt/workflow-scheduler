@@ -1,5 +1,6 @@
 # Cadence.io based workflow scheduler
 
+### Local setup
 - setup db scripts
 - `make start-db`
 - `make start-server`
@@ -8,6 +9,18 @@
 - `go mod tidy -go=1.16 && go mod tidy -go=1.17`
 - build proto - `make build-proto`
 
+### Install cadence cli
+- `git clone https://github.com/uber/cadence.git`
+- `cd cadence && make bins`
+- `./cadence --help`
+- `sudo cp ./cadence /usr/local/bin/`
+- `cadence --help`
+
+- register cadence domain
+    - `make register-domain`
+- add worker, local & test env configs in `env/` folder
+- start worker
+- `make start-worker TARGET=<business|file|shop>`
 
 
 - https://github.com/uber-go/cadence-client/issues/1107, ringpop-go and tchannel-go depends on older version of thrift, yarpc brings up newer version https://github.com/uber/cadence/blob/d3d06825adcf11c20ec3fc58e329f1d9560bb729/go.mod#L92

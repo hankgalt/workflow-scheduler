@@ -51,3 +51,20 @@ register-domain:
 	@echo "registering scheduler domain"
 	cadence --domain scheduler-domain domain register -rd 1
 	cadence --domain scheduler-domain domain describe
+
+# start scheduler service with docker compose
+.PHONY: start-service
+start-service:
+	@echo "starting scheduler service"
+	docker-compose -f deploy/scheduler/docker-compose-sch.yml up -d
+
+# stop docker composed scheduler service
+.PHONY: stop-service
+stop-service:
+	@echo "starting scheduler service"
+	docker-compose -f deploy/scheduler/docker-compose-sch.yml down
+
+# start worker from local repo
+.PHONY: start-worker
+start-worker:
+	scripts/start-worker.sh ${TARGET}

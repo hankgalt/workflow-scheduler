@@ -11,7 +11,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/comfforts/logger"
-	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	"github.com/hankgalt/workflow-scheduler/pkg/clients/scheduler"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
 	bizwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/business"
@@ -143,7 +142,7 @@ func (s *BusinessWorkflowTestSuite) testGetCSVHeadersActivity(env *testsuite.Tes
 	req := &models.CSVInfo{
 		FileName:    filePath,
 		RequestedBy: reqstr,
-		Type:        api.EntityType_AGENT,
+		Type:        models.AGENT,
 	}
 	resp, err := env.ExecuteActivity(bizwkfl.GetCSVHeadersActivity, req)
 	s.NoError(err)
@@ -165,7 +164,7 @@ func (s *BusinessWorkflowTestSuite) testGetCSVOffsetsActivity(env *testsuite.Tes
 	req := &models.CSVInfo{
 		FileName:    filePath,
 		RequestedBy: reqstr,
-		Type:        api.EntityType_AGENT,
+		Type:        models.AGENT,
 	}
 	resp, err := env.ExecuteActivity(bizwkfl.GetCSVHeadersActivity, req)
 	s.NoError(err)
@@ -196,7 +195,7 @@ func (s *BusinessWorkflowTestSuite) testCSVRead(env *testsuite.TestActivityEnvir
 	req := &models.CSVInfo{
 		FileName:    filePath,
 		RequestedBy: reqstr,
-		Type:        api.EntityType_AGENT,
+		Type:        models.AGENT,
 	}
 	resp, err := env.ExecuteActivity(bizwkfl.GetCSVHeadersActivity, req)
 	s.NoError(err)
@@ -229,7 +228,7 @@ func (s *BusinessWorkflowTestSuite) testForMissingRequestParams(env *testsuite.T
 	reqInfo := &models.CSVInfo{
 		FileName:    "",
 		RequestedBy: reqstr,
-		Type:        api.EntityType_AGENT,
+		Type:        models.AGENT,
 	}
 
 	_, err := env.ExecuteActivity(activityFn, reqInfo)
@@ -242,7 +241,7 @@ func (s *BusinessWorkflowTestSuite) testForMissingRequestParams(env *testsuite.T
 	reqInfo = &models.CSVInfo{
 		FileName:    filePath,
 		RequestedBy: "",
-		Type:        api.EntityType_AGENT,
+		Type:        models.AGENT,
 	}
 	_, err = env.ExecuteActivity(activityFn, reqInfo)
 	s.Error(err)

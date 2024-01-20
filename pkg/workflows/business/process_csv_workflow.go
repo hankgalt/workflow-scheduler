@@ -120,6 +120,14 @@ func processCSV(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, err
 		zap.String("reqstr", req.RequestedBy),
 		zap.Any("type", req.Type))
 
+	// setup query handler for query type "state"
+	if err := workflow.SetQueryHandler(ctx, "state", func(input []byte) (models.CSVInfoState, error) {
+		return models.MapCSVInfoToState(req), nil
+	}); err != nil {
+		l.Info("ProcessCSVWorkflow - SetQueryHandler failed", zap.Error(err))
+		return req, cadence.NewCustomError(common.ERR_QUERY_HANDLER, err)
+	}
+
 	// setup results map
 	if req.Results == nil {
 		req.Results = map[int64]*models.CSVBatchResult{}

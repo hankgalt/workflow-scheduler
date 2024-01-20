@@ -8,7 +8,6 @@ import (
 	"go.uber.org/cadence/workflow"
 	"go.uber.org/zap"
 
-	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
 	"github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 	fiwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/file"
@@ -52,6 +51,9 @@ func ProcessFileSignalWorkflow(ctx workflow.Context, req *models.CSVInfo) (*mode
 				configErr = true
 				return req, err
 			case ERR_MISSING_OFFSETS:
+				configErr = true
+				return req, err
+			case common.ERR_QUERY_HANDLER:
 				configErr = true
 				return req, err
 			default:
@@ -109,6 +111,14 @@ func processFileSignal(ctx workflow.Context, req *models.CSVInfo) (*models.CSVIn
 	sessionCtx = workflow.WithStartToCloseTimeout(sessionCtx, executionDuration)
 	defer workflow.CompleteSession(sessionCtx)
 
+	// setup query handler for query type "state"
+	if err := workflow.SetQueryHandler(ctx, "state", func(input []byte) (models.CSVInfoState, error) {
+		return models.MapCSVInfoToState(req), nil
+	}); err != nil {
+		l.Info("ProcessFileSignalWorkflow - SetQueryHandler failed", zap.Error(err))
+		return req, cadence.NewCustomError(common.ERR_QUERY_HANDLER, err)
+	}
+
 	runId := workflow.GetInfo(ctx).WorkflowExecution.RunID
 	wkflId := workflow.GetInfo(ctx).WorkflowExecution.ID
 	l.Debug("ProcessFileSignalWorkflow - current workflow execution", zap.String("file", req.FileName), zap.String("run-id", runId), zap.String("wkfl-id", wkflId))
@@ -158,8 +168,17 @@ func processFileSignal(ctx workflow.Context, req *models.CSVInfo) (*models.CSVIn
 	cwCtx := workflow.WithChildOptions(sessionCtx, scwo)
 
 	// start CSV processing workflow to process file
-	req.Type = api.EntityType_AGENT
+	// TODO - add support for other entity types
+	req.Type = models.AGENT
 	future := workflow.ExecuteChildWorkflow(cwCtx, ProcessCSVWorkflow, req)
+
+	var childWE workflow.Execution
+	if err := future.GetChildWorkflowExecution().Get(ctx, &childWE); err == nil {
+		l.Debug("ProcessFileSignalWorkflow - ProcessCSVWorkflow started", zap.String("child-wkfl-id", childWE.ID), zap.String("child-wkfl-run-id", childWE.RunID))
+		req.ProcessRunId = childWE.RunID
+		req.ProcessWorkflowId = childWE.ID
+	}
+
 	var resp models.CSVInfo
 	err = future.Get(sessionCtx, &resp)
 	if err != nil {
@@ -168,14 +187,20 @@ func processFileSignal(ctx workflow.Context, req *models.CSVInfo) (*models.CSVIn
 		errCount := 0
 		resultCount := 0
 		recCount := 0
-		for _, v := range req.Results {
+		for _, v := range resp.Results {
 			errCount = errCount + v.ErrCount
 			resultCount = resultCount + v.ResultCount
 			recCount = recCount + v.Count
 		}
+		req.FileSize = resp.FileSize
+		req.OffSets = resp.OffSets
+		req.Headers = resp.Headers
+		req.Results = resp.Results
+		req.HostID = resp.HostID
+
 		l.Debug(
 			"ProcessFileSignalWorkflow - ProcessCSVWorkflow response",
-			zap.Int64("size", req.FileSize),
+			zap.Int64("size", resp.FileSize),
 			zap.Int("batches", len(resp.OffSets)),
 			zap.Int("batches-processed", len(resp.Results)),
 			zap.Int("errCount", errCount),

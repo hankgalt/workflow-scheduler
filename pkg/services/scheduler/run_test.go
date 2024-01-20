@@ -2,9 +2,7 @@ package scheduler_test
 
 import (
 	"context"
-	"fmt"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,22 +38,6 @@ func TestWorkflowCRUD(t *testing.T) {
 
 	err := os.RemoveAll(TEST_DIR)
 	require.NoError(t, err)
-}
-
-func setupEnv(t *testing.T) {
-	t.Helper()
-
-	cPath := os.Getenv("CERTS_PATH")
-	if cPath != "" && !strings.Contains(cPath, "../../../") {
-		cPath = fmt.Sprintf("../%s", cPath)
-	}
-	pPath := os.Getenv("POLICY_PATH")
-	if pPath != "" && !strings.Contains(pPath, "../../../") {
-		pPath = fmt.Sprintf("../%s", pPath)
-	}
-
-	os.Setenv("CERTS_PATH", cPath)
-	os.Setenv("POLICY_PATH", pPath)
 }
 
 func setupAPITests(t *testing.T, l *zap.Logger) (

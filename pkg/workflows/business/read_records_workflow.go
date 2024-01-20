@@ -16,7 +16,6 @@ import (
 	"github.com/comfforts/errors"
 	"github.com/comfforts/logger"
 
-	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
 	"github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 )
@@ -295,11 +294,11 @@ func addEntityAndSignal(
 ) {
 	if fields, err := mapToInterface(req.Headers.Headers, record); err == nil {
 		var activityErr error
-		if req.Type == api.EntityType_AGENT {
+		if req.Type == models.AGENT {
 			_, activityErr = ExecuteAddAgentActivity(ctx, fields)
-		} else if req.Type == api.EntityType_PRINCIPAL {
+		} else if req.Type == models.PRINCIPAL {
 			_, activityErr = ExecuteAddPrincipalActivity(ctx, fields)
-		} else if req.Type == api.EntityType_FILING {
+		} else if req.Type == models.FILING {
 			_, activityErr = ExecuteAddFilingActivity(ctx, fields)
 		} else {
 			activityErr = cadence.NewCustomError(ERR_UNKNOW_ENTITY_TYPE, ErrUnknownEntity)
