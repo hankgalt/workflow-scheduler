@@ -188,9 +188,9 @@ func processFileSignal(ctx workflow.Context, req *models.CSVInfo) (*models.CSVIn
 		resultCount := 0
 		recCount := 0
 		for _, v := range resp.Results {
-			errCount = errCount + v.ErrCount
-			resultCount = resultCount + v.ResultCount
-			recCount = recCount + v.Count
+			errCount = errCount + len(v.Errors)
+			resultCount = resultCount + len(v.Results)
+			recCount = recCount + len(v.Errors) + len(v.Results)
 		}
 		req.FileSize = resp.FileSize
 		req.OffSets = resp.OffSets

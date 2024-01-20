@@ -108,9 +108,8 @@ func ReadCSVRecordsWorkflow(ctx workflow.Context, req *models.ReadRecordsParams)
 		zap.Int("index", req.BatchIndex),
 		zap.Int64("start", req.Start),
 		zap.Int64("end", req.End),
-		zap.Int("count", req.Count),
-		zap.Int("resultCount", req.ResultCount),
-		zap.Int("errCount", req.ErrCount),
+		zap.Any("results", req.Results),
+		zap.Any("errors", req.Errors),
 		zap.String("reqstr", req.RequestedBy))
 	return resp, nil
 }
@@ -185,9 +184,6 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 			// end of file, return
 			return req, nil
 		} else if err != nil {
-			// csv record error, increment read count
-			req.Count++
-
 			// calculate read data size
 			size := csvReader.InputOffset() - offset
 
@@ -239,17 +235,21 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 				addEntityAndSignal(ctx, req, req.Start+offset, size, singleRec, l)
 			} else {
 				// send error signal
-				if sigErr := sendCSVRecordSignal(ctx, req, req.Start+offset, size, nil, err); sigErr != nil {
+				if sigErr := sendCSVRecordSignal(ctx, req, req.Start+offset, size, "", err); sigErr != nil {
 					logCSVErrSigError(sigErr, req, req.Start+offset, size, l)
 				} else {
 					logCSVErrSig(req, req.Start+offset, size, l)
-					req.ErrCount++
+					fmt.Println()
+					fmt.Printf("readCSVRecords() appending error result - error: %s, start: %d, end: %d\n", err.Error(), req.Start+offset, req.Start+offset+size)
+					fmt.Println()
+					req.Errors = append(req.Errors, &models.ErrorResult{
+						Start: req.Start + offset,
+						End:   req.Start + offset + size,
+						Error: err.Error(),
+					})
 				}
 			}
 		} else {
-			// csv record read, increment read count
-			req.Count++
-
 			// calculate read data size
 			size := csvReader.InputOffset() - offset
 
@@ -288,50 +288,72 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 func addEntityAndSignal(
 	ctx workflow.Context,
 	req *models.ReadRecordsParams,
-	start, end int64,
+	start, size int64,
 	record []string,
 	l logger.AppLogger,
 ) {
 	if fields, err := mapToInterface(req.Headers.Headers, record); err == nil {
 		var activityErr error
+		var resultId string
 		if req.Type == models.AGENT {
-			_, activityErr = ExecuteAddAgentActivity(ctx, fields)
+			resultId, activityErr = ExecuteAddAgentActivity(ctx, fields)
 		} else if req.Type == models.PRINCIPAL {
-			_, activityErr = ExecuteAddPrincipalActivity(ctx, fields)
+			resultId, activityErr = ExecuteAddPrincipalActivity(ctx, fields)
 		} else if req.Type == models.FILING {
-			_, activityErr = ExecuteAddFilingActivity(ctx, fields)
+			resultId, activityErr = ExecuteAddFilingActivity(ctx, fields)
 		} else {
 			activityErr = cadence.NewCustomError(ERR_UNKNOW_ENTITY_TYPE, ErrUnknownEntity)
 		}
 
 		if activityErr != nil {
-			logCSVResultEntityError(activityErr, req, start, end, l)
+			logCSVResultEntityError(activityErr, req, start, size, l)
 
 			// send error signal
-			if sigErr := sendCSVRecordSignal(ctx, req, start, end, nil, activityErr); sigErr != nil {
-				logCSVErrSigError(sigErr, req, start, end, l)
+			if sigErr := sendCSVRecordSignal(ctx, req, start, size, "", activityErr); sigErr != nil {
+				logCSVErrSigError(sigErr, req, start, size, l)
 			} else {
-				logCSVErrSig(req, start, end, l)
-				req.ErrCount++
+				logCSVErrSig(req, start, size, l)
+				fmt.Println()
+				fmt.Printf("addEntityAndSignal() appending error result - error: %s, start: %d, end: %d\n", activityErr.Error(), start, start+size)
+				fmt.Println()
+				req.Errors = append(req.Errors, &models.ErrorResult{
+					Start: start,
+					End:   start + size,
+					Error: activityErr.Error(),
+				})
 			}
 		} else {
 			// send result signal
-			if sigErr := sendCSVRecordSignal(ctx, req, start, end, record, nil); sigErr != nil {
-				logCSVResultSigError(sigErr, req, start, end, l)
+			if sigErr := sendCSVRecordSignal(ctx, req, start, size, resultId, nil); sigErr != nil {
+				logCSVResultSigError(sigErr, req, start, size, l)
 			} else {
-				logCSVResultSig(req, start, end, l)
-				req.ResultCount++
+				logCSVResultSig(req, start, size, l)
+				fmt.Println()
+				fmt.Printf("addEntityAndSignal() - appending success result - resultId: %s, start: %d, end: %d\n", resultId, start, start+size)
+				fmt.Println()
+				req.Results = append(req.Results, &models.SuccessResult{
+					Start: start,
+					End:   start + size,
+					Id:    resultId,
+				})
 			}
 		}
 	} else {
-		logCSVResultFieldsError(err, req, start, end, l)
+		logCSVResultFieldsError(err, req, start, size, l)
 
 		// send error signal
-		if sigErr := sendCSVRecordSignal(ctx, req, start, end, nil, err); sigErr != nil {
-			logCSVErrSigError(sigErr, req, start, end, l)
+		if sigErr := sendCSVRecordSignal(ctx, req, start, size, "", err); sigErr != nil {
+			logCSVErrSigError(sigErr, req, start, size, l)
 		} else {
-			logCSVErrSig(req, start, end, l)
-			req.ErrCount++
+			logCSVErrSig(req, start, size, l)
+			fmt.Println()
+			fmt.Printf("addEntityAndSignal() appending error result - error: %s, start: %d, end: %d\n", err.Error(), start, start+size)
+			fmt.Println()
+			req.Errors = append(req.Errors, &models.ErrorResult{
+				Start: start,
+				End:   start + size,
+				Error: err.Error(),
+			})
 		}
 	}
 }
@@ -340,13 +362,9 @@ func sendCSVRecordSignal(
 	ctx workflow.Context,
 	req *models.ReadRecordsParams,
 	start, size int64,
-	record []string,
+	resultId string,
 	err error,
 ) error {
-	fmt.Println()
-	fmt.Printf("ReadCSVRecordsWorkflow - sendCSVRecordSignal runId: %s, workflowId: %s\n", req.RunId, req.WorkflowId)
-	fmt.Println()
-
 	// result & error channel names
 	resultChanName := fmt.Sprintf("%s-csv-result-ch", req.FileName)
 	errChanName := fmt.Sprintf("%s-csv-err-ch", req.FileName)
@@ -361,18 +379,17 @@ func sendCSVRecordSignal(
 			return sigErr
 		}
 		return nil
-	} else if len(record) > 0 {
-		var result interface{}
-		if sigErr := workflow.SignalExternalWorkflow(ctx, req.WorkflowId, req.RunId, resultChanName, &models.CSVResultSignal{
-			Record: record,
-			Start:  start,
-			Size:   size,
-		}).Get(ctx, result); sigErr != nil {
-			return sigErr
-		}
-		return nil
 	}
-	return ErrNoSignalToSend
+
+	var result interface{}
+	if sigErr := workflow.SignalExternalWorkflow(ctx, req.WorkflowId, req.RunId, resultChanName, &models.CSVResultSignal{
+		Id:    resultId,
+		Start: start,
+		Size:  size,
+	}).Get(ctx, result); sigErr != nil {
+		return sigErr
+	}
+	return nil
 }
 
 func logCSVResultSigError(err error, req *models.ReadRecordsParams, start, size int64, l logger.AppLogger) {

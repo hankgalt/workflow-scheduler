@@ -2,11 +2,9 @@ package server
 
 import (
 	"context"
-	"fmt"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
-	structpb "google.golang.org/protobuf/types/known/structpb"
 
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
@@ -46,7 +44,7 @@ func (s *grpcServer) ProcessFileSignalWorkflow(ctx context.Context, req *api.Fil
 	}, nil
 }
 
-func (s *grpcServer) QueryWorkflowState(ctx context.Context, req *api.QueryWorkflowRequest) (*api.QueryWorkflowResponse, error) {
+func (s *grpcServer) QueryFileWorkflowState(ctx context.Context, req *api.QueryWorkflowRequest) (*api.FileWorkflowStateResponse, error) {
 	if err := s.Authorizer.Authorize(
 		subject(ctx),
 		objectWildcard,
@@ -68,7 +66,7 @@ func (s *grpcServer) QueryWorkflowState(ctx context.Context, req *api.QueryWorkf
 			errCode:  codes.FailedPrecondition,
 		})
 
-		return &api.QueryWorkflowResponse{
+		return &api.FileWorkflowStateResponse{
 			Ok: false,
 		}, st.Err()
 	}
@@ -82,33 +80,13 @@ func (s *grpcServer) QueryWorkflowState(ctx context.Context, req *api.QueryWorkf
 			errCode:  codes.FailedPrecondition,
 		})
 
-		return &api.QueryWorkflowResponse{
+		return &api.FileWorkflowStateResponse{
 			Ok: false,
 		}, st.Err()
 	}
 
-	s.Info("queried workflow state", zap.Any("resp", state))
-
-	if state["FileSize"] != nil {
-		fileSize := state["FileSize"]
-		s.Info("queried workflow state", zap.Any("file-size", fileSize))
-		state["FileSize"] = fmt.Sprintf("%v", fileSize)
-	}
-
-	if fields, err := structpb.NewStruct(state); err != nil {
-		st := s.buildError(errorParams{
-			errModel: "workflow",
-			err:      err,
-			errTxt:   "error converting workflow state to struct",
-			errCode:  codes.FailedPrecondition,
-		})
-		return &api.QueryWorkflowResponse{
-			Ok: false,
-		}, st.Err()
-	} else {
-		return &api.QueryWorkflowResponse{
-			Ok:    true,
-			State: fields,
-		}, nil
-	}
+	return &api.FileWorkflowStateResponse{
+		Ok:    true,
+		State: models.MapFileWorkflowStateToProto(state),
+	}, nil
 }

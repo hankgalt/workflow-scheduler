@@ -1,6 +1,5 @@
 syntax = "proto3";
 
-import "google/protobuf/struct.proto";
 import "api/google/rpc/status.proto";
 
 package scheduler.v1;
@@ -152,8 +151,49 @@ message QueryWorkflowRequest {
     string workflowId = 2;
 }
 
-message QueryWorkflowResponse {
-    google.protobuf.Struct state = 1;
+message SuccessResultState {
+    string start = 1;
+    string end = 2;
+    string resultId = 3;
+}
+
+message ErrorResultState {
+    string start = 1;
+    string end = 2;
+    string error = 3;
+}
+
+message HeaderState {
+    repeated string headers = 1;
+    string offset = 2;
+}
+
+message BatchState {
+    string start = 1;
+    string end = 2;
+    string batchIndex = 3;
+    repeated SuccessResultState results = 4;
+    repeated ErrorResultState errors = 5;
+}
+
+
+message FileWorkflowState {
+    string fileName = 1;
+    string requestedBy = 2;
+    string runId = 3;
+    string workflowId = 4;
+    string processRunId = 5;
+    string processWorkflowId = 6;
+    string hostId = 7;
+    string fileSize = 8;
+    string type = 9;
+    HeaderState headers = 10;
+    repeated string offsets = 11;
+    repeated BatchState batches = 12;
+}
+
+message FileWorkflowStateResponse {
+    FileWorkflowState state = 1;
     bool ok = 2;
 }
 
@@ -168,5 +208,5 @@ service Scheduler {
     rpc AddBusinessEntities(stream AddEntityRequest) returns (stream StreamAddEntityResponse) {}
 
     rpc ProcessFileSignalWorkflow(FileSignalRequest) returns (RunResponse) {}
-    rpc QueryWorkflowState(QueryWorkflowRequest) returns (QueryWorkflowResponse) {}
+    rpc QueryFileWorkflowState(QueryWorkflowRequest) returns (FileWorkflowStateResponse) {}
 }

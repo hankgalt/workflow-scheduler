@@ -99,7 +99,6 @@ func readCSV(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, error)
 		hostId = HostID
 	}
 
-	// l.Info("readCSV", zap.String("hostId", hostId), zap.String("HostID", HostID))
 	// check for same host
 	if hostId != HostID {
 		l.Error("ReadCSVWorkflow -  - running on wrong host",
@@ -126,18 +125,6 @@ func readCSV(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, error)
 	}
 
 	executionDuration := common.ONE_DAY
-
-	// so := &workflow.SessionOptions{
-	// 	CreationTimeout:  10 * time.Minute,
-	// 	ExecutionTimeout: executionDuration,
-	// }
-	// sessionCtx, err := workflow.CreateSession(ctx, so)
-	// if err != nil {
-	// 	l.Error(common.ERR_SESSION_CTX, zap.Error(err))
-	// 	return req, cadence.NewCustomError(common.ERR_SESSION_CTX, err)
-	// }
-	// sessionCtx = workflow.WithStartToCloseTimeout(sessionCtx, executionDuration)
-	// defer workflow.CompleteSession(sessionCtx)
 
 	batchBuffer := DEFAULT_BATCH_BUFFER
 	pendingFutures := []workflow.Future{}
@@ -196,12 +183,11 @@ func readCSV(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, error)
 					}
 				} else {
 					req.Results[resp.Start] = &models.CSVBatchResult{
-						BatchIndex:  resp.BatchIndex,
-						Start:       resp.Start,
-						End:         resp.End,
-						Count:       resp.Count,
-						ResultCount: resp.ResultCount,
-						ErrCount:    resp.ErrCount,
+						BatchIndex: resp.BatchIndex,
+						Start:      resp.Start,
+						End:        resp.End,
+						Results:    resp.Results,
+						Errors:     resp.Errors,
 					}
 					if sigErr := sendCSVBatchSignal(ctx, &resp, nil); sigErr != nil {
 						l.Error(

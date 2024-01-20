@@ -178,14 +178,6 @@ func processCSV(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, err
 	csvResultCh := workflow.GetSignalChannel(ctx, fmt.Sprintf("%s-csv-result-ch", req.FileName))
 	csvErrCh := workflow.GetSignalChannel(ctx, fmt.Sprintf("%s-csv-err-ch", req.FileName))
 
-	// // setup csvRBP go-routine status update channels
-	// csvBatchCh := workflow.NewNamedChannel(ctx, fmt.Sprintf("%s-csv-batch-ch", req.FileName))
-	// csvBatchErrCh := workflow.NewNamedChannel(ctx, fmt.Sprintf("%s-csv-batch-err-ch", req.FileName))
-
-	// // setup csvRecP go-routine status update channels
-	// csvResultCh := workflow.NewNamedChannel(ctx, fmt.Sprintf("%s-csv-result-ch", req.FileName))
-	// csvErrCh := workflow.NewNamedChannel(ctx, fmt.Sprintf("%s-csv-err-ch", req.FileName))
-
 	defer func() {
 		l.Debug("ProcessCSVWorkflow - closing ProcessCSVWorkflow channels", zap.String("file", req.FileName))
 		readGRStatusChannel.Close()
@@ -232,9 +224,9 @@ func processCSV(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, err
 			resultCount := 0
 			recCount := 0
 			for _, v := range resp.Results {
-				errCount = errCount + v.ErrCount
-				resultCount = resultCount + v.ResultCount
-				recCount = recCount + v.Count
+				errCount = errCount + len(v.Errors)
+				resultCount = resultCount + len(v.Results)
+				recCount = recCount + len(v.Errors) + len(v.Results)
 			}
 			l.Debug(
 				"ProcessCSVWorkflow - ReadCSVWorkflow child workflow response",
@@ -270,7 +262,8 @@ func processCSV(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, err
 					ok := c.Receive(chctx, &resSig)
 					if ok {
 						batchCount++
-						count = count + resSig.Count
+						resSigCount := len(resSig.Errors) + len(resSig.Results)
+						count = count + resSigCount
 						l.Debug(
 							"ProcessCSVWorkflow - batch routine - received csv batch result signal",
 							zap.String("file", req.FileName),
@@ -279,16 +272,15 @@ func processCSV(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, err
 							zap.Int64("end", resSig.End),
 							zap.Int("batches", len(req.OffSets)),
 							zap.Int("batches-processed", batchCount),
-							zap.Int("count", resSig.Count),
-							zap.Int("result", resSig.ResultCount),
-							zap.Int("err", resSig.ErrCount))
+							zap.Int("count", resSigCount),
+							zap.Int("result", len(resSig.Results)),
+							zap.Int("err", len(resSig.Errors)))
 						req.Results[resSig.Start] = &models.CSVBatchResult{
-							BatchIndex:  resSig.BatchIndex,
-							Start:       resSig.Start,
-							End:         resSig.End,
-							Count:       resSig.Count,
-							ResultCount: resSig.ResultCount,
-							ErrCount:    resSig.ErrCount,
+							BatchIndex: resSig.BatchIndex,
+							Start:      resSig.Start,
+							End:        resSig.End,
+							Results:    resSig.Results,
+							Errors:     resSig.Errors,
 						}
 					} else {
 						l.Error("ProcessCSVWorkflow - batch routine - error receiving csv batch result signal", zap.String("file", req.FileName))
@@ -359,7 +351,7 @@ func processCSV(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, err
 						l.Debug(
 							"ProcessCSVWorkflow - record routine - received csv record result signal",
 							zap.String("file", req.FileName),
-							zap.Any("record", resSig.Record),
+							zap.Any("resultId", resSig.Id),
 							zap.Int64("start", resSig.Start),
 							zap.Int64("size", resSig.Size))
 					} else {
@@ -513,16 +505,15 @@ func batchUpdateListener(ctx workflow.Context, req *models.CSVInfo, batchGRStatu
 						zap.Int64("start", resSig.Start),
 						zap.Int64("end", resSig.End),
 						zap.Int("batches", len(req.OffSets)),
-						zap.Int("count", resSig.Count),
-						zap.Int("result", resSig.ResultCount),
-						zap.Int("err", resSig.ErrCount))
+						zap.Int("count", len(resSig.Results)+len(resSig.Errors)),
+						zap.Int("result", len(resSig.Results)),
+						zap.Int("err", len(resSig.Errors)))
 					req.Results[resSig.Start] = &models.CSVBatchResult{
-						BatchIndex:  resSig.BatchIndex,
-						Start:       resSig.Start,
-						End:         resSig.End,
-						Count:       resSig.Count,
-						ResultCount: resSig.ResultCount,
-						ErrCount:    resSig.ErrCount,
+						BatchIndex: resSig.BatchIndex,
+						Start:      resSig.Start,
+						End:        resSig.End,
+						Results:    resSig.Results,
+						Errors:     resSig.Errors,
 					}
 				} else {
 					l.Error("ProcessCSVWorkflow - batch routine - error receiving csv batch result signal", zap.String("file", req.FileName))

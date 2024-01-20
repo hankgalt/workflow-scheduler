@@ -201,7 +201,7 @@ func (cc *CadenceClient) QueryWorkflow(
 		cc.logger.Error("failed to decode query result", zap.Error(err))
 		return nil, errors.WrapError(err, "failed to decode query result")
 	}
-	cc.logger.Info("received query result", zap.Any("result", result))
+	// cc.logger.Debug("received query result", zap.Any("result", result))
 	return result, nil
 }
 
