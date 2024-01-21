@@ -92,8 +92,6 @@ func (bs *schedulerService) SearchRuns(ctx context.Context, searchBy *models.Run
 	}
 	if searchBy.Status != "" {
 		tx = tx.Where("status = ?", searchBy.Status)
-	} else {
-		tx = tx.Not("status = ?", string(models.COMPLETED))
 	}
 	if searchBy.RunId != "" {
 		tx = tx.Where("run_id = ?", searchBy.RunId)
@@ -103,6 +101,10 @@ func (bs *schedulerService) SearchRuns(ctx context.Context, searchBy *models.Run
 	}
 	if searchBy.ExternalRef != "" {
 		tx = tx.Where("external_ref = ?", searchBy.ExternalRef)
+	}
+
+	if searchBy.RunId == "" && searchBy.WorkflowId == "" && searchBy.ExternalRef == "" && searchBy.Type == "" && searchBy.Status == "" {
+		tx = tx.Not("status = ?", string(models.COMPLETED))
 	}
 
 	res := tx.Find(&runs)

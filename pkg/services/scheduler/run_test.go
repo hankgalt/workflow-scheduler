@@ -2,6 +2,7 @@ package scheduler_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
@@ -88,6 +89,25 @@ func testWorkflowRunCRUD(t *testing.T, ss scheduler.SchedulerService) {
 
 	err = ss.DeleteRun(ctx, wfRun.RunId)
 	require.NoError(t, err)
+}
+
+func TestSearchRuns(t *testing.T) {
+	setupEnv(t)
+
+	l := logger.NewTestAppZapLogger(TEST_DIR)
+
+	ss, teardown := setupAPITests(t, l)
+	defer teardown()
+
+	ctx, cancel1 := context.WithCancel(context.Background())
+	defer cancel1()
+
+	runs, err := ss.SearchRuns(ctx, &models.RunParams{
+		WorkflowId: "file-scheduler/Agents-sm.csv",
+		Status:     string(models.COMPLETED),
+	})
+	require.NoError(t, err)
+	fmt.Println("runs: ", runs)
 }
 
 func testWorkflowRunSearch(t *testing.T, ss scheduler.SchedulerService) {

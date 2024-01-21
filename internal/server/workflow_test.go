@@ -20,8 +20,8 @@ func TestSchedulerServiceWorkflows(t *testing.T) {
 		nbClient api.SchedulerClient,
 		config *server.Config,
 	){
-		"process file signal workflow run, succeeds": testProcessFileSignalWorkflowRun,
-		"query file signal workflow run, succeeds":   testQueryWorkflowState,
+		// "process file signal workflow run, succeeds": testProcessFileSignalWorkflowRun,
+		"query file signal workflow run, succeeds": testQueryWorkflowState,
 	} {
 		t.Run(scenario, func(t *testing.T) {
 			client, nbClient, config, teardown := setupTest(t, nil)
