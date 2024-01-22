@@ -121,7 +121,7 @@ func (s *grpcServer) AddEntity(ctx context.Context, req *api.AddEntityRequest) (
 	return &resp, nil
 }
 
-func (s *grpcServer) DeleteEntity(ctx context.Context, req *api.DeleteEntityRequest) (*api.DeleteResponse, error) {
+func (s *grpcServer) DeleteEntity(ctx context.Context, req *api.EntityRequest) (*api.DeleteResponse, error) {
 	if err := s.Authorizer.Authorize(
 		subject(ctx),
 		objectWildcard,
@@ -159,4 +159,65 @@ func (s *grpcServer) DeleteEntity(ctx context.Context, req *api.DeleteEntityRequ
 	return &api.DeleteResponse{
 		Ok: true,
 	}, nil
+}
+
+func (s *grpcServer) GetEntity(ctx context.Context, req *api.EntityRequest) (*api.EntityResponse, error) {
+	if err := s.Authorizer.Authorize(
+		subject(ctx),
+		objectWildcard,
+		getEntityAction,
+	); err != nil {
+		return nil, err
+	}
+
+	var err error
+	var errModel string
+	resp := api.EntityResponse{}
+	switch req.Type {
+	case api.EntityType_AGENT:
+		errModel = "agent"
+		if ag, agErr := s.SchedulerService.GetAgent(ctx, req.Id); agErr == nil {
+			resp.TestOneof = &api.EntityResponse_Agent{
+				Agent: models.MapAgentModelToProto(ag),
+			}
+		} else {
+			err = agErr
+		}
+		break
+	case api.EntityType_PRINCIPAL:
+		errModel = "principal"
+		if ag, agErr := s.SchedulerService.GetPrincipal(ctx, req.Id); agErr == nil {
+			resp.TestOneof = &api.EntityResponse_Principal{
+				Principal: models.MapPrincipalModelToProto(ag),
+			}
+		} else {
+			err = agErr
+		}
+		break
+	case api.EntityType_FILING:
+		errModel = "filing"
+		if ag, agErr := s.SchedulerService.GetFiling(ctx, req.Id); agErr == nil {
+			resp.TestOneof = &api.EntityResponse_Filing{
+				Filing: models.MapFilingModelToProto(ag),
+			}
+		} else {
+			err = agErr
+		}
+		break
+	}
+
+	if err != nil {
+		s.Logger.Info("error fetching business entity", zap.Error(err), zap.Any("type", req.Type))
+		st := s.buildError(errorParams{
+			errModel: errModel,
+			err:      err,
+			errTxt:   fmt.Sprintf("error fetching %s business entity", errModel),
+			errCode:  codes.FailedPrecondition,
+		})
+
+		resp.Ok = false
+		return &resp, st.Err()
+	}
+	resp.Ok = true
+	return &resp, nil
 }

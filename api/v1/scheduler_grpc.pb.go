@@ -28,7 +28,8 @@ type SchedulerClient interface {
 	DeleteRun(ctx context.Context, in *DeleteRunRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	SearchRuns(ctx context.Context, in *SearchRunRequest, opts ...grpc.CallOption) (*RunsResponse, error)
 	AddEntity(ctx context.Context, in *AddEntityRequest, opts ...grpc.CallOption) (*AddEntityResponse, error)
-	DeleteEntity(ctx context.Context, in *DeleteEntityRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	DeleteEntity(ctx context.Context, in *EntityRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	GetEntity(ctx context.Context, in *EntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	AddBusinessEntities(ctx context.Context, opts ...grpc.CallOption) (Scheduler_AddBusinessEntitiesClient, error)
 	ProcessFileSignalWorkflow(ctx context.Context, in *FileSignalRequest, opts ...grpc.CallOption) (*RunResponse, error)
 	QueryFileWorkflowState(ctx context.Context, in *QueryWorkflowRequest, opts ...grpc.CallOption) (*FileWorkflowStateResponse, error)
@@ -96,9 +97,18 @@ func (c *schedulerClient) AddEntity(ctx context.Context, in *AddEntityRequest, o
 	return out, nil
 }
 
-func (c *schedulerClient) DeleteEntity(ctx context.Context, in *DeleteEntityRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+func (c *schedulerClient) DeleteEntity(ctx context.Context, in *EntityRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
 	out := new(DeleteResponse)
 	err := c.cc.Invoke(ctx, "/scheduler.v1.Scheduler/DeleteEntity", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *schedulerClient) GetEntity(ctx context.Context, in *EntityRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
+	out := new(EntityResponse)
+	err := c.cc.Invoke(ctx, "/scheduler.v1.Scheduler/GetEntity", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +174,8 @@ type SchedulerServer interface {
 	DeleteRun(context.Context, *DeleteRunRequest) (*DeleteResponse, error)
 	SearchRuns(context.Context, *SearchRunRequest) (*RunsResponse, error)
 	AddEntity(context.Context, *AddEntityRequest) (*AddEntityResponse, error)
-	DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteResponse, error)
+	DeleteEntity(context.Context, *EntityRequest) (*DeleteResponse, error)
+	GetEntity(context.Context, *EntityRequest) (*EntityResponse, error)
 	AddBusinessEntities(Scheduler_AddBusinessEntitiesServer) error
 	ProcessFileSignalWorkflow(context.Context, *FileSignalRequest) (*RunResponse, error)
 	QueryFileWorkflowState(context.Context, *QueryWorkflowRequest) (*FileWorkflowStateResponse, error)
@@ -193,8 +204,11 @@ func (UnimplementedSchedulerServer) SearchRuns(context.Context, *SearchRunReques
 func (UnimplementedSchedulerServer) AddEntity(context.Context, *AddEntityRequest) (*AddEntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddEntity not implemented")
 }
-func (UnimplementedSchedulerServer) DeleteEntity(context.Context, *DeleteEntityRequest) (*DeleteResponse, error) {
+func (UnimplementedSchedulerServer) DeleteEntity(context.Context, *EntityRequest) (*DeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteEntity not implemented")
+}
+func (UnimplementedSchedulerServer) GetEntity(context.Context, *EntityRequest) (*EntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEntity not implemented")
 }
 func (UnimplementedSchedulerServer) AddBusinessEntities(Scheduler_AddBusinessEntitiesServer) error {
 	return status.Errorf(codes.Unimplemented, "method AddBusinessEntities not implemented")
@@ -327,7 +341,7 @@ func _Scheduler_AddEntity_Handler(srv interface{}, ctx context.Context, dec func
 }
 
 func _Scheduler_DeleteEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteEntityRequest)
+	in := new(EntityRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -339,7 +353,25 @@ func _Scheduler_DeleteEntity_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/scheduler.v1.Scheduler/DeleteEntity",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SchedulerServer).DeleteEntity(ctx, req.(*DeleteEntityRequest))
+		return srv.(SchedulerServer).DeleteEntity(ctx, req.(*EntityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Scheduler_GetEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EntityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SchedulerServer).GetEntity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/scheduler.v1.Scheduler/GetEntity",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SchedulerServer).GetEntity(ctx, req.(*EntityRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -440,6 +472,10 @@ var Scheduler_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteEntity",
 			Handler:    _Scheduler_DeleteEntity_Handler,
+		},
+		{
+			MethodName: "GetEntity",
+			Handler:    _Scheduler_GetEntity_Handler,
 		},
 		{
 			MethodName: "ProcessFileSignalWorkflow",

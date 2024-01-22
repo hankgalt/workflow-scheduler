@@ -12,10 +12,13 @@ import (
 const (
 	ERR_AGENT_ADD           = "error: adding business agent"
 	ERR_AGENT_DELETE        = "error: deleting business agent"
+	ERR_AGENT_GET           = "error: getting business agent"
 	ERR_PRINCIPAL_ADD       = "error: adding business principal"
 	ERR_PRINCIPAL_DELETE    = "error: deleting business principal"
+	ERR_PRINCIPAL_GET       = "error: getting business principal"
 	ERR_FILING_ADD          = "error: adding business filing"
 	ERR_FILING_DELETE       = "error: deleting business filing"
+	ERR_FILING_GET          = "error: getting business filing"
 	ERR_DUPLICATE_AGENT     = "error: duplicate agent"
 	ERR_DUPLICATE_PRINCIPAL = "error: duplicate principal"
 	ERR_DUPLICATE_FILING    = "error: duplicate filing"
@@ -53,6 +56,16 @@ func (bs *schedulerService) DeleteAgent(ctx context.Context, id string) error {
 	return nil
 }
 
+func (bs *schedulerService) GetAgent(ctx context.Context, id string) (*models.BusinessAgent, error) {
+	var agent models.BusinessAgent
+	res := bs.db.WithContext(ctx).Where("id = ?", id).First(&agent)
+	if res.Error != nil {
+		bs.Error(ERR_AGENT_GET, zap.Error(res.Error), zap.String("id", id))
+		return nil, errors.WrapError(res.Error, ERR_AGENT_GET)
+	}
+	return &agent, nil
+}
+
 func (bs *schedulerService) AddPrincipal(ctx context.Context, bp *models.BusinessPrincipal) (*models.BusinessPrincipal, error) {
 	res := bs.db.WithContext(ctx).Create(bp)
 	if res.Error != nil {
@@ -78,6 +91,16 @@ func (bs *schedulerService) DeletePrincipal(ctx context.Context, id string) erro
 	return nil
 }
 
+func (bs *schedulerService) GetPrincipal(ctx context.Context, id string) (*models.BusinessPrincipal, error) {
+	var pri models.BusinessPrincipal
+	res := bs.db.WithContext(ctx).Where("id = ?", id).First(&pri)
+	if res.Error != nil {
+		bs.Error(ERR_PRINCIPAL_GET, zap.Error(res.Error), zap.String("id", id))
+		return nil, errors.WrapError(res.Error, ERR_PRINCIPAL_GET)
+	}
+	return &pri, nil
+}
+
 func (bs *schedulerService) AddFiling(ctx context.Context, bf *models.BusinessFiling) (*models.BusinessFiling, error) {
 	res := bs.db.WithContext(ctx).Create(bf)
 	if res.Error != nil {
@@ -101,4 +124,14 @@ func (bs *schedulerService) DeleteFiling(ctx context.Context, id string) error {
 		return errors.WrapError(res.Error, ERR_FILING_DELETE)
 	}
 	return nil
+}
+
+func (bs *schedulerService) GetFiling(ctx context.Context, id string) (*models.BusinessFiling, error) {
+	var fil models.BusinessFiling
+	res := bs.db.WithContext(ctx).Where("id = ?", id).First(&fil)
+	if res.Error != nil {
+		bs.Error(ERR_FILING_GET, zap.Error(res.Error), zap.String("id", id))
+		return nil, errors.WrapError(res.Error, ERR_FILING_GET)
+	}
+	return &fil, nil
 }

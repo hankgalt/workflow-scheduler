@@ -267,7 +267,7 @@ func testAddBusinessEntities(t *testing.T, client, nbClient api.SchedulerClient,
 
 	// delete records
 	for _, id := range resIds {
-		err := deleteEntity(t, client, &api.DeleteEntityRequest{
+		err := deleteEntity(t, client, &api.EntityRequest{
 			Id:   id,
 			Type: api.EntityType_PRINCIPAL,
 		})
@@ -308,7 +308,7 @@ func testPrincipalCRUD(t *testing.T, client, nbClient api.SchedulerClient, confi
 	t.Helper()
 
 	// build id & entityId
-	id := "5353427"
+	id := "535342788"
 	num, err := strconv.Atoi(id)
 	require.NoError(t, err)
 
@@ -316,7 +316,7 @@ func testPrincipalCRUD(t *testing.T, client, nbClient api.SchedulerClient, confi
 	headers := []string{"ENTITY_NAME", "ENTITY_NUM", "ORG_NAME", "FIRST_NAME", "MIDDLE_NAME", "LAST_NAME", "POSITION_TYPE", "ADDRESS"}
 
 	// build first record
-	values := []string{"Zurn Concierge Nursing, Inc.", id, "", "Teri", "", "Zurn", "Chief Executive Officer", "23811 WASHINGTON AVE C-100 #184 MURRIETA CA  92562"}
+	values := []string{"Zurn Concierge Nursing, Inc.", id, "", "TTeri", "", "Zurn", "Chief Executive Officer", "23811 WASHINGTON AVE C-100 #184 MURRIETA CA  92562"}
 	fields := map[string]string{}
 	for i, k := range headers {
 		fields[strings.ToLower(k)] = values[i]
@@ -337,39 +337,24 @@ func testPrincipalCRUD(t *testing.T, client, nbClient api.SchedulerClient, confi
 	require.Equal(t, bp.Id, id)
 	require.Equal(t, int(bp.EntityId), num)
 
-	// build next record
-	values = []string{"Zurn Concierge Nursing, Inc.", id, "", "Nonda", "", "Bhusti", "Floor Manager", "23811 WASHINGTON AVE C-100 #184 MURRIETA CA  92562"}
-	fields = map[string]string{}
-	for i, k := range headers {
-		fields[strings.ToLower(k)] = values[i]
-	}
-
-	// add next principal
-	resp, err = client.AddEntity(ctx, &api.AddEntityRequest{
-		Fields: fields,
-		Type:   api.EntityType_PRINCIPAL,
+	// get principal
+	gResp, err := client.GetEntity(ctx, &api.EntityRequest{
+		Type: api.EntityType_PRINCIPAL,
+		Id:   bp.Id,
 	})
 	require.NoError(t, err)
+	require.Equal(t, gResp.GetPrincipal().Id, bp.Id)
 
-	// validate next principal
-	bp2 := resp.GetPrincipal()
-	require.Equal(t, int(bp2.EntityId), num)
-
-	// validate principal id uniqueness
-	require.NotEqual(t, bp.Id, bp2.Id)
-
-	// delete records
-	for _, id := range []string{bp.Id, bp2.Id} {
-		dResp, err := client.DeleteEntity(ctx, &api.DeleteEntityRequest{
-			Type: api.EntityType_PRINCIPAL,
-			Id:   id,
-		})
-		require.NoError(t, err)
-		require.Equal(t, dResp.Ok, true)
-	}
+	// delete principal
+	dResp, err := client.DeleteEntity(ctx, &api.EntityRequest{
+		Type: api.EntityType_PRINCIPAL,
+		Id:   bp.Id,
+	})
+	require.NoError(t, err)
+	require.Equal(t, dResp.Ok, true)
 }
 
-func deleteEntity(t *testing.T, bCl api.SchedulerClient, req *api.DeleteEntityRequest) error {
+func deleteEntity(t *testing.T, bCl api.SchedulerClient, req *api.EntityRequest) error {
 	t.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())

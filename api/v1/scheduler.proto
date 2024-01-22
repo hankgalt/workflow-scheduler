@@ -119,13 +119,22 @@ message AddEntityRequest {
     EntityType type = 2;
 }
 
-message DeleteEntityRequest {
+message EntityRequest {
     string id = 1;
     EntityType type = 2;
 }
 
 message AddEntityResponse {
     bool ok = 1;    
+    oneof test_oneof {
+        BusinessAgent agent = 2;
+        BusinessPrincipal principal = 3;
+        BusinessFiling filing = 4;
+    }
+}
+
+message EntityResponse {
+    bool ok = 1;
     oneof test_oneof {
         BusinessAgent agent = 2;
         BusinessPrincipal principal = 3;
@@ -204,7 +213,8 @@ service Scheduler {
     rpc DeleteRun(DeleteRunRequest) returns (DeleteResponse) {}
     rpc SearchRuns(SearchRunRequest) returns (RunsResponse) {}
     rpc AddEntity(AddEntityRequest) returns (AddEntityResponse) {}
-    rpc DeleteEntity(DeleteEntityRequest) returns (DeleteResponse) {}
+    rpc DeleteEntity(EntityRequest) returns (DeleteResponse) {}
+    rpc GetEntity(EntityRequest) returns (EntityResponse) {}
     rpc AddBusinessEntities(stream AddEntityRequest) returns (stream StreamAddEntityResponse) {}
 
     rpc ProcessFileSignalWorkflow(FileSignalRequest) returns (RunResponse) {}

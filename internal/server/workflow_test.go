@@ -49,7 +49,7 @@ func testProcessFileSignalWorkflowRun(t *testing.T, client, nbClient api.Schedul
 	})
 
 	require.NoError(t, err)
-	require.Equal(t, "file-scheduler/Agents-sm.csv", wfRun.Run.RunId)
+	require.Equal(t, "file-scheduler/Agents-sm.csv", wfRun.Run.WorkflowId)
 }
 
 func testQueryWorkflowState(t *testing.T, client, nbClient api.SchedulerClient, config *server.Config) {
@@ -58,7 +58,7 @@ func testQueryWorkflowState(t *testing.T, client, nbClient api.SchedulerClient, 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	runId := "3d912ccf-7752-4ad5-9c68-cd3a68ce06f1"
+	runId := "bca20bd3-08f0-4b39-8f5a-dfe5fed57eb2"
 	wkflId := "file-scheduler/Agents-sm.csv"
 	wfState, err := client.QueryFileWorkflowState(ctx, &api.QueryWorkflowRequest{
 		RunId:      runId,

@@ -37,10 +37,13 @@ type SchedulerService interface {
 	// entities
 	AddAgent(ctx context.Context, ba *models.BusinessAgent) (*models.BusinessAgent, error)
 	DeleteAgent(ctx context.Context, id string) error
+	GetAgent(ctx context.Context, id string) (*models.BusinessAgent, error)
 	AddPrincipal(ctx context.Context, bp *models.BusinessPrincipal) (*models.BusinessPrincipal, error)
 	DeletePrincipal(ctx context.Context, id string) error
+	GetPrincipal(ctx context.Context, id string) (*models.BusinessPrincipal, error)
 	AddFiling(ctx context.Context, bf *models.BusinessFiling) (*models.BusinessFiling, error)
 	DeleteFiling(ctx context.Context, id string) error
+	GetFiling(ctx context.Context, id string) (*models.BusinessFiling, error)
 	// workflows
 	ProcessFileSignalWorkflow(ctx context.Context, params *models.FileSignalParams) (*models.WorkflowRun, error)
 	QueryWorkflowState(ctx context.Context, params *models.WorkflowQueryParams) (interface{}, error)

@@ -37,6 +37,7 @@ const (
 	deleteRunAction     = "delete-run"
 	addEntityAction     = "add-entity"
 	deleteEntityAction  = "delete-entity"
+	getEntityAction     = "get-entity"
 	fileSignalAction    = "file-signal"
 	queryWorkflowAction = "query-workflow"
 )

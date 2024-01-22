@@ -73,6 +73,10 @@ func testAgentCRUD(t *testing.T, bs scheduler.SchedulerService) {
 	require.NoError(t, err)
 	require.Equal(t, int(agent2.EntityID), num)
 
+	agent, err := bs.GetAgent(ctx, agent1.ID)
+	require.NoError(t, err)
+	require.Equal(t, agent.ID, agent1.ID)
+
 	err = bs.DeleteAgent(ctx, agent1.ID)
 	require.NoError(t, err)
 
@@ -103,6 +107,10 @@ func testPrincipalCRUD(t *testing.T, bs scheduler.SchedulerService) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, int(p1.EntityID), num)
+
+	pri, err := bs.GetPrincipal(ctx, p1.ID)
+	require.NoError(t, err)
+	require.Equal(t, pri.ID, p1.ID)
 
 	defer func() {
 		err = bs.DeletePrincipal(ctx, p1.ID)

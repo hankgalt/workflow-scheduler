@@ -71,6 +71,7 @@ func MapToRunProto(wkfl *WorkflowRun) *api.WorkflowRun {
 		Status:      wkfl.Status,
 		Type:        wkfl.Type,
 		ExternalRef: wkfl.ExternalRef,
+		RequestedBy: wkfl.CreatedBy,
 	}
 }
 
