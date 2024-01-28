@@ -11,7 +11,7 @@
 - setup db scripts
     - setup data home env, update env name in `scripts/start-db.sh`
     - add `{DATA_HOME}/data/scripts/db-init.sql`
-    `CREATE USER IF NOT EXISTS '<root_user>'@'%' IDENTIFIED WITH mysql_native_password BY '<root_password>';
+    ```CREATE USER IF NOT EXISTS '<root_user>'@'%' IDENTIFIED WITH mysql_native_password BY '<root_password>';
         GRANT ALL PRIVILEGES ON *.* TO '<root_user>'@'%';
         GRANT GRANT OPTION ON *.* TO '<root_user>'@'%';
         FLUSH PRIVILEGES;
@@ -22,7 +22,7 @@
         CREATE USER IF NOT EXISTS '<db_user_name>'@'%' IDENTIFIED WITH mysql_native_password BY '<db_user_password>';
         GRANT ALL PRIVILEGES on <db_name>.* to '<db_user_name>'@'%';
         GRANT ALL PRIVILEGES on <db_name_test>.* to '<db_user_name>'@'%';
-        FLUSH PRIVILEGES;`
+        FLUSH PRIVILEGES;```
 - add `mysql.env` in `deploy/scheduler` folder. `MYSQL_ROOT_PASSWORD, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD`
 - `make start-db`
 - `make start-cadence`
