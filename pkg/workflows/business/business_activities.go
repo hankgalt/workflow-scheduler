@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -63,15 +64,15 @@ var (
 const DataPathContextKey = clients.ContextKey("data-path")
 
 const DEFAULT_DATA_PATH = "data"
-const DEFAULT_BATCH_SIZE int64 = 400
-const RECORD_SIZE int64 = 90
+const MIN_BATCH_SIZE int64 = 400
+const MAX_BATCH_SIZE int64 = 4000
 
 type CSVActivityFn = func(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo, error)
 
 // AddAgentActivity returns successfully added agent's Id or error.
 func AddAgentActivity(ctx context.Context, fields map[string]string) (string, error) {
 	l := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
-	// l.Info("AddAgentActivity - started", zap.Any("fields", fields))
+	l.Info("AddAgentActivity - started", zap.Any("fields", fields))
 
 	schClient, ok := ctx.Value(scheduler.SchedulerClientContextKey).(scheduler.Client)
 	if !ok {
@@ -89,7 +90,7 @@ func AddAgentActivity(ctx context.Context, fields map[string]string) (string, er
 	}
 
 	agent := resp.GetAgent()
-	// l.Info("AddAgentActivity - agent", zap.Any("agent", agent))
+	l.Info("AddAgentActivity - agent", zap.Any("agent", agent))
 
 	return agent.Id, nil
 }
@@ -97,7 +98,7 @@ func AddAgentActivity(ctx context.Context, fields map[string]string) (string, er
 // AddPrincipalActivity returns successfully added principal's Id or error.
 func AddPrincipalActivity(ctx context.Context, fields map[string]string) (string, error) {
 	l := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
-	// l.Info("AddPrincipalActivity - started", zap.Any("fields", fields))
+	l.Info("AddPrincipalActivity - started", zap.Any("fields", fields))
 
 	bizClient, ok := ctx.Value(scheduler.SchedulerClientContextKey).(scheduler.Client)
 	if !ok {
@@ -115,7 +116,7 @@ func AddPrincipalActivity(ctx context.Context, fields map[string]string) (string
 	}
 
 	princp := resp.GetPrincipal()
-	// l.Info("AddPrincipalActivity - agent", zap.Any("agent", agent))
+	l.Info("AddPrincipalActivity - principal", zap.Any("principal", princp))
 
 	return princp.Id, nil
 }
@@ -123,7 +124,7 @@ func AddPrincipalActivity(ctx context.Context, fields map[string]string) (string
 // AddFilingActivity returns successfully added filing's Id or error.
 func AddFilingActivity(ctx context.Context, fields map[string]string) (string, error) {
 	l := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
-	// l.Info("AddFilingActivity - started", zap.Any("fields", fields))
+	l.Info("AddFilingActivity - started", zap.Any("fields", fields))
 
 	bizClient, ok := ctx.Value(scheduler.SchedulerClientContextKey).(scheduler.Client)
 	if !ok {
@@ -141,7 +142,7 @@ func AddFilingActivity(ctx context.Context, fields map[string]string) (string, e
 	}
 
 	fil := resp.GetFiling()
-	// l.Info("AddFilingActivity - agent", zap.Any("agent", agent))
+	l.Info("AddFilingActivity - filing", zap.Any("filing", fil))
 
 	return fil.Id, nil
 }
@@ -151,7 +152,7 @@ func AddFilingActivity(ctx context.Context, fields map[string]string) (string, e
 // resolves file path using configured/default data directory path
 func GetCSVHeadersActivity(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo, error) {
 	l := activity.GetLogger(ctx).With(zap.String("hostID", HostID))
-	l.Debug("GetCSVHeadersActivity - started", zap.String("file", req.FileName))
+	l.Debug("GetCSVHeadersActivity - started", zap.String("file-name", req.FileName))
 
 	// return if headers already build
 	if req.Headers != nil {
@@ -192,6 +193,8 @@ func GetCSVHeadersActivity(ctx context.Context, req *models.CSVInfo) (*models.CS
 	}
 	localFilePath := filepath.Join(dataPath, req.FileName)
 
+	l.Debug("GetCSVHeadersActivity - local file path", zap.String("file-path", localFilePath))
+
 	// open file
 	file, err := os.Open(localFilePath)
 	if err != nil {
@@ -226,6 +229,26 @@ func GetCSVHeadersActivity(ctx context.Context, req *models.CSVInfo) (*models.CS
 		Headers: headers,
 		Offset:  offset,
 	}
+
+	aveRecordSize := offset
+	samples := 0
+	allRead := false
+
+	for samples < 5 || !allRead {
+		_, err := csvReader.Read()
+		if err == io.EOF {
+			allRead = true
+		} else if err != nil {
+			samples = 5
+			allRead = true
+		} else {
+			newOffset := csvReader.InputOffset()
+			aveRecordSize = (aveRecordSize + (newOffset - offset)) / 2
+			offset = newOffset
+		}
+		samples++
+	}
+	req.AvgRecordSize = aveRecordSize
 	return req, nil
 }
 
@@ -293,8 +316,18 @@ func GetCSVOffsetsActivity(ctx context.Context, req *models.CSVInfo) (*models.CS
 		req.FileSize = fs.Size()
 	}
 
+	// setup batch size
+	batchSize := MIN_BATCH_SIZE
+	if req.BatchSize <= 0 {
+		if req.FileSize > MAX_BATCH_SIZE+req.AvgRecordSize {
+			req.BatchSize = MAX_BATCH_SIZE
+		}
+	} else {
+		batchSize = req.BatchSize
+	}
+
 	offsets := []int64{req.Headers.Offset}
-	if req.FileSize/DEFAULT_BATCH_SIZE < 2 {
+	if req.FileSize/batchSize < 2 {
 		req.OffSets = offsets
 		return req, nil
 	}
@@ -302,23 +335,36 @@ func GetCSVOffsetsActivity(ctx context.Context, req *models.CSVInfo) (*models.CS
 		"GetCSVOffsetsActivity",
 		zap.String("file", req.FileName),
 		zap.Any("file-size", req.FileSize),
-		zap.Any("batch-size", DEFAULT_BATCH_SIZE),
-		zap.Any("record-size", RECORD_SIZE),
+		zap.Any("batch-size", batchSize),
+		zap.Int64("record-size", req.AvgRecordSize),
 	)
 	sOffset := req.Headers.Offset
-	for sOffset+DEFAULT_BATCH_SIZE+RECORD_SIZE < req.FileSize {
-		sOffset = sOffset + DEFAULT_BATCH_SIZE
-		nextOffset, err := getNextOffset(file, sOffset)
+	for sOffset+batchSize+req.AvgRecordSize < req.FileSize {
+		ofSet := sOffset
+		sOffset = sOffset + batchSize
+		nextOffset, err := getNextOffset(file, sOffset, req.AvgRecordSize)
 		if err != nil {
 			l.Error(ERR_BUILDING_OFFSETS, zap.Error(err), zap.String("file", req.FileName), zap.String("host", hostId))
 			return req, cadence.NewCustomError(ERR_BUILDING_OFFSETS, err)
 		}
-		l.Info(
+		l.Debug(
 			"GetCSVOffsetsActivity - nextOffset",
 			zap.String("file", req.FileName),
-			zap.Any("read-offset", sOffset+RECORD_SIZE),
+			zap.Any("start-offset", ofSet),
 			zap.Any("next-offset", nextOffset),
+			zap.Any("numOffsets", len(offsets)),
 		)
+		fmt.Println()
+		fmt.Printf(
+			"GetCSVOffsetsActivity - offSet: %d, nextOffset: %d, diff: %d, RECORD_SIZE: %d, DEFAULT_BATCH_SIZE: %d\n",
+			ofSet,
+			nextOffset,
+			nextOffset-ofSet,
+			req.AvgRecordSize,
+			batchSize,
+		)
+		fmt.Println()
+
 		offsets = append(offsets, nextOffset)
 		sOffset = nextOffset
 	}
@@ -701,8 +747,8 @@ func mapToInterface(headers, values []string) (map[string]string, error) {
 }
 
 // getNextOffset returns next record offset
-func getNextOffset(file *os.File, offset int64) (int64, error) {
-	data := make([]byte, RECORD_SIZE)
+func getNextOffset(file *os.File, offset, avRecordSize int64) (int64, error) {
+	data := make([]byte, avRecordSize)
 	_, err := file.ReadAt(data, int64(offset))
 	if err != nil {
 		return offset, errors.WrapError(err, ERR_CSV_READ)
@@ -713,7 +759,7 @@ func getNextOffset(file *os.File, offset int64) (int64, error) {
 	if i >= 0 {
 		nextOffset = offset + int64(i) + 1
 	} else {
-		nextOffset, err = getNextOffset(file, offset+RECORD_SIZE)
+		nextOffset, err = getNextOffset(file, offset+avRecordSize, avRecordSize)
 	}
 
 	if err != nil {

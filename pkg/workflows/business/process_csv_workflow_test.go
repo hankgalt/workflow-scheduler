@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"go.uber.org/cadence/activity"
 	"go.uber.org/cadence/encoded"
@@ -11,11 +12,14 @@ import (
 
 	"github.com/comfforts/logger"
 
+	api "github.com/hankgalt/workflow-scheduler/api/v1"
+	"github.com/hankgalt/workflow-scheduler/pkg/clients/scheduler"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
 	bizwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/business"
 )
 
 func (s *BusinessWorkflowTestSuite) Test_ProcessCSVWorkflow_Agent() {
+	start := time.Now()
 	l := logger.NewTestAppZapLogger(TEST_DIR)
 
 	reqstr := "process-csv-workflow-test@gmail.com"
@@ -24,6 +28,8 @@ func (s *BusinessWorkflowTestSuite) Test_ProcessCSVWorkflow_Agent() {
 		FileName:    filePath,
 		RequestedBy: reqstr,
 		Type:        models.AGENT,
+		BatchSize:   500,
+		NumBatches:  3,
 	}
 
 	expectedCall := []string{
@@ -73,12 +79,12 @@ func (s *BusinessWorkflowTestSuite) Test_ProcessCSVWorkflow_Agent() {
 		} else {
 			var result models.CSVInfo
 			s.env.GetWorkflowResult(&result)
-			l.Info(
-				"Test_ProcessCSVWorkflow result",
-				zap.Any("file", result.FileName),
-				zap.Any("batches", len(result.OffSets)),
-				zap.Any("headers", result.Headers.Headers),
-				zap.Any("batchesProcessed", len(result.Results)))
+
+			sOpts := scheduler.NewDefaultClientOption()
+			sOpts.Caller = "BusinessWorkflowTestSuite"
+			schClient, err := scheduler.NewClient(l, sOpts)
+			s.NoError(err)
+
 			errCount := 0
 			resultCount := 0
 			recCount := 0
@@ -86,12 +92,15 @@ func (s *BusinessWorkflowTestSuite) Test_ProcessCSVWorkflow_Agent() {
 				errCount = errCount + len(v.Errors)
 				resultCount = resultCount + len(v.Results)
 				recCount = recCount + len(v.Errors) + len(v.Results)
+				for _, res := range v.Results {
+					deleteEntity(schClient, &api.EntityRequest{
+						Type: api.EntityType_AGENT,
+						Id:   res.Id,
+					})
+				}
 			}
-			l.Info(
-				"batch info",
-				zap.Int("resultCount", resultCount),
-				zap.Int("errCount", errCount),
-				zap.Int("recCount", recCount))
+			timeTaken := time.Since(start)
+			l.Info("Test_ProcessCSVWorkflow time taken", zap.Any("time-taken", timeTaken))
 		}
 
 	}()
@@ -101,6 +110,16 @@ func (s *BusinessWorkflowTestSuite) Test_ProcessCSVWorkflow_Agent() {
 	s.True(s.env.IsWorkflowCompleted())
 	s.NoError(s.env.GetWorkflowError())
 	// s.Equal(expectedCall, activityCalled)
+}
+
+func deleteEntity(cl scheduler.Client, req *api.EntityRequest) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if _, err := cl.DeleteEntity(ctx, req); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *BusinessWorkflowTestSuite) Test_ProcessCSVWorkflow_Principal() {

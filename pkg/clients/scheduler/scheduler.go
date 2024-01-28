@@ -43,6 +43,8 @@ type Client interface {
 	DeleteRun(ctx context.Context, req *api.DeleteRunRequest, opts ...grpc.CallOption) (*api.DeleteResponse, error)
 	SearchRuns(ctx context.Context, req *api.SearchRunRequest, opts ...grpc.CallOption) (*api.RunsResponse, error)
 	AddEntity(ctx context.Context, req *api.AddEntityRequest, opts ...grpc.CallOption) (*api.AddEntityResponse, error)
+	DeleteEntity(ctx context.Context, req *api.EntityRequest, opts ...grpc.CallOption) (*api.DeleteResponse, error)
+	GetEntity(ctx context.Context, req *api.EntityRequest, opts ...grpc.CallOption) (*api.EntityResponse, error)
 	Close() error
 }
 
@@ -174,6 +176,30 @@ func (bc *schedulerClient) AddEntity(ctx context.Context, req *api.AddEntityRequ
 	resp, err := bc.client.AddEntity(ctx, req)
 	if err != nil {
 		bc.logger.Error("error adding business entity", zap.Error(err))
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (bc *schedulerClient) DeleteEntity(ctx context.Context, req *api.EntityRequest, opts ...grpc.CallOption) (*api.DeleteResponse, error) {
+	ctx, cancel := bc.contextWithOptions(ctx, bc.opts)
+	defer cancel()
+
+	resp, err := bc.client.DeleteEntity(ctx, req)
+	if err != nil {
+		bc.logger.Error("error deleting business entity", zap.Error(err))
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (bc *schedulerClient) GetEntity(ctx context.Context, req *api.EntityRequest, opts ...grpc.CallOption) (*api.EntityResponse, error) {
+	ctx, cancel := bc.contextWithOptions(ctx, bc.opts)
+	defer cancel()
+
+	resp, err := bc.client.GetEntity(ctx, req)
+	if err != nil {
+		bc.logger.Error("error getting business entity", zap.Error(err))
 		return nil, err
 	}
 	return resp, nil

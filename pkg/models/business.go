@@ -64,6 +64,9 @@ type CSVInfo struct {
 	OffSets           []int64
 	Results           map[int64]*CSVBatchResult
 	Type              EntityType
+	AvgRecordSize     int64
+	BatchSize         int64
+	NumBatches        int
 }
 
 type CSVInfoState struct {
@@ -79,6 +82,7 @@ type CSVInfoState struct {
 	OffSets           []string
 	Results           map[string]*CSVBatchResultState
 	Type              EntityType
+	AvgRecordSize     string
 }
 
 type ReadRecordsParams struct {
@@ -195,6 +199,7 @@ func MapCSVInfoToState(csvInfo *CSVInfo) CSVInfoState {
 		OffSets:           MapInt64SliceToStringSlice(csvInfo.OffSets),
 		Results:           MapCSVBatchResultMapToState(csvInfo.Results),
 		Type:              csvInfo.Type,
+		AvgRecordSize:     Int64ToString(csvInfo.AvgRecordSize),
 	}
 }
 

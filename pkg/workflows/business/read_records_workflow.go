@@ -295,6 +295,7 @@ func addEntityAndSignal(
 	if fields, err := mapToInterface(req.Headers.Headers, record); err == nil {
 		var activityErr error
 		var resultId string
+
 		if req.Type == models.AGENT {
 			resultId, activityErr = ExecuteAddAgentActivity(ctx, fields)
 		} else if req.Type == models.PRINCIPAL {
@@ -313,9 +314,6 @@ func addEntityAndSignal(
 				logCSVErrSigError(sigErr, req, start, size, l)
 			} else {
 				logCSVErrSig(req, start, size, l)
-				fmt.Println()
-				fmt.Printf("addEntityAndSignal() appending error result - error: %s, start: %d, end: %d\n", activityErr.Error(), start, start+size)
-				fmt.Println()
 				req.Errors = append(req.Errors, &models.ErrorResult{
 					Start: start,
 					End:   start + size,
@@ -328,9 +326,6 @@ func addEntityAndSignal(
 				logCSVResultSigError(sigErr, req, start, size, l)
 			} else {
 				logCSVResultSig(req, start, size, l)
-				fmt.Println()
-				fmt.Printf("addEntityAndSignal() - appending success result - resultId: %s, start: %d, end: %d\n", resultId, start, start+size)
-				fmt.Println()
 				req.Results = append(req.Results, &models.SuccessResult{
 					Start: start,
 					End:   start + size,
@@ -346,9 +341,6 @@ func addEntityAndSignal(
 			logCSVErrSigError(sigErr, req, start, size, l)
 		} else {
 			logCSVErrSig(req, start, size, l)
-			fmt.Println()
-			fmt.Printf("addEntityAndSignal() appending error result - error: %s, start: %d, end: %d\n", err.Error(), start, start+size)
-			fmt.Println()
 			req.Errors = append(req.Errors, &models.ErrorResult{
 				Start: start,
 				End:   start + size,

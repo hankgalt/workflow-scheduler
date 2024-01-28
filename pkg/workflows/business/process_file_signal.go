@@ -159,7 +159,7 @@ func processFileSignal(ctx workflow.Context, req *models.CSVInfo) (*models.CSVIn
 		l.Error("ProcessFileSignalWorkflow - error dowloading file", zap.String("error", err.Error()), zap.Any("file", req.FileName))
 		return req, err
 	}
-	l.Debug("ProcessFileSignalWorkflow - file downloaded, starting process CSV workflow", zap.Any("file", req.FileName))
+	l.Debug("ProcessFileSignalWorkflow - file downloaded, starting process CSV workflow", zap.Any("file", req.FileName), zap.Any("type", req.Type))
 
 	// build child workflow context
 	scwo := workflow.ChildWorkflowOptions{
@@ -169,7 +169,6 @@ func processFileSignal(ctx workflow.Context, req *models.CSVInfo) (*models.CSVIn
 
 	// start CSV processing workflow to process file
 	// TODO - add support for other entity types
-	req.Type = models.AGENT
 	future := workflow.ExecuteChildWorkflow(cwCtx, ProcessCSVWorkflow, req)
 
 	var childWE workflow.Execution

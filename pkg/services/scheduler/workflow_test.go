@@ -118,9 +118,7 @@ func testProcessFileSignalWorkflowRun(t *testing.T, l *zap.Logger, ss scheduler.
 			l.Debug("testProcessFileSignalWorkflowRun run state error", zap.Error(err))
 		} else {
 			if runState, ok := state.(models.JSONMapper); ok {
-				fmt.Println()
 				l.Debug("testProcessFileSignalWorkflowRun run state", zap.Any("runState", runState))
-				fmt.Println()
 				cRunId, _ := runState["ProcessRunId"].(string)
 				cWkFlId, ok := runState["ProcessWorkflowId"].(string)
 				if ok && cRunId != "" && cWkFlId != "" {
@@ -130,9 +128,7 @@ func testProcessFileSignalWorkflowRun(t *testing.T, l *zap.Logger, ss scheduler.
 					}); err != nil {
 						l.Debug("testProcessFileSignalWorkflowRun child run state error", zap.Error(err))
 					} else {
-						fmt.Println()
 						l.Debug("testProcessFileSignalWorkflowRun child run state", zap.Any("childState", childState))
-						fmt.Println()
 					}
 				}
 			}

@@ -57,7 +57,7 @@ func (s *grpcServer) AddBusinessEntities(stream api.Scheduler_AddBusinessEntitie
 		}
 
 		if err = stream.Send(&stResp); err != nil {
-			s.Logger.Error("error sending response", zap.Error(err))
+			s.Error("error sending response", zap.Error(err))
 			return err
 		}
 	}
@@ -71,7 +71,7 @@ func (s *grpcServer) AddEntity(ctx context.Context, req *api.AddEntityRequest) (
 	); err != nil {
 		return nil, err
 	}
-
+	s.Debug("AddEntity", zap.Any("fields", req.Fields), zap.Any("type", req.Type))
 	resp := api.AddEntityResponse{}
 	var err error
 	var errModel string
@@ -106,7 +106,7 @@ func (s *grpcServer) AddEntity(ctx context.Context, req *api.AddEntityRequest) (
 	}
 
 	if err != nil {
-		s.Logger.Info("error adding business entity", zap.Error(err), zap.Any("type", req.Type))
+		s.Error("error adding business entity", zap.Error(err), zap.Any("type", req.Type))
 		st := s.buildError(errorParams{
 			errModel: errModel,
 			err:      err,

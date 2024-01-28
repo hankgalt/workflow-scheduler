@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const DEFAULT_BATCH_BUFFER int = 2
+const MIN_BATCH_BUFFER int = 2
 
 // ReadCSVWorkflow workflow decider
 func ReadCSVWorkflow(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, error) {
@@ -126,7 +126,15 @@ func readCSV(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, error)
 
 	executionDuration := common.ONE_DAY
 
-	batchBuffer := DEFAULT_BATCH_BUFFER
+	batchBuffer := MIN_BATCH_BUFFER
+	if req.NumBatches > MIN_BATCH_BUFFER {
+		batchBuffer = req.NumBatches
+	}
+
+	if len(req.OffSets) < batchBuffer {
+		batchBuffer = len(req.OffSets)
+	}
+
 	pendingFutures := []workflow.Future{}
 
 	scwo := workflow.ChildWorkflowOptions{
@@ -220,10 +228,6 @@ func sendCSVBatchSignal(
 	req *models.ReadRecordsParams,
 	err error,
 ) error {
-	fmt.Println()
-	fmt.Printf("ReadCSVWorkflow - sendCSVBatchSignal runId: %s, workflowId: %s\n", req.RunId, req.WorkflowId)
-	fmt.Println()
-
 	// result & error channel names
 	resultChanName := fmt.Sprintf("%s-csv-batch-ch", req.FileName)
 	errChanName := fmt.Sprintf("%s-csv-batch-err-ch", req.FileName)

@@ -20,7 +20,7 @@ type BusinessPrincipal struct {
 	MiddleName   string
 	LastName     string `gorm:"primary_key;not null"`
 	Address      string
-	PositionType string
+	PositionType string `gorm:"primary_key;not null"`
 }
 
 func (bp *BusinessPrincipal) TableName() string {
