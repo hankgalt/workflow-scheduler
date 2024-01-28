@@ -1,5 +1,13 @@
 # Cadence.io based workflow scheduler
 
+### Resources
+- https://cadenceworkflow.io/docs/concepts/workflows/#overview
+- https://cadenceworkflow.io/docs/go-client/
+- https://cadenceworkflow.io/docs/concepts/
+- https://docs.temporal.io/
+- https://protobuf.dev/getting-started/gotutorial/
+
+
 ### Install cadence cli
 - `git clone https://github.com/uber/cadence.git`
 - `cd cadence && make bins`
@@ -54,5 +62,3 @@
 - https://github.com/uber/cadence-idl
 
 - ReadAt reads len(b) bytes from the File starting at byte offset off. It returns the number of bytes read and the error, if any. ReadAt always returns a non-nil error when n < len(b). At end of file, that error is io.EOF. n < len(b) when line ends earlier.
-
-- `export GOPRIVATE=github.com/comfforts/comff-config`
