@@ -5,39 +5,47 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"go.uber.org/cadence"
-	"go.uber.org/cadence/workflow"
-	"go.uber.org/zap"
+	"go.temporal.io/sdk/temporal"
+	"go.temporal.io/sdk/workflow"
 
 	"github.com/comfforts/errors"
-	"github.com/comfforts/logger"
 
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
-	"github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
+	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 )
 
 const (
-	ERR_NO_SIGNAL_TO_SEND = "error no signal to send"
+	ERR_NO_SIGNAL_TO_SEND  string = "error no signal to send"
+	ERR_READING_FILE       string = "error reading file"
+	ERR_CSV_RECORDS_WKFL   string = "error csv records workflow"
+	ERR_UNKNOW_ENTITY_TYPE string = "error unknown business entity type"
 )
 
 var (
 	ErrNoSignalToSend = errors.NewAppError(ERR_NO_SIGNAL_TO_SEND)
+	ErrUnknownEntity  = errors.NewAppError(ERR_UNKNOW_ENTITY_TYPE)
 )
 
-// ReadCSVRecordsWorkflow workflow decider
+var (
+	ErrorUnknownEntity = temporal.NewApplicationErrorWithCause(ERR_UNKNOW_ENTITY_TYPE, ERR_UNKNOW_ENTITY_TYPE, ErrUnknownEntity)
+)
+
+// ReadCSVRecordsWorkflow workflow manages reading a CSV file between given offsets
+// retries on configured errors, returns non-retryable errors & returns updated request state
 func ReadCSVRecordsWorkflow(ctx workflow.Context, req *models.ReadRecordsParams) (*models.ReadRecordsParams, error) {
 	l := workflow.GetLogger(ctx)
 	l.Info(
 		"ReadCSVRecordsWorkflow - started",
-		zap.String("file", req.FileName),
-		zap.Int("index", req.BatchIndex),
-		zap.Int64("start", req.Start),
-		zap.Int64("end", req.End),
-		zap.String("reqstr", req.RequestedBy))
+		slog.String("file", req.FileName),
+		slog.Int("index", req.BatchIndex),
+		slog.Int64("start", req.Start),
+		slog.Int64("end", req.End),
+		slog.String("reqstr", req.RequestedBy))
 
 	count := 0
 	configErr := false
@@ -45,30 +53,30 @@ func ReadCSVRecordsWorkflow(ctx workflow.Context, req *models.ReadRecordsParams)
 	for err != nil && count < 10 && !configErr {
 		count++
 		switch wkflErr := err.(type) {
-		case *workflow.GenericError:
-			l.Error("ReadCSVRecordsWorkflow - cadence generic error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+		case *temporal.ServerError:
+			l.Error("ReadCSVRecordsWorkflow - temporal server error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
 			configErr = true
 			return req, err
-		case *workflow.TimeoutError:
-			l.Error("ReadCSVRecordsWorkflow - time out error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+		case *temporal.TimeoutError:
+			l.Error("ReadCSVRecordsWorkflow - time out error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
 			configErr = true
 			return req, err
-		case *cadence.CustomError:
-			l.Error("ReadCSVRecordsWorkflow - cadence custom error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
-			switch wkflErr.Reason() {
-			case common.ERR_SESSION_CTX:
-				resp, err = readCSVRecords(ctx, resp)
-				continue
-			case common.ERR_WRONG_HOST:
+		case *temporal.ApplicationError:
+			l.Error("ReadCSVRecordsWorkflow - temporal application error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
+			switch wkflErr.Type() {
+			case comwkfl.ERR_MISSING_SCHEDULER_CLIENT:
 				configErr = true
 				return req, err
-			case common.ERR_MISSING_FILE_NAME:
+			case comwkfl.ERR_WRONG_HOST:
 				configErr = true
 				return req, err
-			case common.ERR_MISSING_REQSTR:
+			case comwkfl.ERR_MISSING_FILE_NAME:
 				configErr = true
 				return req, err
-			case common.ERR_MISSING_FILE:
+			case comwkfl.ERR_MISSING_REQSTR:
+				configErr = true
+				return req, err
+			case comwkfl.ERR_MISSING_FILE:
 				configErr = true
 				return req, err
 			case ERR_UNKNOW_ENTITY_TYPE:
@@ -78,16 +86,16 @@ func ReadCSVRecordsWorkflow(ctx workflow.Context, req *models.ReadRecordsParams)
 				resp, err = readCSVRecords(ctx, resp)
 				continue
 			}
-		case *workflow.PanicError:
-			l.Error("ReadCSVRecordsWorkflow - cadence panic error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+		case *temporal.PanicError:
+			l.Error("ReadCSVRecordsWorkflow - temporal panic error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
 			configErr = true
 			return resp, err
-		case *cadence.CanceledError:
-			l.Error("ReadCSVRecordsWorkflow - cadence canceled error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+		case *temporal.CanceledError:
+			l.Error("ReadCSVRecordsWorkflow - temporal canceled error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
 			configErr = true
 			return resp, err
 		default:
-			l.Error("ReadCSVRecordsWorkflow - other error", zap.Error(err), zap.String("err-msg", err.Error()), zap.String("type", fmt.Sprintf("%T", err)))
+			l.Error("ReadCSVRecordsWorkflow - other error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
 			resp, err = readCSVRecords(ctx, resp)
 		}
 	}
@@ -95,25 +103,28 @@ func ReadCSVRecordsWorkflow(ctx workflow.Context, req *models.ReadRecordsParams)
 	if err != nil {
 		l.Error(
 			"ReadCSVRecordsWorkflow - failed",
-			zap.String("err-msg", err.Error()),
-			zap.Int("tries", count),
-			zap.Bool("config-err", configErr),
+			slog.String("err-msg", err.Error()),
+			slog.Int("tries", count),
+			slog.Bool("config-err", configErr),
 		)
-		return resp, cadence.NewCustomError("ReadCSVWorkflow failed", err)
+		return resp, temporal.NewApplicationErrorWithCause(ERR_CSV_RECORDS_WKFL, ERR_CSV_RECORDS_WKFL, errors.WrapError(err, ERR_CSV_RECORDS_WKFL))
 	}
 
 	l.Info(
 		"ReadCSVRecordsWorkflow - completed",
-		zap.String("file", req.FileName),
-		zap.Int("index", req.BatchIndex),
-		zap.Int64("start", req.Start),
-		zap.Int64("end", req.End),
-		zap.Any("results", req.Results),
-		zap.Any("errors", req.Errors),
-		zap.String("reqstr", req.RequestedBy))
+		slog.String("file", req.FileName),
+		slog.Int("index", req.BatchIndex),
+		slog.Int64("start", req.Start),
+		slog.Int64("end", req.End),
+		slog.Any("results", req.Results),
+		slog.Any("errors", req.Errors),
+		slog.String("reqstr", req.RequestedBy))
 	return resp, nil
 }
 
+// readCSVRecords reads csv records from file at given start & end offsets
+// sends result/error signal for each record & returns
+// returns error if missing file name, requester, mismatched host & error reading file
 func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*models.ReadRecordsParams, error) {
 	l := workflow.GetLogger(ctx)
 
@@ -124,18 +135,18 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 
 	// check for same host
 	if hostId != HostID {
-		logWrongHostError(req, hostId, HostID, l)
-		return req, cadence.NewCustomError(common.ERR_WRONG_HOST, common.ErrWrongHost)
+		logWrongHostError(req, hostId, HostID)
+		return req, comwkfl.ErrorWrongHost
 	}
 
 	if req.FileName == "" {
-		l.Error(common.ERR_MISSING_FILE_NAME)
-		return nil, cadence.NewCustomError(common.ERR_MISSING_FILE_NAME, common.ErrMissingFileName)
+		l.Error(comwkfl.ERR_MISSING_FILE_NAME)
+		return nil, comwkfl.ErrorMissingFileName
 	}
 
 	if req.RequestedBy == "" {
-		l.Error(common.ERR_MISSING_REQSTR)
-		return nil, cadence.NewCustomError(common.ERR_MISSING_REQSTR, common.ErrMissingReqstr)
+		l.Error(comwkfl.ERR_MISSING_REQSTR)
+		return nil, comwkfl.ErrorMissingReqstr
 	}
 
 	// build local file path
@@ -148,13 +159,13 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 	// get file
 	file, err := os.Open(localFilePath)
 	if err != nil {
-		l.Error(common.ERR_MISSING_FILE)
-		return req, cadence.NewCustomError(common.ERR_MISSING_FILE, err)
+		l.Error(comwkfl.ERR_MISSING_FILE)
+		return req, temporal.NewApplicationErrorWithCause(comwkfl.ERR_MISSING_FILE, comwkfl.ERR_MISSING_FILE, errors.WrapError(err, comwkfl.ERR_MISSING_FILE))
 	}
 	defer func() {
 		err := file.Close()
 		if err != nil && err != os.ErrClosed {
-			l.Error("ReadCSVRecordsWorkflow - error closing csv file", zap.Error(err))
+			l.Error("ReadCSVRecordsWorkflow - error closing csv file", slog.Any("error", err))
 		}
 	}()
 
@@ -163,7 +174,7 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 	_, err = file.ReadAt(data, req.Start)
 	if err != nil {
 		l.Error(ERR_READING_FILE)
-		return req, cadence.NewCustomError(ERR_READING_FILE, err)
+		return req, temporal.NewApplicationErrorWithCause(ERR_READING_FILE, ERR_READING_FILE, errors.WrapError(err, ERR_READING_FILE))
 	}
 
 	// create batch csv reader
@@ -189,8 +200,8 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 
 			// get record string
 			var singleRec []string
-			if recStr, err := ReadRecord(localFilePath, req.Start+offset, size, l); err != nil {
-				l.Error("ReadCSVRecordsWorkflow - error reading error record", zap.Error(err))
+			if recStr, err := ReadRecord(localFilePath, req.Start+offset, size); err != nil {
+				l.Error("ReadCSVRecordsWorkflow - error reading error record", slog.Any("error", err))
 			} else {
 				// sanitize record string
 				recStr = strings.Replace(recStr, "\"", "", -1)
@@ -198,7 +209,7 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 				// read single csv record from record string
 				singleRec, err = readSingleRecord(recStr)
 				if err != nil {
-					l.Error("ReadCSVRecordsWorkflow - error reading single record", zap.Error(err))
+					l.Error("ReadCSVRecordsWorkflow - error reading single record", slog.Any("error", err))
 				}
 			}
 
@@ -214,8 +225,8 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 					}
 					localFilePath := filepath.Join(dataPath, req.FileName)
 
-					if recStr, err := ReadRecord(localFilePath, req.Start+offset, size, l); err != nil {
-						l.Error("ReadCSVRecordsWorkflow - error reading record string", zap.Error(err))
+					if recStr, err := ReadRecord(localFilePath, req.Start+offset, size); err != nil {
+						l.Error("ReadCSVRecordsWorkflow - error reading record string", slog.Any("error", err))
 					} else {
 
 						recStr = strings.ReplaceAll(recStr, "\"", "")
@@ -232,16 +243,13 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 					}
 				}
 
-				addEntityAndSignal(ctx, req, req.Start+offset, size, singleRec, l)
+				addEntityAndSignal(ctx, req, req.Start+offset, size, singleRec)
 			} else {
 				// send error signal
 				if sigErr := sendCSVRecordSignal(ctx, req, req.Start+offset, size, "", err); sigErr != nil {
-					logCSVErrSigError(sigErr, req, req.Start+offset, size, l)
+					logCSVErrSigError(sigErr, req, req.Start+offset, size)
 				} else {
-					logCSVErrSig(req, req.Start+offset, size, l)
-					fmt.Println()
-					fmt.Printf("readCSVRecords() appending error result - error: %s, start: %d, end: %d\n", err.Error(), req.Start+offset, req.Start+offset+size)
-					fmt.Println()
+					logCSVErrSig(req, req.Start+offset, size)
 					req.Errors = append(req.Errors, &models.ErrorResult{
 						Start: req.Start + offset,
 						End:   req.Start + offset + size,
@@ -261,8 +269,8 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 				}
 				localFilePath := filepath.Join(dataPath, req.FileName)
 
-				if recStr, err := ReadRecord(localFilePath, req.Start+offset, size, l); err != nil {
-					l.Error("ReadCSVRecordsWorkflow - error reading record string", zap.Error(err))
+				if recStr, err := ReadRecord(localFilePath, req.Start+offset, size); err != nil {
+					l.Error("ReadCSVRecordsWorkflow - error reading record string", slog.Any("error", err))
 				} else {
 
 					recStr = strings.ReplaceAll(recStr, "\r", "")
@@ -278,7 +286,7 @@ func readCSVRecords(ctx workflow.Context, req *models.ReadRecordsParams) (*model
 				}
 			}
 
-			addEntityAndSignal(ctx, req, req.Start+offset, size, record, l)
+			addEntityAndSignal(ctx, req, req.Start+offset, size, record)
 		}
 
 		offset = csvReader.InputOffset()
@@ -290,7 +298,6 @@ func addEntityAndSignal(
 	req *models.ReadRecordsParams,
 	start, size int64,
 	record []string,
-	l logger.AppLogger,
 ) {
 	if fields, err := mapToInterface(req.Headers.Headers, record); err == nil {
 		var activityErr error
@@ -303,17 +310,17 @@ func addEntityAndSignal(
 		} else if req.Type == models.FILING {
 			resultId, activityErr = ExecuteAddFilingActivity(ctx, fields)
 		} else {
-			activityErr = cadence.NewCustomError(ERR_UNKNOW_ENTITY_TYPE, ErrUnknownEntity)
+			activityErr = ErrorUnknownEntity
 		}
 
 		if activityErr != nil {
-			logCSVResultEntityError(activityErr, req, start, size, l)
+			logCSVResultEntityError(activityErr, req, start, size)
 
 			// send error signal
 			if sigErr := sendCSVRecordSignal(ctx, req, start, size, "", activityErr); sigErr != nil {
-				logCSVErrSigError(sigErr, req, start, size, l)
+				logCSVErrSigError(sigErr, req, start, size)
 			} else {
-				logCSVErrSig(req, start, size, l)
+				logCSVErrSig(req, start, size)
 				req.Errors = append(req.Errors, &models.ErrorResult{
 					Start: start,
 					End:   start + size,
@@ -323,9 +330,9 @@ func addEntityAndSignal(
 		} else {
 			// send result signal
 			if sigErr := sendCSVRecordSignal(ctx, req, start, size, resultId, nil); sigErr != nil {
-				logCSVResultSigError(sigErr, req, start, size, l)
+				logCSVResultSigError(sigErr, req, start, size)
 			} else {
-				logCSVResultSig(req, start, size, l)
+				logCSVResultSig(req, start, size)
 				req.Results = append(req.Results, &models.SuccessResult{
 					Start: start,
 					End:   start + size,
@@ -334,13 +341,13 @@ func addEntityAndSignal(
 			}
 		}
 	} else {
-		logCSVResultFieldsError(err, req, start, size, l)
+		logCSVResultFieldsError(err, req, start, size)
 
 		// send error signal
 		if sigErr := sendCSVRecordSignal(ctx, req, start, size, "", err); sigErr != nil {
-			logCSVErrSigError(sigErr, req, start, size, l)
+			logCSVErrSigError(sigErr, req, start, size)
 		} else {
-			logCSVErrSig(req, start, size, l)
+			logCSVErrSig(req, start, size)
 			req.Errors = append(req.Errors, &models.ErrorResult{
 				Start: start,
 				End:   start + size,
@@ -384,72 +391,72 @@ func sendCSVRecordSignal(
 	return nil
 }
 
-func logCSVResultSigError(err error, req *models.ReadRecordsParams, start, size int64, l logger.AppLogger) {
-	l.Error(
+func logCSVResultSigError(err error, req *models.ReadRecordsParams, start, size int64) {
+	slog.Error(
 		"ReadCSVRecordsWorkflow error sending csv result signal",
-		zap.Error(err),
-		zap.String("file", req.FileName),
-		zap.Any("type", req.Type),
-		zap.String("workflow", req.WorkflowId),
-		zap.Int64("start", start),
-		zap.Int64("size", size))
+		slog.Any("error", err),
+		slog.String("file", req.FileName),
+		slog.Any("type", req.Type),
+		slog.String("workflow", req.WorkflowId),
+		slog.Int64("start", start),
+		slog.Int64("size", size))
 }
 
-func logCSVResultFieldsError(err error, req *models.ReadRecordsParams, start, size int64, l logger.AppLogger) {
-	l.Error(
+func logCSVResultFieldsError(err error, req *models.ReadRecordsParams, start, size int64) {
+	slog.Error(
 		"ReadCSVRecordsWorkflow error mapping entity fields",
-		zap.Error(err),
-		zap.String("file", req.FileName),
-		zap.Any("type", req.Type),
-		zap.String("workflow", req.WorkflowId),
-		zap.Int64("start", start),
-		zap.Int64("size", size))
+		slog.Any("error", err),
+		slog.String("file", req.FileName),
+		slog.Any("type", req.Type),
+		slog.String("workflow", req.WorkflowId),
+		slog.Int64("start", start),
+		slog.Int64("size", size))
 }
 
-func logCSVResultEntityError(err error, req *models.ReadRecordsParams, start, size int64, l logger.AppLogger) {
-	l.Error(
+func logCSVResultEntityError(err error, req *models.ReadRecordsParams, start, size int64) {
+	slog.Error(
 		"ReadCSVRecordsWorkflow error adding entity",
-		zap.Error(err),
-		zap.String("file", req.FileName),
-		zap.Any("type", req.Type),
-		zap.String("workflow", req.WorkflowId),
-		zap.Int64("start", start),
-		zap.Int64("size", size))
+		slog.Any("error", err),
+		slog.String("file", req.FileName),
+		slog.Any("type", req.Type),
+		slog.String("workflow", req.WorkflowId),
+		slog.Int64("start", start),
+		slog.Int64("size", size))
 }
 
-func logCSVResultSig(req *models.ReadRecordsParams, start, size int64, l logger.AppLogger) {
-	l.Info(
+func logCSVResultSig(req *models.ReadRecordsParams, start, size int64) {
+	slog.Info(
 		"ReadCSVRecordsWorkflow csv result signal sent",
-		zap.String("file", req.FileName),
-		zap.String("workflow", req.WorkflowId),
-		zap.Any("type", req.Type),
-		zap.Int64("start", start),
-		zap.Int64("size", size))
+		slog.String("file", req.FileName),
+		slog.String("workflow", req.WorkflowId),
+		slog.Any("type", req.Type),
+		slog.Int64("start", start),
+		slog.Int64("size", size))
 }
 
-func logCSVErrSigError(err error, req *models.ReadRecordsParams, start, size int64, l logger.AppLogger) {
-	l.Error(
+func logCSVErrSigError(err error, req *models.ReadRecordsParams, start, size int64) {
+	slog.Error(
 		"ReadCSVRecordsWorkflow error sending csv error signal",
-		zap.Error(err),
-		zap.String("file", req.FileName),
-		zap.String("workflow", req.WorkflowId),
-		zap.Any("type", req.Type),
-		zap.Int64("start", start),
-		zap.Int64("size", size))
+		slog.Any("error", err),
+		slog.String("file", req.FileName),
+		slog.String("workflow", req.WorkflowId),
+		slog.Any("type", req.Type),
+		slog.Int64("start", start),
+		slog.Int64("size", size))
 }
 
-func logCSVErrSig(req *models.ReadRecordsParams, start, size int64, l logger.AppLogger) {
-	l.Info(
+func logCSVErrSig(req *models.ReadRecordsParams, start, size int64) {
+	slog.Info(
 		"ReadCSVRecordsWorkflow csv error signal sent",
-		zap.String("file", req.FileName),
-		zap.String("workflow", req.WorkflowId),
-		zap.Int64("start", start),
-		zap.Int64("size", size))
+		slog.String("file", req.FileName),
+		slog.String("workflow", req.WorkflowId),
+		slog.Int64("start", start),
+		slog.Int64("size", size))
 }
 
-func logWrongHostError(req *models.ReadRecordsParams, hostId, currentHostId string, l logger.AppLogger) {
-	l.Error("ReadCSVRecordsWorkflow - running on wrong host",
-		zap.String("file", req.FileName),
-		zap.String("req-host", hostId),
-		zap.String("curr-host", currentHostId))
+func logWrongHostError(req *models.ReadRecordsParams, hostId, currentHostId string) {
+	slog.Error("ReadCSVRecordsWorkflow - running on wrong host",
+		slog.String("file", req.FileName),
+		slog.String("req-host", hostId),
+		slog.String("curr-host", currentHostId))
 }

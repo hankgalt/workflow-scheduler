@@ -34,23 +34,23 @@ run-client:
 	@echo "starting local test client with latest ${HEAD}"
 	scripts/start-client.sh
 
-# start cadence server
-.PHONY: start-cadence
-start-cadence:
-	@echo "starting cadence server"
-	docker-compose -f deploy/scheduler/docker-compose-cadence.yml up -d
+# start temporal server
+.PHONY: start-temporal
+start-temporal:
+	@echo "starting temporal server"
+	docker-compose -f deploy/scheduler/docker-compose-temporal.yml up -d
 
-# stop cadence server
-.PHONY: stop-cadence
-stop-cadence:
-	@echo "stopping cadence server"
-	docker-compose -f deploy/scheduler/docker-compose-cadence.yml down
+# stop temporal server
+.PHONY: stop-temporal
+stop-temporal:
+	@echo "stopping temporal server"
+	docker-compose -f deploy/scheduler/docker-compose-temporal.yml down
 
 .PHONY: register-domain
 register-domain:
-	@echo "registering scheduler domain"
-	cadence --domain scheduler-domain domain register -rd 1
-	cadence --domain scheduler-domain domain describe
+	@echo "registering scheduler temporal domain"
+	docker exec temporal-admin-tools tctl --namespace scheduler-domain namespace register
+	docker exec temporal-admin-tools tctl namespace describe scheduler-domain
 
 # start scheduler service with docker compose
 .PHONY: start-service
@@ -69,21 +69,4 @@ stop-service:
 start-worker:
 	scripts/start-worker.sh ${TARGET}
 
-# start temporal server
-.PHONY: start-temporal
-start-temporal:
-	@echo "starting temporal server"
-	docker-compose -f deploy/scheduler/docker-compose-temporal.yml up -d
-
-# stop temporal server
-.PHONY: stop-temporal
-stop-temporal:
-	@echo "stopping temporal server"
-	docker-compose -f deploy/scheduler/docker-compose-temporal.yml down
-
-.PHONY: register-temporal-domain
-register-temporal-domain:
-	@echo "registering scheduler temporal domain"
-	tctl --namespace scheduler-domain namespace register
-	tctl namespace describe scheduler-domain
 

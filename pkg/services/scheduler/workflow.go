@@ -8,8 +8,8 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
-	bizwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/temporal/business"
-	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/temporal/common"
+	bizwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/business"
+	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 )
 
 func (ss *schedulerService) ProcessFileSignalWorkflow(ctx context.Context, params *models.FileSignalParams) (*models.WorkflowRun, error) {

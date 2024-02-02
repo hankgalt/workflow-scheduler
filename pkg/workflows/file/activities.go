@@ -12,7 +12,7 @@ import (
 	"github.com/hankgalt/workflow-scheduler/pkg/clients"
 	"github.com/hankgalt/workflow-scheduler/pkg/clients/cloud"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
-	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/temporal/common"
+	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 )
 
 const (

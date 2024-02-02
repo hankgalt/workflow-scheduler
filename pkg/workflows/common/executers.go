@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	"go.temporal.io/sdk/temporal"
+	"go.temporal.io/sdk/workflow"
+
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
-	"go.uber.org/cadence"
-	"go.uber.org/cadence/workflow"
 )
 
 type ActivityParams struct {
@@ -24,21 +25,12 @@ func DefaultActivityOptions() workflow.ActivityOptions {
 		ScheduleToStartTimeout: time.Second * 5,
 		StartToCloseTimeout:    time.Minute,
 		HeartbeatTimeout:       time.Second * 2, // such a short timeout to make sample fail over very fast
-		RetryPolicy: &cadence.RetryPolicy{
-			InitialInterval:          time.Second,
-			BackoffCoefficient:       2.0,
-			MaximumInterval:          time.Minute,
-			ExpirationInterval:       time.Minute * 10,
-			NonRetriableErrorReasons: []string{"bad-error"},
+		RetryPolicy: &temporal.RetryPolicy{
+			InitialInterval:        time.Second,
+			BackoffCoefficient:     2.0,
+			MaximumInterval:        time.Minute,
+			NonRetryableErrorTypes: []string{"bad-error"},
 		},
-	}
-}
-
-func NoRetryActivityOptions() workflow.ActivityOptions {
-	return workflow.ActivityOptions{
-		ScheduleToStartTimeout: time.Second * 5,
-		StartToCloseTimeout:    time.Minute,
-		HeartbeatTimeout:       time.Second * 2, // such a short timeout to make sample fail over very fast
 	}
 }
 
@@ -54,13 +46,23 @@ func GetRunWorkflowIds(ctx workflow.Context, runId, wkflId string) (string, stri
 	return runId, wkflId
 }
 
-func ExecuteCreateRunActivity(ctx workflow.Context, params *models.RunParams) (*models.RequestInfo, error) {
+func ExecuteCreateRunActivity(ctx workflow.Context, params *models.RunParams) (*api.WorkflowRun, error) {
 	// setup activity options
 	ao := DefaultActivityOptions()
+	ao.RetryPolicy = &temporal.RetryPolicy{
+		InitialInterval:    time.Second,
+		BackoffCoefficient: 2.0,
+		MaximumInterval:    time.Minute,
+		MaximumAttempts:    10,
+		NonRetryableErrorTypes: []string{
+			ERR_MISSING_SCHEDULER_CLIENT,
+			ERR_CREATING_RUN,
+		},
+	}
 
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
-	var resp *models.RequestInfo
+	var resp *api.WorkflowRun
 	err := workflow.ExecuteActivity(ctx, CreateRunActivityName, params).Get(ctx, &resp)
 	if err != nil {
 		return nil, err
@@ -69,13 +71,23 @@ func ExecuteCreateRunActivity(ctx workflow.Context, params *models.RunParams) (*
 	return resp, nil
 }
 
-func ExecuteUpdateRunActivity(ctx workflow.Context, params *models.RunParams) (*models.RequestInfo, error) {
+func ExecuteUpdateRunActivity(ctx workflow.Context, params *models.RunParams) (*api.WorkflowRun, error) {
 	// setup activity options
 	ao := DefaultActivityOptions()
+	ao.RetryPolicy = &temporal.RetryPolicy{
+		InitialInterval:    time.Second,
+		BackoffCoefficient: 2.0,
+		MaximumInterval:    time.Minute,
+		MaximumAttempts:    10,
+		NonRetryableErrorTypes: []string{
+			ERR_MISSING_SCHEDULER_CLIENT,
+			ERR_UPDATING_RUN,
+		},
+	}
 
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
-	var resp *models.RequestInfo
+	var resp *api.WorkflowRun
 	err := workflow.ExecuteActivity(ctx, UpdateRunActivityName, params).Get(ctx, &resp)
 	if err != nil {
 		return nil, err
@@ -84,13 +96,23 @@ func ExecuteUpdateRunActivity(ctx workflow.Context, params *models.RunParams) (*
 	return resp, nil
 }
 
-func ExecuteUpdateFileRunActivity(ctx workflow.Context, req *models.RunParams) (*models.RequestInfo, error) {
+func ExecuteUpdateFileRunActivity(ctx workflow.Context, req *models.RunParams) (*api.WorkflowRun, error) {
 	// setup activity options
 	ao := DefaultActivityOptions()
+	ao.RetryPolicy = &temporal.RetryPolicy{
+		InitialInterval:    time.Second,
+		BackoffCoefficient: 2.0,
+		MaximumInterval:    time.Minute,
+		MaximumAttempts:    10,
+		NonRetryableErrorTypes: []string{
+			ERR_MISSING_SCHEDULER_CLIENT,
+			ERR_UPDATING_RUN,
+		},
+	}
 
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
-	var resp *models.RequestInfo
+	var resp *api.WorkflowRun
 	err := workflow.ExecuteActivity(ctx, UpdateRunActivityName, req).Get(ctx, &resp)
 	if err != nil {
 		return nil, err
@@ -103,13 +125,12 @@ func ExecuteSearchRunActivity(ctx workflow.Context, params *models.RunParams) ([
 	fmt.Println("ExecuteSearchRunActivity started, params", params)
 	// setup activity options
 	ao := DefaultActivityOptions()
-	ao.RetryPolicy = &cadence.RetryPolicy{
+	ao.RetryPolicy = &temporal.RetryPolicy{
 		InitialInterval:    time.Second,
 		BackoffCoefficient: 2.0,
 		MaximumInterval:    time.Minute,
-		ExpirationInterval: time.Minute * 2,
 		MaximumAttempts:    10,
-		NonRetriableErrorReasons: []string{
+		NonRetryableErrorTypes: []string{
 			ERR_MISSING_SCHEDULER_CLIENT,
 			ERR_SEARCH_RUN,
 		},

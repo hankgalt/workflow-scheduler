@@ -40,7 +40,7 @@ func testProcessFileSignalWorkflowRun(t *testing.T, client, nbClient api.Schedul
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	reqstr := "process-file-signal-workflow-server-test@gmail.com"
+	reqstr := "process-file-signal-workflow-server-test@test.com"
 	filePath := fmt.Sprintf("%s/%s", DATA_PATH, "Agents-sm.csv")
 	wfRun, err := client.ProcessFileSignalWorkflow(ctx, &api.FileSignalRequest{
 		FilePath:    filePath,
@@ -58,7 +58,7 @@ func testQueryWorkflowState(t *testing.T, client, nbClient api.SchedulerClient, 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	runId := "bca20bd3-08f0-4b39-8f5a-dfe5fed57eb2"
+	runId := "c6f63e6a-7cfe-4fa5-a6a6-94282bea143e"
 	wkflId := "file-scheduler/Agents-sm.csv"
 	wfState, err := client.QueryFileWorkflowState(ctx, &api.QueryWorkflowRequest{
 		RunId:      runId,

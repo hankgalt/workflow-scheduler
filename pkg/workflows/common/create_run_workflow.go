@@ -3,11 +3,14 @@ package common
 import (
 	"log/slog"
 
+	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/workflow"
-	"go.uber.org/cadence"
 
+	"github.com/comfforts/errors"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
 )
+
+const ERR_CREATE_RUN_WKFL string = "error create run workflow"
 
 // CreateRunWorkflow workflow decider
 func CreateRunWorkflow(ctx workflow.Context, req *models.RunParams) (*models.RunParams, error) {
@@ -26,7 +29,7 @@ func CreateRunWorkflow(ctx workflow.Context, req *models.RunParams) (*models.Run
 			"CreateRunWorkflow - failed",
 			slog.String("err-msg", err.Error()),
 		)
-		return resp, cadence.NewCustomError("ReadCSVWorkflow failed", err)
+		return resp, temporal.NewApplicationErrorWithCause(ERR_CREATE_RUN_WKFL, ERR_CREATE_RUN_WKFL, errors.WrapError(err, ERR_CREATE_RUN_WKFL))
 	}
 
 	l.Info(

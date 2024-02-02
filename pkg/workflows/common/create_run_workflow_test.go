@@ -17,7 +17,8 @@ import (
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	"github.com/hankgalt/workflow-scheduler/pkg/clients/scheduler"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
-	"github.com/hankgalt/workflow-scheduler/pkg/workflows/temporal/common"
+	"github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
+	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 )
 
 type CommonWorkflowTestSuite struct {
@@ -42,7 +43,7 @@ func (s *CommonWorkflowTestSuite) Test_CreateRunWorkflow() {
 		RequestedBy: requester,
 	}
 	expectedCall := []string{
-		common.CreateRunActivityName,
+		comwkfl.CreateRunActivityName,
 	}
 
 	var activityCalled []string
@@ -89,7 +90,7 @@ func (s *CommonWorkflowTestSuite) Test_CreateRunWorkflow() {
 		}
 	}()
 
-	s.env.ExecuteWorkflow(common.CreateRunWorkflow, req)
+	s.env.ExecuteWorkflow(comwkfl.CreateRunWorkflow, req)
 	s.True(s.env.IsWorkflowCompleted())
 	var resp models.RunParams
 	err := s.env.GetWorkflowResult(&resp)
@@ -104,10 +105,10 @@ func (s *CommonWorkflowTestSuite) SetupTest() {
 	l := logger.NewTestAppZapLogger(TEST_DIR)
 	s.env = s.NewTestWorkflowEnvironment()
 
-	s.env.RegisterWorkflow(common.CreateRunWorkflow)
+	s.env.RegisterWorkflow(comwkfl.CreateRunWorkflow)
 
-	s.env.RegisterActivityWithOptions(common.CreateRunActivity, activity.RegisterOptions{
-		Name: common.CreateRunActivityName,
+	s.env.RegisterActivityWithOptions(comwkfl.CreateRunActivity, activity.RegisterOptions{
+		Name: comwkfl.CreateRunActivityName,
 	})
 
 	ctx := context.Background()
@@ -122,7 +123,7 @@ func (s *CommonWorkflowTestSuite) SetupTest() {
 		BackgroundActivityContext: ctx,
 	})
 
-	s.env.SetTestTimeout(common.ONE_DAY)
+	s.env.SetTestTimeout(comwkfl.ONE_DAY)
 }
 
 func (s *CommonWorkflowTestSuite) TearDownTest() {

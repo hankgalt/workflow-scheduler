@@ -57,7 +57,7 @@ func main() {
 	}
 
 	l.Info("setting up scheduler service config")
-	serviceCfg, err := scheduler.NewServiceConfig("", "", "", "", "", true)
+	serviceCfg, err := scheduler.NewServiceConfig("", "", "", "", true)
 	if err != nil {
 		l.Error("error creating scheduler service config", zap.Error(err))
 		panic(err)

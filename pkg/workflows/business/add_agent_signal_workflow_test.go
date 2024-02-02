@@ -17,9 +17,9 @@ import (
 	"github.com/hankgalt/workflow-scheduler/pkg/clients/cloud"
 	"github.com/hankgalt/workflow-scheduler/pkg/clients/scheduler"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
+	bizwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/business"
+	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 	fiwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/file"
-	bizwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/temporal/business"
-	"github.com/hankgalt/workflow-scheduler/pkg/workflows/temporal/common"
 )
 
 type EntityWorkflowTestSuite struct {
@@ -39,14 +39,14 @@ func (s *EntityWorkflowTestSuite) SetupTest() {
 
 	s.env.RegisterWorkflow(bizwkfl.AddAgentSignalWorkflow)
 
-	s.env.RegisterActivityWithOptions(common.CreateRunActivity, activity.RegisterOptions{
-		Name: common.CreateRunActivityName,
+	s.env.RegisterActivityWithOptions(comwkfl.CreateRunActivity, activity.RegisterOptions{
+		Name: comwkfl.CreateRunActivityName,
 	})
-	s.env.RegisterActivityWithOptions(common.UpdateRunActivity, activity.RegisterOptions{
-		Name: common.UpdateRunActivityName,
+	s.env.RegisterActivityWithOptions(comwkfl.UpdateRunActivity, activity.RegisterOptions{
+		Name: comwkfl.UpdateRunActivityName,
 	})
-	s.env.RegisterActivityWithOptions(common.SearchRunActivity, activity.RegisterOptions{
-		Name: common.SearchRunActivityName,
+	s.env.RegisterActivityWithOptions(comwkfl.SearchRunActivity, activity.RegisterOptions{
+		Name: comwkfl.SearchRunActivityName,
 	})
 	s.env.RegisterActivityWithOptions(fiwkfl.DownloadFileActivity, activity.RegisterOptions{
 		Name: fiwkfl.DownloadFileActivityName,
@@ -94,7 +94,7 @@ func (s *EntityWorkflowTestSuite) SetupTest() {
 		BackgroundActivityContext: ctx,
 	})
 
-	s.env.SetTestTimeout(common.ONE_DAY)
+	s.env.SetTestTimeout(comwkfl.ONE_DAY)
 }
 
 func (s *EntityWorkflowTestSuite) TearDownTest() {

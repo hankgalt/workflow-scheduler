@@ -47,7 +47,7 @@ func setupAPITests(t *testing.T, l *zap.Logger) (
 ) {
 	t.Helper()
 
-	serviceCfg, err := scheduler.NewServiceConfig("localhost", "", "", "", CADENCE_CONFIG, false)
+	serviceCfg, err := scheduler.NewServiceConfig("localhost", "", "", "", false)
 	require.NoError(t, err)
 
 	ss, err = scheduler.NewSchedulerService(serviceCfg, l)

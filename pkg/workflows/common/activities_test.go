@@ -7,17 +7,18 @@ import (
 	"os"
 	"testing"
 
-	"github.com/comfforts/logger"
 	"github.com/stretchr/testify/suite"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 	"go.temporal.io/sdk/worker"
 
+	"github.com/comfforts/logger"
+
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	"github.com/hankgalt/workflow-scheduler/pkg/clients/scheduler"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
-	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/temporal/common"
+	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 )
 
 const TEST_DIR = "data"

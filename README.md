@@ -1,19 +1,10 @@
-# Cadence.io based workflow scheduler
+# Temporal.io based workflow scheduler
 
 ### Resources
-- https://cadenceworkflow.io/docs/concepts/workflows/#overview
-- https://cadenceworkflow.io/docs/go-client/
-- https://cadenceworkflow.io/docs/concepts/
-- https://docs.temporal.io/
+- https://docs.temporal.io/workflows
+- https://docs.temporal.io/dev-guide/go
+- https://docs.temporal.io/concepts/
 - https://protobuf.dev/getting-started/gotutorial/
-
-
-### Install cadence cli
-- `git clone https://github.com/uber/cadence.git`
-- `cd cadence && make bins`
-- `./cadence --help`
-- `sudo cp ./cadence /usr/local/bin/`
-- `cadence --help`
 
 ### Local setup
 - setup db scripts
@@ -33,15 +24,15 @@
         FLUSH PRIVILEGES;```
 - add `mysql.env` in `deploy/scheduler` folder. `MYSQL_ROOT_PASSWORD, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD`
 - `make start-db`
-- `make start-cadence`
+- `make start-temporal`
 - `make register-domain`
 - add env configs in `env/` folder
     - local
-        `SERVER_PORT, DB_HOST, DB_NAME, DB_USER, DB_PASSWORD`
+        `SERVER_PORT, DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, TEMPORAL_HOST, WORKFLOW_DOMAIN`
     - test
-        `DB_NAME, DB_USER, DB_PASSWORD, CERTS_PATH, POLICY_PATH, CADENCE_CONFIG_PATH, CREDS_PATH=, BUCKET`
+        `DB_NAME, DB_USER, DB_PASSWORD, CERTS_PATH, POLICY_PATH, TEMPORAL_HOST, WORKFLOW_DOMAIN, CREDS_PATH, BUCKET`
     - worker (business)
-        `CADENCE_CONFIG_PATH, SCHEDULER_SERVICE_HOST, CREDS_PATH, BUCKET, METRICS_PORT`
+        `TEMPORAL_HOST, WORKFLOW_DOMAIN, SCHEDULER_SERVICE_HOST, CREDS_PATH, BUCKET, METRICS_PORT`
 - `make start-worker TARGET=business`
 - `make start-server`
 
@@ -54,11 +45,6 @@
 - `export GOPRIVATE=github.com/comfforts/comff-config`
 - `go mod tidy -go=1.16 && go mod tidy -go=1.17`
 
-### cadence notes
-
-- https://github.com/uber-go/cadence-client/issues/1107, ringpop-go and tchannel-go depends on older version of thrift, yarpc brings up newer version https://github.com/uber/cadence/blob/d3d06825adcf11c20ec3fc58e329f1d9560bb729/go.mod#L92
-`replace github.com/apache/thrift => github.com/apache/thrift v0.0.0-20161221203622-b2a4d4ae21c7`
-
-- https://github.com/uber/cadence-idl
+### dev notes
 
 - ReadAt reads len(b) bytes from the File starting at byte offset off. It returns the number of bytes read and the error, if any. ReadAt always returns a non-nil error when n < len(b). At end of file, that error is io.EOF. n < len(b) when line ends earlier.

@@ -17,10 +17,20 @@ const (
 	ERR_MISSING_REQUIRED = "error: missing required configuration"
 	ERR_DB_CONNECTION    = "error: data store connection"
 	ERR_DB_CLOSE         = "error: closing data store connection"
+
+	ERR_MISSING_HOST = "error: missing host information"
+	ERR_MISSING_USER = "error: missing DB user"
+	ERR_MISSING_DB   = "error: missing DB name"
+	ERR_MISSING_AUTH = "error: missing DB user auth"
 )
 
 var (
 	ErrMissingRequired = errors.NewAppError(ERR_MISSING_REQUIRED)
+
+	ErrMissingHost = errors.NewAppError(ERR_MISSING_HOST)
+	ErrMissingUser = errors.NewAppError(ERR_MISSING_USER)
+	ErrMissingDB   = errors.NewAppError(ERR_MISSING_DB)
+	ErrMissingAuth = errors.NewAppError(ERR_MISSING_AUTH)
 )
 
 type DBClient interface {
@@ -53,8 +63,20 @@ func NewDBConfig(host, db, user, auth string) (*DBConfig, error) {
 		auth = os.Getenv("DB_PASSWORD")
 	}
 
-	if host == "" || db == "" || user == "" || auth == "" {
-		return nil, ErrMissingRequired
+	if host == "" {
+		return nil, ErrMissingHost
+	}
+
+	if user == "" {
+		return nil, ErrMissingUser
+	}
+
+	if db == "" {
+		return nil, ErrMissingDB
+	}
+
+	if auth == "" {
+		return nil, ErrMissingAuth
 	}
 
 	return &DBConfig{

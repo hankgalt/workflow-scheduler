@@ -6,26 +6,23 @@ import (
 	"github.com/comfforts/errors"
 	"go.uber.org/zap"
 
-	"github.com/hankgalt/workflow-scheduler/pkg/clients/cadence"
 	"github.com/hankgalt/workflow-scheduler/pkg/clients/mysqldb"
 	"github.com/hankgalt/workflow-scheduler/pkg/clients/temporal"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
 )
 
 const (
-	ERR_MISSING_REQUIRED    = "error: missing required configuration"
-	ERR_MISSING_CADENCE_CFG = "error: missing cadence configuration"
-	ERR_DB_SETUP            = "error: data store setup"
-	ERR_DB_RUN_INIT         = "error: data store workflow run init"
-	ERR_DB_RUN_CLEANUP      = "error: data store workflow run cleanup"
-	ERR_DB_PRINCIPALS_INIT  = "error: data store business principals init"
-	ERR_DB_AGENTS_INIT      = "error: data store business agents init"
-	ERR_DB_FILINGS_INIT     = "error: data store business filings init"
+	ERR_MISSING_REQUIRED   = "error: missing required configuration"
+	ERR_DB_SETUP           = "error: data store setup"
+	ERR_DB_RUN_INIT        = "error: data store workflow run init"
+	ERR_DB_RUN_CLEANUP     = "error: data store workflow run cleanup"
+	ERR_DB_PRINCIPALS_INIT = "error: data store business principals init"
+	ERR_DB_AGENTS_INIT     = "error: data store business agents init"
+	ERR_DB_FILINGS_INIT    = "error: data store business filings init"
 )
 
 var (
-	ErrMissingRequired   = errors.NewAppError(ERR_MISSING_REQUIRED)
-	ErrMissingCadenceCfg = errors.NewAppError(ERR_MISSING_CADENCE_CFG)
+	ErrMissingRequired = errors.NewAppError(ERR_MISSING_REQUIRED)
 )
 
 type SchedulerService interface {
@@ -54,12 +51,11 @@ type SchedulerService interface {
 type serviceConfig struct {
 	*mysqldb.DBConfig
 	validateSetup bool
-	cadenceCfg    string
 }
 
 // NewServiceConfig takes databaase credential
 // returns service config instance or error
-func NewServiceConfig(host, db, user, auth string, cadenceCfg string, validate bool) (*serviceConfig, error) {
+func NewServiceConfig(host, db, user, auth string, validate bool) (*serviceConfig, error) {
 	dbCfg, err := mysqldb.NewDBConfig(host, db, user, auth)
 	if err != nil {
 		return nil, err
@@ -68,14 +64,12 @@ func NewServiceConfig(host, db, user, auth string, cadenceCfg string, validate b
 	return &serviceConfig{
 		DBConfig:      dbCfg,
 		validateSetup: validate,
-		cadenceCfg:    cadenceCfg,
 	}, nil
 }
 
 type schedulerService struct {
 	db       *mysqldb.MYSQLDBClient
 	cfg      *serviceConfig
-	cadence  *cadence.CadenceClient
 	temporal *temporal.TemporalClient
 	*zap.Logger
 }
@@ -104,31 +98,12 @@ func NewSchedulerService(cfg *serviceConfig, l *zap.Logger) (*schedulerService, 
 		}
 	}
 
-	cc, err := cadence.NewCadenceClient(cfg.cadenceCfg, l)
-	if err != nil {
-		l.Error("error creating cadence client", zap.Error(err))
-		return nil, err
-	}
-	bs.cadence = cc
-
 	tc, err := temporal.NewTemporalClient(l)
 	if err != nil {
 		l.Error("error creating temporal client", zap.Error(err))
 		return nil, err
 	}
 	bs.temporal = tc
-
-	// err = bs.registerFileProcessingWorkflowGroup()
-	// if err != nil {
-	// 	logger.Error("error registering file processing workflow group", zap.Error(err))
-	// 	return nil, err
-	// }
-
-	// err = bs.registerShopWorkflowGroup()
-	// if err != nil {
-	// 	logger.Error("error registering shop workflow group", zap.Error(err))
-	// 	return nil, err
-	// }
 
 	return bs, nil
 }
@@ -205,32 +180,3 @@ func (ss *schedulerService) resetWorkflowRun() error {
 	}
 	return nil
 }
-
-// // registerFileProcessingWorkflowGroup registers file task group workflows and activities
-// func (bs *schedulerService) registerFileProcessingWorkflowGroup() error {
-// 	bs.cadence.RegisterWorkflow(file.FileProcessingWorkflow)
-// 	bs.cadence.RegisterWorkflow(file.UploadFileWorkflowName)
-// 	bs.cadence.RegisterWorkflow(file.DownloadFileWorkflowName)
-// 	bs.cadence.RegisterActivityWithAlias(common.CreateRunActivity, common.CreateRunActivityName)
-// 	bs.cadence.RegisterActivityWithAlias(common.UpdateRunActivity, common.UpdateRunActivityName)
-// 	bs.cadence.RegisterActivityWithAlias(file.DownloadFileActivity, file.DownloadFileActivityName)
-// 	bs.cadence.RegisterActivityWithAlias(file.DryRunActivity, file.DryRunActivityName)
-// 	bs.cadence.RegisterActivityWithAlias(file.UploadFileActivity, file.UploadFileActivityName)
-// 	bs.cadence.RegisterActivityWithAlias(file.CreateFileActivity, file.CreateFileActivityName)
-// 	bs.cadence.RegisterActivityWithAlias(file.SaveFileActivity, file.SaveFileActivityName)
-// 	bs.cadence.RegisterActivityWithAlias(file.DeleteFileActivity, file.DeleteFileActivityName)
-// 	return nil
-// }
-
-// // registerShopWorkflowGroup registers shop task group workflows and activities
-// func (bs *schedulerService) registerShopWorkflowGroup() error {
-// 	bs.cadence.RegisterWorkflow(shwkfl.AddShopWorkflow)
-// 	bs.cadence.RegisterWorkflow(shwkfl.ProcessShopDownloadWorkflow)
-// 	bs.cadence.RegisterActivityWithAlias(common.CreateRunActivity, common.CreateRunActivityName)
-// 	bs.cadence.RegisterActivityWithAlias(common.UpdateRunActivity, common.UpdateRunActivityName)
-// 	bs.cadence.RegisterActivityWithAlias(shwkfl.AddGeoLocationActivity, shwkfl.AddGeoLocationActivityName)
-// 	bs.cadence.RegisterActivityWithAlias(shwkfl.AddAddressActivity, shwkfl.AddAddressActivityName)
-// 	bs.cadence.RegisterActivityWithAlias(shwkfl.AddShopActivity, shwkfl.AddShopActivityName)
-// 	bs.cadence.RegisterActivityWithAlias(shwkfl.ProcessShopDownloadWorkflow, shwkfl.ProcessShopDownloadWorkflowName)
-// 	return nil
-// }

@@ -4,38 +4,35 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
-	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
+	"go.temporal.io/sdk/activity"
+	"go.temporal.io/sdk/temporal"
+
 	"github.com/comfforts/errors"
-	"github.com/comfforts/logger"
+
+	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	"github.com/hankgalt/workflow-scheduler/pkg/clients"
 	"github.com/hankgalt/workflow-scheduler/pkg/clients/scheduler"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
-	"github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
-	"go.uber.org/cadence"
-	"go.uber.org/cadence/activity"
-	"go.uber.org/zap"
-
-	api "github.com/hankgalt/workflow-scheduler/api/v1"
+	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 )
 
 /**
  * activities used by file processing workflow.
  */
 const (
+	AddAgentActivityName      = "AddAgentActivity"
+	AddPrincipalActivityName  = "AddPrincipalActivity"
+	AddFilingActivityName     = "AddFilingActivity"
 	GetCSVHeadersActivityName = "GetCSVHeadersActivity"
 	GetCSVOffsetsActivityName = "GetCSVOffsetsActivity"
-	AddAgentActivityName      = "AddAgentActivity"
-
-	ReadCSVActivityName = "ReadCSVActivity"
-
-	AddPrincipalActivityName = "AddPrincipalActivity"
-	AddFilingActivityName    = "AddFilingActivity"
+	ReadCSVActivityName       = "ReadCSVActivity"
 )
 
 const (
@@ -47,7 +44,6 @@ const (
 	ERR_ADDING_AGENT         = "error adding business agent"
 	ERR_ADDING_PRINCIPAL     = "error adding business principal"
 	ERR_ADDING_FILING        = "error adding business filing"
-	ERR_UNKNOW_ENTITY_TYPE   = "error unknown business entity type"
 )
 
 var (
@@ -58,7 +54,11 @@ var (
 	ErrAddingAgent        = errors.NewAppError(ERR_ADDING_AGENT)
 	ErrAddingPriciipal    = errors.NewAppError(ERR_ADDING_PRINCIPAL)
 	ErrAddingFiling       = errors.NewAppError(ERR_ADDING_FILING)
-	ErrUnknownEntity      = errors.NewAppError(ERR_UNKNOW_ENTITY_TYPE)
+)
+
+var (
+	ErrorMissingStartOffset = temporal.NewApplicationErrorWithCause(ERR_MISSING_START_OFFSET, ERR_MISSING_START_OFFSET, ErrMissingStartOffset)
+	ErrorMissingOffsets     = temporal.NewApplicationErrorWithCause(ERR_MISSING_OFFSETS, ERR_MISSING_OFFSETS, ErrMissingOffsets)
 )
 
 const DataPathContextKey = clients.ContextKey("data-path")
@@ -71,13 +71,13 @@ type CSVActivityFn = func(ctx context.Context, req *models.CSVInfo) (*models.CSV
 
 // AddAgentActivity returns successfully added agent's Id or error.
 func AddAgentActivity(ctx context.Context, fields map[string]string) (string, error) {
-	l := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
-	l.Info("AddAgentActivity - started", zap.Any("fields", fields))
+	l := activity.GetLogger(ctx)
+	l.Info("AddAgentActivity - started", slog.Any("fields", fields))
 
 	schClient, ok := ctx.Value(scheduler.SchedulerClientContextKey).(scheduler.Client)
 	if !ok {
-		l.Error(common.ERR_MISSING_SCHEDULER_CLIENT)
-		return "", cadence.NewCustomError(common.ERR_MISSING_SCHEDULER_CLIENT, common.ErrMissingSchClient)
+		l.Error(comwkfl.ERR_MISSING_SCHEDULER_CLIENT)
+		return "", comwkfl.ErrorMissingSchedulerClient
 	}
 
 	resp, err := schClient.AddEntity(ctx, &api.AddEntityRequest{
@@ -85,25 +85,25 @@ func AddAgentActivity(ctx context.Context, fields map[string]string) (string, er
 		Type:   api.EntityType_AGENT,
 	})
 	if err != nil {
-		l.Error(ERR_ADDING_AGENT, zap.Error(err))
-		return "", cadence.NewCustomError(ERR_ADDING_AGENT, err)
+		l.Error(ERR_ADDING_AGENT, slog.String("error", err.Error()))
+		return "", temporal.NewApplicationErrorWithCause(ERR_ADDING_AGENT, ERR_ADDING_AGENT, errors.WrapError(err, ERR_ADDING_AGENT))
 	}
 
 	agent := resp.GetAgent()
-	l.Info("AddAgentActivity - agent", zap.Any("agent", agent))
+	l.Info("AddAgentActivity - agent", slog.Any("agent", agent))
 
 	return agent.Id, nil
 }
 
 // AddPrincipalActivity returns successfully added principal's Id or error.
 func AddPrincipalActivity(ctx context.Context, fields map[string]string) (string, error) {
-	l := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
-	l.Info("AddPrincipalActivity - started", zap.Any("fields", fields))
+	l := activity.GetLogger(ctx)
+	l.Info("AddPrincipalActivity - started", slog.Any("fields", fields))
 
 	bizClient, ok := ctx.Value(scheduler.SchedulerClientContextKey).(scheduler.Client)
 	if !ok {
-		l.Error(common.ERR_MISSING_SCHEDULER_CLIENT)
-		return "", cadence.NewCustomError(common.ERR_MISSING_SCHEDULER_CLIENT, common.ErrMissingSchClient)
+		l.Error(comwkfl.ERR_MISSING_SCHEDULER_CLIENT)
+		return "", comwkfl.ErrorMissingSchedulerClient
 	}
 
 	resp, err := bizClient.AddEntity(ctx, &api.AddEntityRequest{
@@ -111,25 +111,25 @@ func AddPrincipalActivity(ctx context.Context, fields map[string]string) (string
 		Type:   api.EntityType_PRINCIPAL,
 	})
 	if err != nil {
-		l.Error(ERR_ADDING_PRINCIPAL, zap.Error(err))
-		return "", cadence.NewCustomError(ERR_ADDING_PRINCIPAL, err)
+		l.Error(ERR_ADDING_PRINCIPAL, slog.String("error", err.Error()))
+		return "", temporal.NewApplicationErrorWithCause(ERR_ADDING_PRINCIPAL, ERR_ADDING_PRINCIPAL, errors.WrapError(err, ERR_ADDING_PRINCIPAL))
 	}
 
 	princp := resp.GetPrincipal()
-	l.Info("AddPrincipalActivity - principal", zap.Any("principal", princp))
+	l.Info("AddPrincipalActivity - principal", slog.Any("principal", princp))
 
 	return princp.Id, nil
 }
 
 // AddFilingActivity returns successfully added filing's Id or error.
 func AddFilingActivity(ctx context.Context, fields map[string]string) (string, error) {
-	l := activity.GetLogger(ctx).With(zap.String("HostID", HostID))
-	l.Info("AddFilingActivity - started", zap.Any("fields", fields))
+	l := activity.GetLogger(ctx)
+	l.Info("AddFilingActivity - started", slog.Any("fields", fields))
 
 	bizClient, ok := ctx.Value(scheduler.SchedulerClientContextKey).(scheduler.Client)
 	if !ok {
-		l.Error(common.ERR_MISSING_SCHEDULER_CLIENT)
-		return "", cadence.NewCustomError(common.ERR_MISSING_SCHEDULER_CLIENT, common.ErrMissingSchClient)
+		l.Error(comwkfl.ERR_MISSING_SCHEDULER_CLIENT)
+		return "", comwkfl.ErrorMissingSchedulerClient
 	}
 
 	resp, err := bizClient.AddEntity(ctx, &api.AddEntityRequest{
@@ -137,12 +137,12 @@ func AddFilingActivity(ctx context.Context, fields map[string]string) (string, e
 		Type:   api.EntityType_FILING,
 	})
 	if err != nil {
-		l.Error(ERR_ADDING_FILING, zap.Error(err))
-		return "", cadence.NewCustomError(ERR_ADDING_FILING, err)
+		l.Error(ERR_ADDING_FILING, slog.String("error", err.Error()))
+		return "", temporal.NewApplicationErrorWithCause(ERR_ADDING_FILING, ERR_ADDING_FILING, errors.WrapError(err, ERR_ADDING_FILING))
 	}
 
 	fil := resp.GetFiling()
-	l.Info("AddFilingActivity - filing", zap.Any("filing", fil))
+	l.Info("AddFilingActivity - filing", slog.Any("filing", fil))
 
 	return fil.Id, nil
 }
@@ -151,8 +151,8 @@ func AddFilingActivity(ctx context.Context, fields map[string]string) (string, e
 // records starting index for given file. Requires same host once processing starts,
 // resolves file path using configured/default data directory path
 func GetCSVHeadersActivity(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo, error) {
-	l := activity.GetLogger(ctx).With(zap.String("hostID", HostID))
-	l.Debug("GetCSVHeadersActivity - started", zap.String("file-name", req.FileName))
+	l := activity.GetLogger(ctx)
+	l.Debug("GetCSVHeadersActivity - started", slog.String("file-name", req.FileName))
 
 	// return if headers already build
 	if req.Headers != nil {
@@ -167,23 +167,23 @@ func GetCSVHeadersActivity(ctx context.Context, req *models.CSVInfo) (*models.CS
 
 	if hostId != HostID {
 		l.Error("GetCSVHeadersActivity - running on wrong host",
-			zap.String("file", req.FileName),
-			zap.String("req-host", hostId),
-			zap.String("curr-host", HostID))
+			slog.String("file", req.FileName),
+			slog.String("req-host", hostId),
+			slog.String("curr-host", HostID))
 
-		return req, cadence.NewCustomError(common.ERR_WRONG_HOST, common.ErrWrongHost)
+		return req, comwkfl.ErrorWrongHost
 	}
 
 	// check for file name
 	if req.FileName == "" {
-		l.Error(common.ERR_MISSING_FILE_NAME)
-		return req, cadence.NewCustomError(common.ERR_MISSING_FILE_NAME, common.ErrMissingFileName)
+		l.Error(comwkfl.ERR_MISSING_FILE_NAME)
+		return req, comwkfl.ErrorMissingFileName
 	}
 
 	// check for requester
 	if req.RequestedBy == "" {
-		l.Error(common.ERR_MISSING_REQSTR)
-		return req, cadence.NewCustomError(common.ERR_MISSING_REQSTR, common.ErrMissingReqstr)
+		l.Error(comwkfl.ERR_MISSING_REQSTR)
+		return req, comwkfl.ErrorMissingReqstr
 	}
 
 	// build local file path
@@ -193,25 +193,25 @@ func GetCSVHeadersActivity(ctx context.Context, req *models.CSVInfo) (*models.CS
 	}
 	localFilePath := filepath.Join(dataPath, req.FileName)
 
-	l.Debug("GetCSVHeadersActivity - local file path", zap.String("file-path", localFilePath))
+	l.Debug("GetCSVHeadersActivity - local file path", slog.String("file-path", localFilePath))
 
 	// open file
 	file, err := os.Open(localFilePath)
 	if err != nil {
-		l.Error(common.ERR_MISSING_FILE, zap.Error(err), zap.String("file", req.FileName), zap.String("host", hostId))
-		return req, cadence.NewCustomError(common.ERR_MISSING_FILE, err)
+		l.Error(comwkfl.ERR_MISSING_FILE, slog.Any("error", err), slog.String("file", req.FileName), slog.String("host", hostId))
+		return req, temporal.NewApplicationErrorWithCause(comwkfl.ERR_MISSING_FILE, comwkfl.ERR_MISSING_FILE, errors.WrapError(err, comwkfl.ERR_MISSING_FILE))
 	}
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			l.Error("error closing csv file", zap.Error(err))
+			l.Error("error closing csv file", slog.Any("error", err))
 		}
 	}()
 
 	// persist file size
 	fs, err := os.Stat(file.Name())
 	if err != nil {
-		return req, cadence.NewCustomError(common.ERR_MISSING_FILE, err)
+		return req, temporal.NewApplicationErrorWithCause(comwkfl.ERR_MISSING_FILE, comwkfl.ERR_MISSING_FILE, errors.WrapError(err, comwkfl.ERR_MISSING_FILE))
 	}
 	req.FileSize = int64(fs.Size())
 
@@ -221,8 +221,8 @@ func GetCSVHeadersActivity(ctx context.Context, req *models.CSVInfo) (*models.CS
 
 	headers, err := csvReader.Read()
 	if err != nil {
-		l.Error(ERR_CSV_READ, zap.Error(err), zap.String("file", req.FileName), zap.String("host", hostId))
-		return req, cadence.NewCustomError(ERR_CSV_READ, err)
+		l.Error(ERR_CSV_READ, slog.Any("error", err), slog.String("file", req.FileName), slog.String("host", hostId))
+		return req, temporal.NewApplicationErrorWithCause(ERR_CSV_READ, ERR_CSV_READ, errors.WrapError(err, ERR_CSV_READ))
 	}
 	offset := csvReader.InputOffset()
 	req.Headers = &models.HeadersInfo{
@@ -254,34 +254,34 @@ func GetCSVHeadersActivity(ctx context.Context, req *models.CSVInfo) (*models.CS
 
 // GetCSVOffsetsActivity populates CSV state with partition offsets for given file.
 func GetCSVOffsetsActivity(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo, error) {
-	l := activity.GetLogger(ctx).With(zap.String("hostID", HostID))
-	l.Info("GetCSVOffsetsActivity - started", zap.String("file", req.FileName), zap.Int64("size", req.FileSize))
+	l := activity.GetLogger(ctx)
+	l.Info("GetCSVOffsetsActivity - started", slog.String("file", req.FileName), slog.Int64("size", req.FileSize))
 
 	hostId := req.HostID
 	if hostId == "" {
 		hostId = HostID
 	}
 
-	// l.Info("GetCSVOffsetsActivity", zap.String("hostId", hostId), zap.String("HostID", HostID))
+	// l.Info("GetCSVOffsetsActivity", slog.String("hostId", hostId), slog.String("HostID", HostID))
 
 	// check for same host
 	if hostId != HostID {
 		l.Error("GetCSVHeadersActivity - running on wrong host",
-			zap.String("file", req.FileName),
-			zap.String("req-host", hostId),
-			zap.String("curr-host", HostID))
+			slog.String("file", req.FileName),
+			slog.String("req-host", hostId),
+			slog.String("curr-host", HostID))
 
-		return req, cadence.NewCustomError(common.ERR_WRONG_HOST, common.ErrWrongHost)
+		return req, comwkfl.ErrorWrongHost
 	}
 
 	if req.FileName == "" {
-		l.Error(common.ERR_MISSING_FILE_NAME)
-		return req, cadence.NewCustomError(common.ERR_MISSING_FILE_NAME, common.ErrMissingFileName)
+		l.Error(comwkfl.ERR_MISSING_FILE_NAME)
+		return req, comwkfl.ErrorMissingFileName
 	}
 
 	if req.RequestedBy == "" {
-		l.Error(common.ERR_MISSING_REQSTR)
-		return req, cadence.NewCustomError(common.ERR_MISSING_REQSTR, common.ErrMissingReqstr)
+		l.Error(comwkfl.ERR_MISSING_REQSTR)
+		return req, comwkfl.ErrorMissingReqstr
 	}
 
 	dataPath, ok := ctx.Value(DataPathContextKey).(string)
@@ -292,26 +292,26 @@ func GetCSVOffsetsActivity(ctx context.Context, req *models.CSVInfo) (*models.CS
 
 	file, err := os.Open(localFilePath)
 	if err != nil {
-		l.Error(common.ERR_MISSING_FILE, zap.Error(err), zap.String("file", req.FileName), zap.String("host", hostId))
-		return req, cadence.NewCustomError(common.ERR_MISSING_FILE, err)
+		l.Error(comwkfl.ERR_MISSING_FILE, slog.Any("error", err), slog.String("file", req.FileName), slog.String("host", hostId))
+		return req, temporal.NewApplicationErrorWithCause(comwkfl.ERR_MISSING_FILE, comwkfl.ERR_MISSING_FILE, errors.WrapError(err, comwkfl.ERR_MISSING_FILE))
 	}
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			l.Error("error closing csv file", zap.Error(err))
+			l.Error("error closing csv file", slog.Any("error", err))
 		}
 	}()
 
 	if req.Headers == nil {
 		l.Error(ERR_MISSING_START_OFFSET)
-		return req, cadence.NewCustomError(ERR_MISSING_START_OFFSET, ErrMissingStartOffset)
+		return req, ErrorMissingStartOffset
 	}
 
 	if req.FileSize == 0 {
 		fs, err := os.Stat(file.Name())
 		if err != nil {
-			l.Error(common.ERR_MISSING_FILE, zap.Error(err), zap.String("file", req.FileName), zap.String("host", hostId))
-			return req, cadence.NewCustomError(common.ERR_MISSING_FILE, err)
+			l.Error(comwkfl.ERR_MISSING_FILE, slog.Any("error", err), slog.String("file", req.FileName), slog.String("host", hostId))
+			return req, temporal.NewApplicationErrorWithCause(comwkfl.ERR_MISSING_FILE, comwkfl.ERR_MISSING_FILE, errors.WrapError(err, comwkfl.ERR_MISSING_FILE))
 		}
 		req.FileSize = fs.Size()
 	}
@@ -333,10 +333,10 @@ func GetCSVOffsetsActivity(ctx context.Context, req *models.CSVInfo) (*models.CS
 	}
 	l.Info(
 		"GetCSVOffsetsActivity",
-		zap.String("file", req.FileName),
-		zap.Any("file-size", req.FileSize),
-		zap.Any("batch-size", batchSize),
-		zap.Int64("record-size", req.AvgRecordSize),
+		slog.String("file", req.FileName),
+		slog.Any("file-size", req.FileSize),
+		slog.Any("batch-size", batchSize),
+		slog.Int64("record-size", req.AvgRecordSize),
 	)
 	sOffset := req.Headers.Offset
 	for sOffset+batchSize+req.AvgRecordSize < req.FileSize {
@@ -344,26 +344,16 @@ func GetCSVOffsetsActivity(ctx context.Context, req *models.CSVInfo) (*models.CS
 		sOffset = sOffset + batchSize
 		nextOffset, err := getNextOffset(file, sOffset, req.AvgRecordSize)
 		if err != nil {
-			l.Error(ERR_BUILDING_OFFSETS, zap.Error(err), zap.String("file", req.FileName), zap.String("host", hostId))
-			return req, cadence.NewCustomError(ERR_BUILDING_OFFSETS, err)
+			l.Error(ERR_BUILDING_OFFSETS, slog.Any("error", err), slog.String("file", req.FileName), slog.String("host", hostId))
+			return req, temporal.NewApplicationErrorWithCause(ERR_BUILDING_OFFSETS, ERR_BUILDING_OFFSETS, errors.WrapError(err, ERR_BUILDING_OFFSETS))
 		}
 		l.Debug(
 			"GetCSVOffsetsActivity - nextOffset",
-			zap.String("file", req.FileName),
-			zap.Any("start-offset", ofSet),
-			zap.Any("next-offset", nextOffset),
-			zap.Any("numOffsets", len(offsets)),
+			slog.String("file", req.FileName),
+			slog.Any("start-offset", ofSet),
+			slog.Any("next-offset", nextOffset),
+			slog.Any("numOffsets", len(offsets)),
 		)
-		fmt.Println()
-		fmt.Printf(
-			"GetCSVOffsetsActivity - offSet: %d, nextOffset: %d, diff: %d, RECORD_SIZE: %d, DEFAULT_BATCH_SIZE: %d\n",
-			ofSet,
-			nextOffset,
-			nextOffset-ofSet,
-			req.AvgRecordSize,
-			batchSize,
-		)
-		fmt.Println()
 
 		offsets = append(offsets, nextOffset)
 		sOffset = nextOffset
@@ -375,34 +365,34 @@ func GetCSVOffsetsActivity(ctx context.Context, req *models.CSVInfo) (*models.CS
 
 // ReadCSVActivity reads csv file and adds business entities to scheduler data store.
 func ReadCSVActivity(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo, error) {
-	l := activity.GetLogger(ctx).With(zap.String("hostID", HostID))
-	l.Info("ReadCSVActivity - started", zap.String("file", req.FileName), zap.Int64("size", req.FileSize))
+	l := activity.GetLogger(ctx)
+	l.Info("ReadCSVActivity - started", slog.String("file", req.FileName), slog.Int64("size", req.FileSize))
 
 	hostId := req.HostID
 	if hostId == "" {
 		hostId = HostID
 	}
 
-	l.Info("ReadCSVActivity", zap.String("hostId", hostId), zap.String("HostID", HostID))
+	l.Info("ReadCSVActivity", slog.String("hostId", hostId), slog.String("HostID", HostID))
 
 	// check for same host
 	if hostId != HostID {
 		l.Error("GetCSVHeadersActivity - running on wrong host",
-			zap.String("file", req.FileName),
-			zap.String("req-host", hostId),
-			zap.String("curr-host", HostID))
+			slog.String("file", req.FileName),
+			slog.String("req-host", hostId),
+			slog.String("curr-host", HostID))
 
-		return req, cadence.NewCustomError(common.ERR_WRONG_HOST, common.ErrWrongHost)
+		return req, comwkfl.ErrorWrongHost
 	}
 
 	if req.FileName == "" {
-		l.Error(common.ERR_MISSING_FILE_NAME)
-		return nil, cadence.NewCustomError(common.ERR_MISSING_FILE_NAME, common.ErrMissingFileName)
+		l.Error(comwkfl.ERR_MISSING_FILE_NAME)
+		return nil, comwkfl.ErrorMissingFileName
 	}
 
 	if req.RequestedBy == "" {
-		l.Error(common.ERR_MISSING_REQSTR)
-		return nil, cadence.NewCustomError(common.ERR_MISSING_REQSTR, common.ErrMissingReqstr)
+		l.Error(comwkfl.ERR_MISSING_REQSTR)
+		return nil, comwkfl.ErrorMissingReqstr
 	}
 
 	dataPath, ok := ctx.Value(DataPathContextKey).(string)
@@ -413,13 +403,13 @@ func ReadCSVActivity(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo,
 
 	if len(req.OffSets) == 0 {
 		l.Error(ERR_MISSING_OFFSETS)
-		return req, cadence.NewCustomError(ERR_MISSING_OFFSETS, ErrMissingOffsets)
+		return req, ErrorMissingOffsets
 	}
 
 	schClient, ok := ctx.Value(scheduler.SchedulerClientContextKey).(scheduler.Client)
 	if !ok {
-		l.Error(common.ERR_MISSING_SCHEDULER_CLIENT)
-		return nil, cadence.NewCustomError(common.ERR_MISSING_SCHEDULER_CLIENT, common.ErrMissingSchClient)
+		l.Error(comwkfl.ERR_MISSING_SCHEDULER_CLIENT)
+		return nil, comwkfl.ErrorMissingSchedulerClient
 	}
 
 	resCh := make(chan []string)
@@ -430,7 +420,7 @@ func ReadCSVActivity(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo,
 
 	var count, resultCount, errCount int
 
-	go ReadRecords(ctx, localFilePath, resCh, errCh, req.FileSize, req.OffSets, l)
+	go ReadRecords(ctx, localFilePath, resCh, errCh, req.FileSize, req.OffSets)
 
 	errs := map[string]int{}
 	for {
@@ -438,16 +428,16 @@ func ReadCSVActivity(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo,
 		case <-ctx.Done():
 			l.Info(
 				"ReadCSVActivity - file processing done, context close",
-				zap.Int("batches", len(req.OffSets)),
-				zap.Int("count", count),
-				zap.Int("resultCount", resultCount),
-				zap.Int("errCount", errCount))
+				slog.Int("batches", len(req.OffSets)),
+				slog.Int("count", count),
+				slog.Int("resultCount", resultCount),
+				slog.Int("errCount", errCount))
 			if len(errs) > 0 {
 				for k, v := range errs {
 					l.Info(
 						"ReadCSVActivity - file processing done, context closed",
-						zap.String("err", k),
-						zap.Int("errCount", v))
+						slog.String("err", k),
+						slog.Int("errCount", v))
 				}
 			}
 			return req, nil
@@ -455,16 +445,16 @@ func ReadCSVActivity(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo,
 			if !ok {
 				l.Info(
 					"ReadCSVActivity - result stream closed",
-					zap.Int("batches", len(req.OffSets)),
-					zap.Int("count", count),
-					zap.Int("resultCount", resultCount),
-					zap.Int("errCount", errCount))
+					slog.Int("batches", len(req.OffSets)),
+					slog.Int("count", count),
+					slog.Int("resultCount", resultCount),
+					slog.Int("errCount", errCount))
 				if len(errs) > 0 {
 					for k, v := range errs {
 						l.Info(
 							"ReadCSVActivity - result stream closed",
-							zap.String("err", k),
-							zap.Int("errCount", v))
+							slog.String("err", k),
+							slog.Int("errCount", v))
 					}
 				}
 				return req, nil
@@ -475,11 +465,11 @@ func ReadCSVActivity(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo,
 					if fields, err := mapToInterface(req.Headers.Headers, r); err == nil {
 						_, ok := ctx.Value(scheduler.SchedulerClientContextKey).(scheduler.Client)
 						if !ok {
-							l.Error(common.ERR_MISSING_SCHEDULER_CLIENT)
+							l.Error(comwkfl.ERR_MISSING_SCHEDULER_CLIENT)
 							errCount++
-							errs[common.ERR_MISSING_SCHEDULER_CLIENT]++
+							errs[comwkfl.ERR_MISSING_SCHEDULER_CLIENT]++
 						} else {
-							l.Info("adding business entity", zap.Any("type", req.Type), zap.Any("fields", fields))
+							l.Info("adding business entity", slog.Any("type", req.Type), slog.Any("fields", fields))
 							if _, err := schClient.AddEntity(ctx, &api.AddEntityRequest{
 								Fields: fields,
 								Type:   models.MapEntityTypeToProto(req.Type),
@@ -501,16 +491,16 @@ func ReadCSVActivity(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo,
 			if !ok {
 				l.Info(
 					"ReadCSVActivity - error stream closed",
-					zap.Int("batches", len(req.OffSets)),
-					zap.Int("count", count),
-					zap.Int("resultCount", resultCount),
-					zap.Int("errCount", errCount))
+					slog.Int("batches", len(req.OffSets)),
+					slog.Int("count", count),
+					slog.Int("resultCount", resultCount),
+					slog.Int("errCount", errCount))
 				if len(errs) > 0 {
 					for k, v := range errs {
 						l.Info(
 							"ReadCSVActivity - error stream closed",
-							zap.String("err", k),
-							zap.Int("errCount", v))
+							slog.String("err", k),
+							slog.Int("errCount", v))
 					}
 				}
 				return req, nil
@@ -520,50 +510,6 @@ func ReadCSVActivity(ctx context.Context, req *models.CSVInfo) (*models.CSVInfo,
 					errs[err.Error()]++
 				}
 			}
-		}
-	}
-}
-
-// ReadFile reads csv file, sends records to result channel and errors to error channel.
-func ReadFile(ctx context.Context, filePath string, resCh chan []string, errCh chan error, l logger.AppLogger) {
-	defer func() {
-		close(resCh)
-		close(errCh)
-	}()
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		errCh <- err
-		return
-	}
-	defer func() {
-		err := file.Close()
-		if err != nil {
-			l.Error("error closing csv file", zap.Error(err))
-		}
-	}()
-
-	csvReader := csv.NewReader(file)
-	csvReader.Comma = '|'
-	csvReader.FieldsPerRecord = -1
-
-	offset := csvReader.InputOffset()
-	l.Info("starting offset", zap.Any("offset", offset))
-	for i := 0; ; i = i + 1 {
-		record, err := csvReader.Read()
-		if err == io.EOF {
-			l.Info("csv file: end of csv file")
-			return
-		} else if err != nil {
-			size := csvReader.InputOffset() - offset
-			l.Info("error reading csv record", zap.Error(err), zap.Any("offset", offset), zap.Any("size", size))
-			errCh <- errors.WrapError(err, "error reading csv record, offset: %d, size: %d", offset, size)
-		}
-		offset = csvReader.InputOffset()
-		select {
-		case <-ctx.Done():
-			return
-		case resCh <- record:
 		}
 	}
 }
@@ -578,12 +524,13 @@ func ReadRecords(
 	errCh chan error,
 	size int64,
 	offsets []int64,
-	l logger.AppLogger,
 ) {
 	defer func() {
 		close(resCh)
 		close(errCh)
 	}()
+
+	l := activity.GetLogger(ctx)
 
 	var wg sync.WaitGroup
 	batchCount := 0
@@ -591,19 +538,19 @@ func ReadRecords(
 	for i, offset := range offsets {
 		batchCount++
 		if i >= len(offsets)-1 {
-			l.Info("batch info", zap.Any("start", offset), zap.Any("end", size), zap.Any("batchIdx", i))
+			l.Info("batch info", slog.Any("start", offset), slog.Any("end", size), slog.Any("batchIdx", i))
 			wg.Add(1)
-			go readRecords(ctx, filePath, resCh, errCh, &wg, offset, size, l)
+			go readRecords(ctx, filePath, resCh, errCh, &wg, offset, size)
 		} else {
-			l.Info("batch info", zap.Any("start", offset), zap.Any("end", offsets[i+1]), zap.Any("batchIdx", i))
+			l.Info("batch info", slog.Any("start", offset), slog.Any("end", offsets[i+1]), slog.Any("batchIdx", i))
 			wg.Add(1)
-			go readRecords(ctx, filePath, resCh, errCh, &wg, offset, offsets[i+1], l)
+			go readRecords(ctx, filePath, resCh, errCh, &wg, offset, offsets[i+1])
 		}
 		if batchCount >= batchBuffer {
 			batchCount = 0
 			if len(offsets)-i < batchBuffer {
 				batchBuffer = len(offsets) - i
-				l.Info("last batch info", zap.Any("batch-size", batchBuffer), zap.Any("record", i))
+				l.Info("last batch info", slog.Any("batch-size", batchBuffer), slog.Any("record", i))
 			}
 			wg.Wait()
 		}
@@ -615,7 +562,6 @@ func ReadRecords(
 func ReadRecord(
 	filePath string,
 	offset, size int64,
-	l logger.AppLogger,
 ) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -624,14 +570,13 @@ func ReadRecord(
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			l.Error("error closing csv file", zap.Error(err))
+			slog.Error("error closing csv file", slog.Any("error", err))
 		}
 	}()
 
 	data := make([]byte, size)
 	n, err := file.ReadAt(data, offset)
 	if err != nil {
-		l.Error("error", zap.Error(err))
 		return "", err
 	}
 	return string(data[:n]), nil
@@ -645,9 +590,10 @@ func readRecords(
 	errCh chan error,
 	wg *sync.WaitGroup,
 	start, end int64,
-	l logger.AppLogger,
 ) {
 	defer wg.Done()
+
+	l := activity.GetLogger(ctx)
 
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -657,14 +603,14 @@ func readRecords(
 	defer func() {
 		err := file.Close()
 		if err != nil && err != os.ErrClosed {
-			l.Error("error closing csv file", zap.Error(err))
+			l.Error("error closing csv file", slog.Any("error", err))
 		}
 	}()
 
 	data := make([]byte, end-start)
 	_, err = file.ReadAt(data, start)
 	if err != nil {
-		l.Error("error", zap.Error(err))
+		l.Error("error", slog.Any("error", err))
 		errCh <- err
 		return
 	}
@@ -682,18 +628,18 @@ func readRecords(
 	for i := 0; ; i = i + 1 {
 		record, err := csvReader.Read()
 		if err == io.EOF {
-			l.Info("batch done", zap.Any("start", start), zap.Any("end", end))
+			l.Info("batch done", slog.Any("start", start), slog.Any("end", end))
 			return
 		} else if err != nil {
 			size := csvReader.InputOffset() - offset
 			var singleRec []string
-			if recStr, err := ReadRecord(filePath, start+offset, size, l); err != nil {
-				l.Error("error reading error record", zap.Error(err))
+			if recStr, err := readRecord(ctx, filePath, start+offset, size); err != nil {
+				l.Error("error reading error record", slog.Any("error", err))
 			} else {
 				recStr = strings.Replace(recStr, "\"", "", -1)
 				singleRec, err = readSingleRecord(recStr)
 				if err != nil {
-					l.Error("error reading single record", zap.Error(err))
+					l.Error("error reading single record", slog.Any("error", err))
 				}
 			}
 			// l.Info("single record", zap.Any("singleRec", singleRec), zap.Any("offset", start+offset), zap.Any("size", size))
@@ -701,7 +647,7 @@ func readRecords(
 				resultCount++
 				resCh <- singleRec
 			} else {
-				l.Error("error reading csv record", zap.Error(err), zap.Any("offset", start+offset), zap.Any("size", size))
+				l.Error("error reading csv record", slog.Any("error", err), slog.Any("offset", start+offset), slog.Any("size", size))
 				errCount++
 				errCh <- errors.WrapError(err, "error reading csv record")
 			}
@@ -717,6 +663,34 @@ func readRecords(
 	}
 }
 
+// readRecord reads single record for given file path, offset and size
+func readRecord(
+	ctx context.Context,
+	filePath string,
+	offset, size int64,
+) (string, error) {
+	l := activity.GetLogger(ctx)
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			l.Error("error closing csv file", slog.Any("error", err))
+		}
+	}()
+
+	data := make([]byte, size)
+	n, err := file.ReadAt(data, offset)
+	if err != nil {
+		l.Error("error", slog.Any("error", err))
+		return "", err
+	}
+	return string(data[:n]), nil
+}
+
 // readSingleRecord reads single record from given data byte string
 func readSingleRecord(recStr string) ([]string, error) {
 	bReader := bytes.NewReader([]byte(recStr))
@@ -729,21 +703,6 @@ func readSingleRecord(recStr string) ([]string, error) {
 		return nil, err
 	}
 	return record, nil
-}
-
-// mapToInterface maps headers and values to map[string]string
-func mapToInterface(headers, values []string) (map[string]string, error) {
-	if len(headers) != len(values) {
-		return nil, ErrMissingValue
-	}
-
-	val := map[string]string{}
-	for i, k := range headers {
-		val[strings.ToLower(k)] = values[i]
-	}
-
-	// fmt.Printf("business entity mapping - value: %v, val: %v\n", values, val)
-	return val, nil
 }
 
 // getNextOffset returns next record offset
@@ -766,4 +725,19 @@ func getNextOffset(file *os.File, offset, avRecordSize int64) (int64, error) {
 		return offset, err
 	}
 	return nextOffset, nil
+}
+
+// mapToInterface maps headers and values to map[string]string
+func mapToInterface(headers, values []string) (map[string]string, error) {
+	if len(headers) != len(values) {
+		return nil, ErrMissingValue
+	}
+
+	val := map[string]string{}
+	for i, k := range headers {
+		val[strings.ToLower(k)] = values[i]
+	}
+
+	// fmt.Printf("business entity mapping - value: %v, val: %v\n", values, val)
+	return val, nil
 }

@@ -1,9 +1,10 @@
 package business
 
 import (
-	"github.com/hankgalt/workflow-scheduler/pkg/models"
-	"go.uber.org/cadence/workflow"
+	"go.temporal.io/sdk/workflow"
 	"go.uber.org/zap"
+
+	"github.com/hankgalt/workflow-scheduler/pkg/models"
 )
 
 const (
@@ -23,7 +24,7 @@ func AddAgentSignalWorkflow(ctx workflow.Context, req *models.BatchInfo) (*model
 
 	for {
 		s := workflow.NewSelector(ctx)
-		s.AddReceive(workflow.GetSignalChannel(ctx, AGENT_SIG_CHAN), func(c workflow.Channel, ok bool) {
+		s.AddReceive(workflow.GetSignalChannel(ctx, AGENT_SIG_CHAN), func(c workflow.ReceiveChannel, ok bool) {
 			if ok {
 				var fields models.CSVRecord
 				c.Receive(ctx, &fields)
@@ -32,7 +33,7 @@ func AddAgentSignalWorkflow(ctx workflow.Context, req *models.BatchInfo) (*model
 				logger.Info("AddAgentSignalWorkflow - received signal on result channel.", zap.Any("fields", fields), zap.Int("result-count", resCount))
 			}
 		})
-		s.AddReceive(workflow.GetSignalChannel(ctx, AGENT_ERR_CHAN), func(c workflow.Channel, ok bool) {
+		s.AddReceive(workflow.GetSignalChannel(ctx, AGENT_ERR_CHAN), func(c workflow.ReceiveChannel, ok bool) {
 			if ok {
 				var err error
 				c.Receive(ctx, &err)

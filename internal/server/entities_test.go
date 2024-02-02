@@ -76,7 +76,7 @@ func setupTest(t *testing.T, fn func(*server.Config)) (
 	nbcc, nbClient, _ := newClient(config.NOBODY_CLIENT)
 
 	l := logger.NewTestAppZapLogger(TEST_DIR)
-	serviceCfg, err := scheduler.NewServiceConfig("localhost", "", "", "", "", true)
+	serviceCfg, err := scheduler.NewServiceConfig("localhost", "", "", "", true)
 	require.NoError(t, err)
 
 	ps, err := scheduler.NewSchedulerService(serviceCfg, l)

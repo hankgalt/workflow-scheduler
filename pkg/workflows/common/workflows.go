@@ -10,4 +10,4 @@ const ApplicationName = "commonTaskGroup"
 var HostID = ApplicationName + "_" + uuid.New().String()
 
 // CreateRunWorkflowName is the task list for create run workflow
-const CreateRunWorkflowName = "github.com/hankgalt/workflow-scheduler/pkg/workflows/temporal/common.CreateRunWorkflow"
+const CreateRunWorkflowName = "github.com/hankgalt/workflow-scheduler/pkg/workflows/common.CreateRunWorkflow"

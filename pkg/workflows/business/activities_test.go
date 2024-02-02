@@ -20,8 +20,8 @@ import (
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	"github.com/hankgalt/workflow-scheduler/pkg/clients/scheduler"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
-	bizwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/temporal/business"
-	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/temporal/common"
+	bizwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/business"
+	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
 )
 
 const TEST_DIR = "data"

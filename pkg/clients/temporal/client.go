@@ -2,11 +2,24 @@ package temporal
 
 import (
 	"context"
+	"os"
 
 	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 
 	"github.com/comfforts/errors"
+)
+
+const (
+	ERR_MISSING_NAMESPACE = "error: missing namespace information"
+	ERR_MISSING_HOST      = "error: missing server host information"
+	ERR_TEMPORAL_CLIENT   = "error: creating temporal client"
+)
+
+var (
+	ErrMissingNamespace = errors.NewAppError(ERR_MISSING_NAMESPACE)
+	ErrMissingHost      = errors.NewAppError(ERR_MISSING_HOST)
+	ErrTemporalClient   = errors.NewAppError(ERR_TEMPORAL_CLIENT)
 )
 
 type Configuration struct {
@@ -21,20 +34,33 @@ type registryOption struct {
 
 type TemporalClient struct {
 	*zap.Logger
-	// client is the client used for cadence
+	// client is the client used for temporal
 	client             client.Client
 	workflowRegistries []registryOption
 	activityRegistries []registryOption
 }
 
 func NewTemporalClient(l *zap.Logger) (*TemporalClient, error) {
+	namespace := os.Getenv("WORKFLOW_DOMAIN")
+	host := os.Getenv("TEMPORAL_HOST")
+
+	if namespace == "" {
+		l.Error(ERR_MISSING_NAMESPACE)
+		return nil, ErrMissingNamespace
+	}
+	if host == "" {
+		l.Error(ERR_MISSING_HOST)
+		return nil, ErrMissingHost
+	}
+
 	clientOptions := client.Options{
-		Namespace: "scheduler-domain",
-		HostPort:  "localhost:7233",
+		Namespace: namespace,
+		HostPort:  host,
 	}
 	tClient, err := client.Dial(clientOptions)
 	if err != nil {
-		l.Error("error initializing temporal service client", zap.Error(err))
+		l.Error(ERR_TEMPORAL_CLIENT)
+		return nil, ErrTemporalClient
 	}
 
 	temporalCl := TemporalClient{

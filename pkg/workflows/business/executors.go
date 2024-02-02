@@ -4,23 +4,22 @@ import (
 	"time"
 
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
-	"github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
-	"go.uber.org/cadence"
-	"go.uber.org/cadence/workflow"
+	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
+	"go.temporal.io/sdk/temporal"
+	"go.temporal.io/sdk/workflow"
 )
 
 func ExecuteAddAgentActivity(ctx workflow.Context, fields map[string]string) (string, error) {
 	// setup activity options
-	ao := common.DefaultActivityOptions()
-	ao.RetryPolicy = &cadence.RetryPolicy{
+	ao := comwkfl.DefaultActivityOptions()
+	ao.RetryPolicy = &temporal.RetryPolicy{
 		InitialInterval:    time.Second,
 		BackoffCoefficient: 2.0,
 		MaximumInterval:    time.Minute,
-		ExpirationInterval: time.Minute * 5,
 		MaximumAttempts:    3,
-		NonRetriableErrorReasons: []string{
+		NonRetryableErrorTypes: []string{
 			ERR_ADDING_AGENT,
-			common.ERR_MISSING_SCHEDULER_CLIENT,
+			comwkfl.ERR_MISSING_SCHEDULER_CLIENT,
 		},
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)
@@ -35,16 +34,15 @@ func ExecuteAddAgentActivity(ctx workflow.Context, fields map[string]string) (st
 
 func ExecuteAddPrincipalActivity(ctx workflow.Context, fields map[string]string) (string, error) {
 	// setup activity options
-	ao := common.DefaultActivityOptions()
-	ao.RetryPolicy = &cadence.RetryPolicy{
+	ao := comwkfl.DefaultActivityOptions()
+	ao.RetryPolicy = &temporal.RetryPolicy{
 		InitialInterval:    time.Second,
 		BackoffCoefficient: 2.0,
 		MaximumInterval:    time.Minute,
-		ExpirationInterval: time.Minute * 5,
 		MaximumAttempts:    3,
-		NonRetriableErrorReasons: []string{
+		NonRetryableErrorTypes: []string{
 			ERR_ADDING_PRINCIPAL,
-			common.ERR_MISSING_SCHEDULER_CLIENT,
+			comwkfl.ERR_MISSING_SCHEDULER_CLIENT,
 		},
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)
@@ -59,16 +57,15 @@ func ExecuteAddPrincipalActivity(ctx workflow.Context, fields map[string]string)
 
 func ExecuteAddFilingActivity(ctx workflow.Context, fields map[string]string) (string, error) {
 	// setup activity options
-	ao := common.DefaultActivityOptions()
-	ao.RetryPolicy = &cadence.RetryPolicy{
+	ao := comwkfl.DefaultActivityOptions()
+	ao.RetryPolicy = &temporal.RetryPolicy{
 		InitialInterval:    time.Second,
 		BackoffCoefficient: 2.0,
 		MaximumInterval:    time.Minute,
-		ExpirationInterval: time.Minute * 5,
 		MaximumAttempts:    3,
-		NonRetriableErrorReasons: []string{
+		NonRetryableErrorTypes: []string{
 			ERR_ADDING_FILING,
-			common.ERR_MISSING_SCHEDULER_CLIENT,
+			comwkfl.ERR_MISSING_SCHEDULER_CLIENT,
 		},
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)
@@ -83,18 +80,17 @@ func ExecuteAddFilingActivity(ctx workflow.Context, fields map[string]string) (s
 
 func ExecuteGetCSVHeadersActivity(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, error) {
 	// setup activity options
-	ao := common.DefaultActivityOptions()
-	ao.RetryPolicy = &cadence.RetryPolicy{
+	ao := comwkfl.DefaultActivityOptions()
+	ao.RetryPolicy = &temporal.RetryPolicy{
 		InitialInterval:    time.Second,
 		BackoffCoefficient: 2.0,
 		MaximumInterval:    time.Minute,
-		ExpirationInterval: time.Minute * 5,
 		MaximumAttempts:    10,
-		NonRetriableErrorReasons: []string{
-			common.ERR_WRONG_HOST,
-			common.ERR_MISSING_FILE_NAME,
-			common.ERR_MISSING_REQSTR,
-			common.ERR_MISSING_FILE,
+		NonRetryableErrorTypes: []string{
+			comwkfl.ERR_WRONG_HOST,
+			comwkfl.ERR_MISSING_FILE_NAME,
+			comwkfl.ERR_MISSING_REQSTR,
+			comwkfl.ERR_MISSING_FILE,
 		},
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)
@@ -109,18 +105,17 @@ func ExecuteGetCSVHeadersActivity(ctx workflow.Context, req *models.CSVInfo) (*m
 
 func ExecuteGetCSVOffsetsActivity(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, error) {
 	// setup activity options
-	ao := common.DefaultActivityOptions()
-	ao.RetryPolicy = &cadence.RetryPolicy{
+	ao := comwkfl.DefaultActivityOptions()
+	ao.RetryPolicy = &temporal.RetryPolicy{
 		InitialInterval:    time.Second,
 		BackoffCoefficient: 2.0,
 		MaximumInterval:    time.Minute,
-		ExpirationInterval: common.FIVE_MINS,
 		MaximumAttempts:    10,
-		NonRetriableErrorReasons: []string{
-			common.ERR_WRONG_HOST,
-			common.ERR_MISSING_FILE_NAME,
-			common.ERR_MISSING_REQSTR,
-			common.ERR_MISSING_FILE,
+		NonRetryableErrorTypes: []string{
+			comwkfl.ERR_WRONG_HOST,
+			comwkfl.ERR_MISSING_FILE_NAME,
+			comwkfl.ERR_MISSING_REQSTR,
+			comwkfl.ERR_MISSING_FILE,
 			ERR_MISSING_START_OFFSET,
 			ERR_BUILDING_OFFSETS,
 		},
@@ -137,23 +132,22 @@ func ExecuteGetCSVOffsetsActivity(ctx workflow.Context, req *models.CSVInfo) (*m
 
 func ExecuteReadCSVActivity(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo, error) {
 	// setup activity options
-	ao := common.DefaultActivityOptions()
-	ao.StartToCloseTimeout = common.ONE_DAY
-	ao.RetryPolicy = &cadence.RetryPolicy{
+	ao := comwkfl.DefaultActivityOptions()
+	ao.StartToCloseTimeout = comwkfl.ONE_DAY
+	ao.RetryPolicy = &temporal.RetryPolicy{
 		InitialInterval:    time.Second,
 		BackoffCoefficient: 2.0,
 		MaximumInterval:    time.Minute,
-		ExpirationInterval: common.FIVE_MINS,
 		MaximumAttempts:    10,
-		NonRetriableErrorReasons: []string{
-			common.ERR_WRONG_HOST,
-			common.ERR_MISSING_FILE_NAME,
-			common.ERR_MISSING_REQSTR,
+		NonRetryableErrorTypes: []string{
+			comwkfl.ERR_WRONG_HOST,
+			comwkfl.ERR_MISSING_FILE_NAME,
+			comwkfl.ERR_MISSING_REQSTR,
 			ERR_MISSING_OFFSETS,
-			common.ERR_MISSING_FILE,
+			comwkfl.ERR_MISSING_FILE,
 			ERR_MISSING_START_OFFSET,
 			ERR_BUILDING_OFFSETS,
-			common.ERR_MISSING_SCHEDULER_CLIENT,
+			comwkfl.ERR_MISSING_SCHEDULER_CLIENT,
 		},
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)

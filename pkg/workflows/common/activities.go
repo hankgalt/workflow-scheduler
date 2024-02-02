@@ -3,8 +3,8 @@ package common
 import (
 	"context"
 
-	"go.uber.org/cadence"
-	"go.uber.org/cadence/activity"
+	"go.temporal.io/sdk/activity"
+	"go.temporal.io/sdk/temporal"
 	"go.uber.org/zap"
 
 	"github.com/comfforts/errors"
@@ -24,30 +24,14 @@ const (
 	SearchRunActivityName = "SearchRunActivity"
 )
 
-const (
-	CREATE_RUN_ACT_STARTED = "create run activity started."
-	ERR_CREATING_RUN       = "error creating workflow run"
-	ERR_SEARCH_RUN         = "error searching workflow run"
-	CREATE_RUN_ACT_COMPL   = "create run activity completed."
-	UPDATE_RUN_ACT_STARTED = "update run activity started."
-	ERR_UPDATING_RUN       = "error updating workflow run"
-	UPDATE_RUN_ACT_COMPL   = "update run activity completed."
-)
-
-var (
-	ErrCreatingRun = errors.NewAppError(ERR_CREATING_RUN)
-	ErrUpdatingRun = errors.NewAppError(ERR_UPDATING_RUN)
-	ErrSearchRun   = errors.NewAppError(ERR_SEARCH_RUN)
-)
-
 func CreateRunActivity(ctx context.Context, req *models.RunParams) (*api.WorkflowRun, error) {
-	logger := activity.GetLogger(ctx)
-	logger.Info(CREATE_RUN_ACT_STARTED, zap.Any("req", req))
+	l := activity.GetLogger(ctx)
+	l.Info(CREATE_RUN_ACT_STARTED, zap.Any("req", req))
 
 	schClient := ctx.Value(scheduler.SchedulerClientContextKey).(scheduler.Client)
 	if schClient == nil {
-		logger.Error(ERR_MISSING_SCHEDULER_CLIENT)
-		return nil, cadence.NewCustomError(ERR_MISSING_SCHEDULER_CLIENT, ErrMissingSchClient)
+		l.Error(ERR_MISSING_SCHEDULER_CLIENT)
+		return nil, ErrorMissingSchedulerClient
 	}
 
 	resp, err := schClient.CreateRun(ctx, &api.RunRequest{
@@ -58,11 +42,11 @@ func CreateRunActivity(ctx context.Context, req *models.RunParams) (*api.Workflo
 		Type:        req.Type,
 	})
 	if err != nil {
-		logger.Error(ERR_CREATING_RUN, zap.Error(err))
-		return nil, cadence.NewCustomError(ERR_CREATING_RUN, err)
+		l.Error(ERR_CREATING_RUN, zap.Error(err))
+		return nil, temporal.NewApplicationErrorWithCause(ERR_CREATING_RUN, ERR_CREATING_RUN, errors.WrapError(err, ERR_CREATING_RUN))
 	}
 
-	logger.Info(CREATE_RUN_ACT_COMPL, zap.Any("run", resp.Run))
+	l.Info(CREATE_RUN_ACT_COMPL, zap.Any("run", resp.Run))
 	return resp.Run, nil
 }
 
@@ -73,7 +57,7 @@ func UpdateRunActivity(ctx context.Context, req *models.RunParams) (*api.Workflo
 	schClient := ctx.Value(scheduler.SchedulerClientContextKey).(scheduler.Client)
 	if schClient == nil {
 		l.Error(ERR_MISSING_SCHEDULER_CLIENT)
-		return nil, cadence.NewCustomError(ERR_MISSING_SCHEDULER_CLIENT, ErrMissingSchClient)
+		return nil, ErrorMissingSchedulerClient
 	}
 
 	resp, err := schClient.UpdateRun(ctx, &api.UpdateRunRequest{
@@ -83,7 +67,7 @@ func UpdateRunActivity(ctx context.Context, req *models.RunParams) (*api.Workflo
 	})
 	if err != nil {
 		l.Error(ERR_UPDATING_RUN, zap.Error(err))
-		return nil, cadence.NewCustomError(ERR_UPDATING_RUN, err)
+		return nil, temporal.NewApplicationErrorWithCause(ERR_UPDATING_RUN, ERR_UPDATING_RUN, errors.WrapError(err, ERR_UPDATING_RUN))
 	}
 
 	l.Info(UPDATE_RUN_ACT_COMPL, zap.String("status", resp.Run.Status))
@@ -97,7 +81,7 @@ func SearchRunActivity(ctx context.Context, req *models.RunParams) ([]*api.Workf
 	schClient := ctx.Value(scheduler.SchedulerClientContextKey).(scheduler.Client)
 	if schClient == nil {
 		l.Error(ERR_MISSING_SCHEDULER_CLIENT)
-		return nil, cadence.NewCustomError(ERR_MISSING_SCHEDULER_CLIENT, ErrMissingSchClient)
+		return nil, ErrorMissingSchedulerClient
 	}
 
 	resp, err := schClient.SearchRuns(ctx, &api.SearchRunRequest{
@@ -105,7 +89,7 @@ func SearchRunActivity(ctx context.Context, req *models.RunParams) ([]*api.Workf
 	})
 	if err != nil {
 		l.Error(ERR_SEARCH_RUN, zap.Error(err))
-		return nil, cadence.NewCustomError(ERR_SEARCH_RUN, err)
+		return nil, temporal.NewApplicationErrorWithCause(ERR_SEARCH_RUN, ERR_SEARCH_RUN, errors.WrapError(err, ERR_SEARCH_RUN))
 	}
 
 	l.Info("SearchRunActivity completed", zap.Any("resp", resp))

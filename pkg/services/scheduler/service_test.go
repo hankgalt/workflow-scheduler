@@ -16,7 +16,6 @@ import (
 )
 
 const TEST_DIR = "data"
-const CADENCE_CONFIG = "../../../cmd/scheduler/config/development.yaml"
 
 func TestSchedulerService(t *testing.T) {
 	setupEnv(t)
@@ -68,7 +67,7 @@ func setup(t *testing.T, l *zap.Logger) (
 ) {
 	t.Helper()
 
-	serviceCfg, err := NewServiceConfig("localhost", "", "", "", CADENCE_CONFIG, false)
+	serviceCfg, err := NewServiceConfig("localhost", "", "", "", false)
 	require.NoError(t, err)
 
 	bs, err = NewSchedulerService(serviceCfg, l)
@@ -86,11 +85,11 @@ func setup(t *testing.T, l *zap.Logger) (
 
 func testServiceConfig(t *testing.T) {
 	host := "localhost"
-	srvCfg, err := NewServiceConfig(host, "", "", "", CADENCE_CONFIG, false)
+	srvCfg, err := NewServiceConfig(host, "", "", "", false)
 	require.NoError(t, err)
 	require.Equal(t, srvCfg.DBConfig.Host, host)
 
-	_, err = NewServiceConfig("", "", "", "", CADENCE_CONFIG, false)
+	_, err = NewServiceConfig("", "", "", "", false)
 	require.Error(t, err)
 	require.Equal(t, err, mysqldb.ErrMissingRequired)
 }
