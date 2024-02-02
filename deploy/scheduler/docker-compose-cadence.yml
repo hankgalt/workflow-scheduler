@@ -61,7 +61,7 @@ services:
       - ./prometheus:/etc/prometheus
       - ./data/prometheus/:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--config.file=/etc/prometheus/prometheus-cadence.yml'
     ports:
       - '9090:9090'
     networks:

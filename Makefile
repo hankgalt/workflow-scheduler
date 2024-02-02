@@ -68,3 +68,22 @@ stop-service:
 .PHONY: start-worker
 start-worker:
 	scripts/start-worker.sh ${TARGET}
+
+# start temporal server
+.PHONY: start-temporal
+start-temporal:
+	@echo "starting temporal server"
+	docker-compose -f deploy/scheduler/docker-compose-temporal.yml up -d
+
+# stop temporal server
+.PHONY: stop-temporal
+stop-temporal:
+	@echo "stopping temporal server"
+	docker-compose -f deploy/scheduler/docker-compose-temporal.yml down
+
+.PHONY: register-temporal-domain
+register-temporal-domain:
+	@echo "registering scheduler temporal domain"
+	tctl --namespace scheduler-domain namespace register
+	tctl namespace describe scheduler-domain
+
