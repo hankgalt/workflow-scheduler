@@ -10,18 +10,30 @@ import (
 )
 
 const (
-	ERR_RUN_CREATE    = "error: creating workflow run"
-	ERR_RUN_FETCH     = "error: fetching workflow run details"
-	ERR_RUN_UPDATE    = "error: updating workflow run"
-	ERR_RUN_DELETE    = "error: deleting workflow run"
-	ERR_DUPLICATE_RUN = "error: duplicate run"
+	ERR_RUN_CREATE          = "error: creating workflow run"
+	ERR_RUN_FETCH           = "error: fetching workflow run details"
+	ERR_RUN_UPDATE          = "error: updating workflow run"
+	ERR_RUN_DELETE          = "error: deleting workflow run"
+	ERR_DUPLICATE_RUN       = "error: duplicate run"
+	ERR_MISSING_RUN_ID      = "error: missing run id"
+	ERR_MISSING_WORKFLOW_ID = "error: missing workflow id"
 )
 
 var (
-	ErrDuplicateRun = errors.NewAppError(ERR_DUPLICATE_RUN)
+	ErrDuplicateRun      = errors.NewAppError(ERR_DUPLICATE_RUN)
+	ErrMisiingRunId      = errors.NewAppError(ERR_MISSING_RUN_ID)
+	ErrMissingWorkflowId = errors.NewAppError(ERR_MISSING_WORKFLOW_ID)
 )
 
 func (bs *schedulerService) CreateRun(ctx context.Context, params *models.RunParams) (*models.WorkflowRun, error) {
+	if params.WorkflowId == "" {
+		return nil, ErrMissingWorkflowId
+	}
+
+	if params.RunId == "" {
+		return nil, ErrMisiingRunId
+	}
+
 	wkflRun := models.WorkflowRun{
 		WorkflowId:  params.WorkflowId,
 		RunId:       params.RunId,

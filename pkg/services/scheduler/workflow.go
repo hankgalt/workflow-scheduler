@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"go.uber.org/cadence/client"
+	"go.temporal.io/sdk/client"
 	"go.uber.org/zap"
 
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
-	bizwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/business"
-	"github.com/hankgalt/workflow-scheduler/pkg/workflows/common"
+	bizwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/temporal/business"
+	comwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/temporal/common"
 )
 
 func (ss *schedulerService) ProcessFileSignalWorkflow(ctx context.Context, params *models.FileSignalParams) (*models.WorkflowRun, error) {
@@ -25,20 +25,20 @@ func (ss *schedulerService) ProcessFileSignalWorkflow(ctx context.Context, param
 	}
 
 	workflowOptions := client.StartWorkflowOptions{
-		ID:                              fmt.Sprintf("file-%s", params.FilePath),
-		TaskList:                        bizwkfl.ApplicationName,
-		ExecutionStartToCloseTimeout:    common.ONE_DAY,
-		DecisionTaskStartToCloseTimeout: common.FIVE_MINS, // set to max, as there are decision tasks that'll take as long as max
-		WorkflowIDReusePolicy:           1,
+		ID:                       fmt.Sprintf("file-%s", params.FilePath),
+		TaskQueue:                bizwkfl.ApplicationName,
+		WorkflowExecutionTimeout: comwkfl.ONE_DAY,
+		WorkflowTaskTimeout:      comwkfl.FIVE_MINS, // set to max, as there are decision tasks that'll take as long as max
+		WorkflowIDReusePolicy:    1,
 	}
-	we, err := ss.cadence.StartWorkflow(workflowOptions, bizwkfl.ProcessFileSignalWorkflow, req)
+	we, err := ss.temporal.StartWorkflow(workflowOptions, bizwkfl.ProcessFileSignalWorkflow, req)
 	if err != nil {
 		return nil, err
 	}
 
 	return &models.WorkflowRun{
-		RunId:      we.RunID,
-		WorkflowId: we.ID,
+		RunId:      we.GetRunID(),
+		WorkflowId: we.GetID(),
 	}, nil
 }
 
@@ -48,7 +48,7 @@ func (ss *schedulerService) QueryWorkflowState(ctx context.Context, params *mode
 		return nil, ErrMissingRequired
 	}
 
-	if state, err := ss.cadence.QueryWorkflow(ctx, params.WorkflowId, params.RunId, "state"); err != nil {
+	if state, err := ss.temporal.QueryWorkflow(ctx, params.WorkflowId, params.RunId, "state"); err != nil {
 		return nil, err
 	} else {
 		return state, nil

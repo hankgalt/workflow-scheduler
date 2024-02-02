@@ -32,7 +32,8 @@ func TestSchedulerServiceWorkflows(t *testing.T) {
 		ss scheduler.SchedulerService,
 	){
 		"process file signal workflow run, succeeds": testProcessFileSignalWorkflowRun,
-		// "get completed workflow run, succeeds": testGetCompletedRun,
+		"get completed workflow run, succeeds":       testGetCompletedRun,
+		"test query workflow state":                  testQueryState,
 	} {
 		t.Run(scenario, func(t *testing.T) {
 			ss, teardown := setupAPITests(t, logger)
@@ -133,6 +134,20 @@ func testProcessFileSignalWorkflowRun(t *testing.T, l *zap.Logger, ss scheduler.
 				}
 			}
 		}
+	}
+}
+
+func testQueryState(t *testing.T, l *zap.Logger, ss scheduler.SchedulerService) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if childState, err := ss.QueryWorkflowState(ctx, &models.WorkflowQueryParams{
+		RunId:      "644522c9-2c89-44c6-a40a-f58d8af143fa",
+		WorkflowId: "file-scheduler/Agents-sm.csv",
+	}); err != nil {
+		l.Debug("testQueryState child run state error", zap.Error(err))
+	} else {
+		l.Debug("testQueryState child run state", zap.Any("childState", childState))
 	}
 }
 

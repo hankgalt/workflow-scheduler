@@ -8,6 +8,7 @@ import (
 
 	"github.com/hankgalt/workflow-scheduler/pkg/clients/cadence"
 	"github.com/hankgalt/workflow-scheduler/pkg/clients/mysqldb"
+	"github.com/hankgalt/workflow-scheduler/pkg/clients/temporal"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
 )
 
@@ -72,9 +73,10 @@ func NewServiceConfig(host, db, user, auth string, cadenceCfg string, validate b
 }
 
 type schedulerService struct {
-	db      *mysqldb.MYSQLDBClient
-	cfg     *serviceConfig
-	cadence *cadence.CadenceClient
+	db       *mysqldb.MYSQLDBClient
+	cfg      *serviceConfig
+	cadence  *cadence.CadenceClient
+	temporal *temporal.TemporalClient
 	*zap.Logger
 }
 
@@ -108,6 +110,13 @@ func NewSchedulerService(cfg *serviceConfig, l *zap.Logger) (*schedulerService, 
 		return nil, err
 	}
 	bs.cadence = cc
+
+	tc, err := temporal.NewTemporalClient(l)
+	if err != nil {
+		l.Error("error creating temporal client", zap.Error(err))
+		return nil, err
+	}
+	bs.temporal = tc
 
 	// err = bs.registerFileProcessingWorkflowGroup()
 	// if err != nil {
