@@ -7,4 +7,4 @@ echo "data volume: $DATA_VOLUME, init script: $INIT_SCRIPT_PATH"
 BASEDIR=$(dirname "$0")
 cd ${BASEDIR}/../
 
-docker-compose -f deploy/scheduler/docker-compose-db.yml up -d
+docker-compose -f deploy/scheduler/docker-compose-mysql.yml up -d
