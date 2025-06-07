@@ -27,7 +27,7 @@ import (
 const TEST_DIR = "data"
 const DATA_PATH string = "scheduler"
 const MISSING_FILE_NAME string = "geo.csv"
-const LIVE_FILE_NAME string = "Agents-sm.csv"
+const LIVE_FILE_NAME string = "Agents.csv"
 
 const (
 	ActivityAlias             string = "some-random-activity-alias"

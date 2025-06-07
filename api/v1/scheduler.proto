@@ -1,7 +1,5 @@
 syntax = "proto3";
 
-import "api/google/rpc/status.proto";
-
 package scheduler.v1;
 
 option go_package = "github.com/hankgalt/workflow-scheduler/api/scheduler_v1";
@@ -145,7 +143,7 @@ message EntityResponse {
 message StreamAddEntityResponse {
     oneof test_oneof {
         AddEntityResponse entityResponse = 1;
-        google.rpc.Status error = 2;
+        string error = 2;
     }
 }
 

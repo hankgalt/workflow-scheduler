@@ -192,10 +192,10 @@ func testAddBusinessEntities(t *testing.T, client, nbClient api.SchedulerClient,
 						bp := r.GetEntityResponse().GetPrincipal()
 						require.Equal(t, int(bp.EntityId), num)
 						resIds = append(resIds, bp.Id)
-					} else if r.GetError() != nil {
+					} else if r.GetError() != "" {
 						// error aggregation
 						t.Log("received error: ", r.GetError())
-						errs = append(errs, errors.NewAppError(r.GetError().GetMessage()))
+						errs = append(errs, errors.NewAppError(r.GetError()))
 					}
 				}
 			case err, ok := <-errCh:

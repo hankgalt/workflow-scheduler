@@ -1,6 +1,6 @@
 module github.com/hankgalt/workflow-scheduler
 
-go 1.21.6
+go 1.22.12
 
 require (
 	github.com/comfforts/errors v0.1.1
@@ -22,7 +22,6 @@ require (
 	github.com/comfforts/cloudstorage v0.1.21
 	github.com/google/uuid v1.3.1
 	go.temporal.io/sdk v1.25.1
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d
 )
 
 require (
@@ -68,6 +67,7 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

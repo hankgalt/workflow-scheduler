@@ -7,44 +7,52 @@
 - https://protobuf.dev/getting-started/gotutorial/
 
 ### Local setup
-- setup db scripts
-    - setup data home env, update env name in `scripts/start-db.sh`
-    - add `{DATA_HOME}/data/scripts/db-init.sql`
-    ```CREATE USER IF NOT EXISTS '<root_user>'@'%' IDENTIFIED WITH mysql_native_password BY '<root_password>';
-        GRANT ALL PRIVILEGES ON *.* TO '<root_user>'@'%';
-        GRANT GRANT OPTION ON *.* TO '<root_user>'@'%';
-        FLUSH PRIVILEGES;
+- db
+    - setup db scripts
+        - setup data home env, update env name in `scripts/start-db.sh`
+        - add `{DATA_HOME}/data/scripts/db-init.sql`
+        ```CREATE USER IF NOT EXISTS '<root_user>'@'%' IDENTIFIED WITH mysql_native_password BY '<root_password>';
+            GRANT ALL PRIVILEGES ON *.* TO '<root_user>'@'%';
+            GRANT GRANT OPTION ON *.* TO '<root_user>'@'%';
+            FLUSH PRIVILEGES;
 
-        CREATE DATABASE IF NOT EXISTS <db_name>;
-        CREATE DATABASE IF NOT EXISTS <db_name_test>;
+            CREATE DATABASE IF NOT EXISTS <db_name>;
+            CREATE DATABASE IF NOT EXISTS <db_name_test>;
 
-        CREATE USER IF NOT EXISTS '<db_user_name>'@'%' IDENTIFIED WITH mysql_native_password BY '<db_user_password>';
-        GRANT ALL PRIVILEGES on <db_name>.* to '<db_user_name>'@'%';
-        GRANT ALL PRIVILEGES on <db_name_test>.* to '<db_user_name>'@'%';
-        FLUSH PRIVILEGES;```
-- add `mysql.env` in `deploy/scheduler` folder. `MYSQL_ROOT_PASSWORD, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD`
-- `make start-db`
-- `make start-temporal`
-- `make register-domain`
-- add env configs in `env/` folder
-    - local
-        `SERVER_PORT, DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, TEMPORAL_HOST, WORKFLOW_DOMAIN`
-    - test
-        `DB_NAME, DB_USER, DB_PASSWORD, CERTS_PATH, POLICY_PATH, TEMPORAL_HOST, WORKFLOW_DOMAIN, CREDS_PATH, BUCKET`
-    - worker (business)
-        `TEMPORAL_HOST, WORKFLOW_DOMAIN, SCHEDULER_SERVICE_HOST, CREDS_PATH, BUCKET, METRICS_PORT`
-- `make start-worker TARGET=business`
-- `make start-server`
+            CREATE USER IF NOT EXISTS '<db_user_name>'@'%' IDENTIFIED WITH mysql_native_password BY '<db_user_password>';
+            GRANT ALL PRIVILEGES on <db_name>.* to '<db_user_name>'@'%';
+            GRANT ALL PRIVILEGES on <db_name_test>.* to '<db_user_name>'@'%';
+            FLUSH PRIVILEGES;```
+    - add `mysql.env` in `deploy/scheduler` folder - `MYSQL_ROOT_PASSWORD, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD`
+    - `make start-db`
+- temporal
+    - `make start-temporal`
+    - `make register-domain`
+- services
+    - add env configs in `env/` folder
+        - local - `SERVER_PORT, DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, TEMPORAL_HOST, WORKFLOW_DOMAIN`
+        - test - `DB_NAME, DB_USER, DB_PASSWORD, CERTS_PATH, POLICY_PATH, TEMPORAL_HOST, WORKFLOW_DOMAIN, CREDS_PATH, BUCKET`
+        - worker (business) - `TEMPORAL_HOST, WORKFLOW_DOMAIN, SCHEDULER_SERVICE_HOST, CREDS_PATH, BUCKET, METRICS_PORT`
+    - `make start-worker TARGET=business`
+    - `make start-server`
 
 ### Testing
 - `make run-client` or `make test-server`
 - VSCode
 
 ### Maintenance
-- build proto - `make build-proto`
-- `export GOPRIVATE=github.com/comfforts/comff-config`
-- `go mod tidy -go=1.16 && go mod tidy -go=1.17`
+- protoc
+    - `curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v28.3/protoc-28.3-osx-aarch_64.zip`, update version, os & arch.
+    - `mv protoc-<version>-<os>-<arch>.zip $HOME/.local/bin/`
+    - `unzip protoc-<version>-<os>-<arch>.zip`
+    - `export PATH="$HOME/.local/bin:$PATH"`
+    - `make setup-proto`
+    - `make build-proto`
+- module
+    - `export GOPRIVATE=github.com/comfforts/comff-config`
 
 ### dev notes
-
+- `openssl rand -base64 32`
+- grpcurl
+    - `go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest`
 - ReadAt reads len(b) bytes from the File starting at byte offset off. It returns the number of bytes read and the error, if any. ReadAt always returns a non-nil error when n < len(b). At end of file, that error is io.EOF. n < len(b) when line ends earlier.

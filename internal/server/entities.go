@@ -10,7 +10,6 @@ import (
 
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
-	statusproto "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/status"
 )
 
@@ -28,23 +27,17 @@ func (s *grpcServer) AddBusinessEntities(stream api.Scheduler_AddBusinessEntitie
 		var stResp api.StreamAddEntityResponse
 		if res, err := s.AddEntity(stream.Context(), req); err != nil {
 			s.Logger.Error("error adding entity", zap.Error(err))
-			e, ok := status.FromError(err)
+			_, ok := status.FromError(err)
 			if ok {
 				stResp = api.StreamAddEntityResponse{
 					TestOneof: &api.StreamAddEntityResponse_Error{
-						Error: &statusproto.Status{
-							Code:    e.Proto().Code,
-							Message: e.Message(),
-						},
+						Error: err.Error(),
 					},
 				}
 			} else {
 				stResp = api.StreamAddEntityResponse{
 					TestOneof: &api.StreamAddEntityResponse_Error{
-						Error: &statusproto.Status{
-							Code:    int32(codes.Unknown),
-							Message: err.Error(),
-						},
+						Error: err.Error(),
 					},
 				}
 			}

@@ -1,0 +1,26 @@
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: scheduler-mysql
+    restart: always
+    env_file:
+      - mysql.env
+    ports:
+      - '3306:3306'
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - ${DATA_VOLUME}:/var/lib/mysql
+      - ${INIT_SCRIPT_PATH}/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
+      - ${INIT_SCRIPT_PATH}/data.sql:/docker-entrypoint-initdb.d/2_data.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - schenet
+
+networks:
+  schenet:
+    driver: bridge
