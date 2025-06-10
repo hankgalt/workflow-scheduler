@@ -1,30 +1,49 @@
 
 services:
-  mongodb-scheduler:
-    container_name: mongodb-scheduler
-    image: mongo:7.0
+  
+  scheduler-mongo:
+    image: mongo:8.0
+    container_name: scheduler-mongo
+    env_file:
+      - mongo.env
     ports:
       - 27117:27017
     restart: always
-    entrypoint: ["/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0"]
+    volumes:
+      - ./mongo-keyfile:/etc/mongo-keyfile:ro
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - scheduler-mongo-data:/data/db
+    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip_all", "--keyFile", "/etc/mongo-keyfile"]
     networks:
       - schenet
-  mongodb-scheduler-rep-0:
-    container_name: mongodb-scheduler-rep-0
-    image: mongo:7.0
+  
+  scheduler-mongo-rep-1:
+    image: mongo:8.0
+    container_name: scheduler-mongo-rep-1
+    env_file:
+      - mongo.env
     ports:
       - 27118:27017
     restart: always
-    entrypoint: ["/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0"]
+    volumes:
+      - ./mongo-keyfile:/etc/mongo-keyfile:ro
+      - scheduler-mongo-rep-1-data:/data/db
+    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip_all", "--keyFile", "/etc/mongo-keyfile"]
     networks:
       - schenet
-  mongodb-scheduler-rep-1:
-    container_name: mongodb-scheduler-rep-1
-    image: mongo:7.0
+  
+  scheduler-mongo-rep-2:
+    image: mongo:8.0
+    container_name: scheduler-mongo-rep-2
+    env_file:
+      - mongo.env
     ports:
       - 27119:27017
+    volumes:
+      - ./mongo-keyfile:/etc/mongo-keyfile:ro
+      - scheduler-mongo-rep-2-data:/data/db
     restart: always
-    entrypoint: ["/usr/bin/mongod", "--bind_ip_all", "--replSet", "rs0"]
+    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip_all", "--keyFile", "/etc/mongo-keyfile"]
     networks:
       - schenet
 
@@ -33,5 +52,6 @@ networks:
     external: true
 
 volumes:
-  data:
-    driver: local
+  scheduler-mongo-data:
+  scheduler-mongo-rep-1-data:
+  scheduler-mongo-rep-2-data:

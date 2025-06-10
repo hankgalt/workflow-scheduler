@@ -23,4 +23,4 @@ services:
 
 networks:
   schenet:
-    driver: bridge
+    external: true

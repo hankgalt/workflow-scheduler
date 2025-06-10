@@ -4,23 +4,52 @@ build-proto:
 	@echo "building latest scheduler proto for ${HEAD}"
 	scripts/build-proto.sh
 
-# start database
-start-mysql:
-	@echo "starting mysql db"
+setup-proto:
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+
+# gen-go:
+# 	which protoc
+# 	protoc -I . --go_out ./api --go_opt=paths=source_relative ./**/*.proto --experimental_allow_proto3_optional && \
+# 	protoc -I . --go-grpc_out ./api --go-grpc_opt=paths=source_relative ./**/*.proto --experimental_allow_proto3_optional
+
+# setup docker network for local development
+network:
+	@echo "Creating schenet network if it doesn't exist..."
+	@if ! docker network inspect schenet > /dev/null 2>&1; then \
+		docker network create schenet; \
+		echo "Network schenet created."; \
+	else \
+		echo "Network schenet already exists."; \
+	fi
+
+# wait for 10 seconds
+wait-10:
+	@echo "Waiting 10 seconds..."
+	sleep 10
+
+# start mysql database
+mysql:
+	@echo "Starting mysql db"
 	scripts/start-mysql.sh
 
-# stop database
+start-mysql: network mysql
+
+# stop mysql database
 stop-mysql:
 	@echo "stopping mysql db"
-	scripts/stop-db.sh
+	scripts/stop-mysql.sh
 
-start-mongo:
+# start mongo cluster
+mongo:
 	@echo "Creating MongoDB cluster..."
-	@set -a; . deploy/scheduler/mongo.env; set +a; docker-compose -f deploy/scheduler/docker-compose-mongo.yml up -d
+	@set -a; . deploy/scheduler/mongo.env; set +a; docker-compose -f deploy/scheduler/docker-compose-mongo.yml up --build -d --remove-orphans
+
+start-mongo: network mongo
 
 stop-mongo:
 	@echo "Stopping MongoDB cluster..."
-	@set -a; . deploy/scheduler/mongo.env; set +a; docker-compose -f deploy/scheduler/docker-compose-mongo.yml down
+	@set -a; . deploy/scheduler/mongo.env; set +a; docker-compose -f deploy/scheduler/docker-compose-mongo.yml down -v 
 
 # start scheduler service from local repo
 start-server:
@@ -37,9 +66,11 @@ run-client:
 	scripts/start-client.sh
 
 # start temporal server
-start-temporal:
+temporal:
 	@echo "starting temporal server"
 	docker-compose -f deploy/scheduler/docker-compose-temporal.yml up -d
+
+start-temporal: network temporal
 
 # stop temporal server
 stop-temporal:
@@ -65,13 +96,5 @@ stop-service:
 start-worker:
 	scripts/start-worker.sh ${TARGET}
 
-setup-proto:
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
-	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
-
-# gen-go:
-# 	which protoc
-# 	protoc -I . --go_out ./api --go_opt=paths=source_relative ./**/*.proto --experimental_allow_proto3_optional && \
-# 	protoc -I . --go-grpc_out ./api --go-grpc_opt=paths=source_relative ./**/*.proto --experimental_allow_proto3_optional
 
 

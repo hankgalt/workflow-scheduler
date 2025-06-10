@@ -11,3 +11,5 @@ env
 */*/creds
 */*/policies
 */*/logs
+
+*/*/mongo-keyfile
