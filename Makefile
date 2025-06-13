@@ -42,8 +42,8 @@ stop-mysql:
 
 # start mongo cluster
 mongo:
-	@echo "Creating MongoDB cluster..."
-	@set -a; . deploy/scheduler/mongo.env; set +a; docker-compose -f deploy/scheduler/docker-compose-mongo.yml up --build -d --remove-orphans
+	@echo "Starting MongoDB cluster..."
+	scripts/start-mongo.sh
 
 start-mongo: network mongo
 

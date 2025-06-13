@@ -56,3 +56,13 @@
 - grpcurl
     - `go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest`
 - ReadAt reads len(b) bytes from the File starting at byte offset off. It returns the number of bytes read and the error, if any. ReadAt always returns a non-nil error when n < len(b). At end of file, that error is io.EOF. n < len(b) when line ends earlier.
+- `docker-compose -f docker-compose-mongo.yml up -d`
+- `docker-compose -f docker-compose-mongo.yml down -v`
+- `mongosh -u mongouser -p mongopass`
+- `mongosh "mongodb://localhost:27017/?replicaSet=rs0"`
+- `mongosh "mongodb://adminuser:adminpassword@localhost:27017/?authSource=admin&replicaSet=rs0"`
+- `mongosh "mongodb://root:password@localhost:27017/?authSource=admin&replicaSet=rs0"`
+- `use admin; db.createUser({user: "adminuser", pwd: "adminpassword", roles: [ { role: "root", db: "admin" } ]}); db.createUser({user: "root", pwd: "rootpassword", roles: [ { role: "root", db: "admin" } ]})`
+- `openssl rand -base64 756 > mongo-keyfile && chmod 400 mongo-keyfile`
+
+

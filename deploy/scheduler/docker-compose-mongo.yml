@@ -1,51 +1,95 @@
+# Single node MongoDB cluster
+# services:
+#   mongo1:
+#     image: mongo:8.0
+#     container_name: mongo1
+#     command: ["--replSet", "rs0", "--bind_ip_all", "--port", "27017"]
+#     ports:
+#       - 27017:27017
+#     healthcheck:
+#       test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}) }" | mongosh --port 27017 --quiet
+#       interval: 5s
+#       timeout: 30s
+#       start_period: 0s
+#       start_interval: 1s
+#       retries: 30
+#     volumes:
+#       - "mongo1_data:/data/db"
+#       - "mongo1_config:/data/configdb"
 
+# volumes:
+#   mongo1_data:
+#   mongo1_config:
+
+# MongoDB Replica Set with 3 nodes and admin users
 services:
-  
   scheduler-mongo:
     image: mongo:8.0
     container_name: scheduler-mongo
+    restart: unless-stopped
     env_file:
       - mongo.env
-    ports:
-      - 27117:27017
-    restart: always
     volumes:
-      - ./mongo-keyfile:/etc/mongo-keyfile:ro
-      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
       - scheduler-mongo-data:/data/db
-    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip_all", "--keyFile", "/etc/mongo-keyfile"]
+      - ./mongo-keyfile:/opt/keyfile/mongo-keyfile
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --eval 'rs.status().ok' | grep 1"]
+      interval: 10s
+      start_period: 30s
+    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip", "localhost,scheduler-mongo", "--auth",  "--keyFile", "/opt/keyfile/mongo-keyfile"]
     networks:
-      - schenet
-  
-  scheduler-mongo-rep-1:
+      schenet:
+    
+  scheduler-mongo-rep1:
     image: mongo:8.0
-    container_name: scheduler-mongo-rep-1
+    container_name: scheduler-mongo-rep1
+    restart: unless-stopped
     env_file:
       - mongo.env
-    ports:
-      - 27118:27017
-    restart: always
     volumes:
-      - ./mongo-keyfile:/etc/mongo-keyfile:ro
-      - scheduler-mongo-rep-1-data:/data/db
-    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip_all", "--keyFile", "/etc/mongo-keyfile"]
+      - scheduler-mongo-rep1-data:/data/db
+      - ./mongo-keyfile:/opt/keyfile/mongo-keyfile
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --eval 'rs.status().ok' | grep 1"]
+      interval: 10s
+      start_period: 30s
+    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip", "localhost,scheduler-mongo-rep1", "--auth",  "--keyFile", "/opt/keyfile/mongo-keyfile"]
     networks:
-      - schenet
-  
-  scheduler-mongo-rep-2:
+      schenet:
+
+  scheduler-mongo-rep2:
     image: mongo:8.0
-    container_name: scheduler-mongo-rep-2
+    container_name: scheduler-mongo-rep2
+    restart: unless-stopped
     env_file:
       - mongo.env
-    ports:
-      - 27119:27017
     volumes:
-      - ./mongo-keyfile:/etc/mongo-keyfile:ro
-      - scheduler-mongo-rep-2-data:/data/db
-    restart: always
-    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip_all", "--keyFile", "/etc/mongo-keyfile"]
+      - scheduler-mongo-rep2-data:/data/db
+      - ./mongo-keyfile:/opt/keyfile/mongo-keyfile
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --eval 'rs.status().ok' | grep 1"]
+      interval: 10s
+      start_period: 30s
+    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip", "localhost,scheduler-mongo-rep2", "--auth",  "--keyFile", "/opt/keyfile/mongo-keyfile"]
     networks:
-      - schenet
+      schenet:
+
+  scheduler-mongo-setup:
+    image: mongo:8.0
+    container_name: scheduler-mongo-setup
+    depends_on:
+      - scheduler-mongo
+      - scheduler-mongo-rep1
+      - scheduler-mongo-rep2
+    env_file:
+      - mongo.env
+    entrypoint: ["bash", "/scripts/mongo_setup.sh"]
+    volumes:
+      - ./mongo-setup.sh:/scripts/mongo_setup.sh:ro
+    networks:
+      schenet:
 
 networks:
   schenet:
@@ -53,5 +97,6 @@ networks:
 
 volumes:
   scheduler-mongo-data:
-  scheduler-mongo-rep-1-data:
-  scheduler-mongo-rep-2-data:
+  scheduler-mongo-rep1-data:
+  scheduler-mongo-rep2-data:
+
