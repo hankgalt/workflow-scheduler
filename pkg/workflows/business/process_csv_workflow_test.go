@@ -148,7 +148,8 @@ func (s *ProcessCSVWorkflowTestSuite) Test_ProcessCSVWorkflow_Agent() {
 			l.Info("Test_ProcessCSVWorkflow_Agent - error", slog.Any("error", err))
 		} else {
 			var result models.CSVInfo
-			s.env.GetWorkflowResult(&result)
+			err := s.env.GetWorkflowResult(&result)
+			s.NoError(err)
 
 			cLog := logger.NewTestAppZapLogger(TEST_DIR)
 			sOpts := scheduler.NewDefaultClientOption()
@@ -164,10 +165,11 @@ func (s *ProcessCSVWorkflowTestSuite) Test_ProcessCSVWorkflow_Agent() {
 				resultCount = resultCount + len(v.Results)
 				recCount = recCount + len(v.Errors) + len(v.Results)
 				for _, res := range v.Results {
-					deleteEntity(schClient, &api.EntityRequest{
+					err := deleteEntity(schClient, &api.EntityRequest{
 						Type: models.MapEntityTypeToProto(req.Type),
 						Id:   res.Id,
 					})
+					s.NoError(err)
 				}
 			}
 			timeTaken := time.Since(start)
@@ -241,7 +243,8 @@ func (s *ProcessCSVWorkflowTestSuite) Test_ProcessCSVWorkflow_Principal() {
 			l.Info("Test_ProcessCSVWorkflow_Principal - error", slog.Any("error", err))
 		} else {
 			var result models.CSVInfo
-			s.env.GetWorkflowResult(&result)
+			err := s.env.GetWorkflowResult(&result)
+			s.NoError(err)
 
 			cLog := logger.NewTestAppZapLogger(TEST_DIR)
 			sOpts := scheduler.NewDefaultClientOption()
@@ -257,10 +260,11 @@ func (s *ProcessCSVWorkflowTestSuite) Test_ProcessCSVWorkflow_Principal() {
 				resultCount = resultCount + len(v.Results)
 				recCount = recCount + len(v.Errors) + len(v.Results)
 				for _, res := range v.Results {
-					deleteEntity(schClient, &api.EntityRequest{
+					err := deleteEntity(schClient, &api.EntityRequest{
 						Type: models.MapEntityTypeToProto(req.Type),
 						Id:   res.Id,
 					})
+					s.NoError(err)
 				}
 			}
 
@@ -335,7 +339,8 @@ func (s *ProcessCSVWorkflowTestSuite) Test_ProcessCSVWorkflow_Filing() {
 			l.Info("Test_ProcessCSVWorkflow_Filing - error", slog.Any("error", err))
 		} else {
 			var result models.CSVInfo
-			s.env.GetWorkflowResult(&result)
+			err := s.env.GetWorkflowResult(&result)
+			s.NoError(err)
 
 			cLog := logger.NewTestAppZapLogger(TEST_DIR)
 			sOpts := scheduler.NewDefaultClientOption()
@@ -351,10 +356,11 @@ func (s *ProcessCSVWorkflowTestSuite) Test_ProcessCSVWorkflow_Filing() {
 				resultCount = resultCount + len(v.Results)
 				recCount = recCount + len(v.Errors) + len(v.Results)
 				for _, res := range v.Results {
-					deleteEntity(schClient, &api.EntityRequest{
+					err := deleteEntity(schClient, &api.EntityRequest{
 						Type: models.MapEntityTypeToProto(req.Type),
 						Id:   res.Id,
 					})
+					s.NoError(err)
 				}
 			}
 

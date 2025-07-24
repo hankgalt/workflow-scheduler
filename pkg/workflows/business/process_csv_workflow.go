@@ -35,18 +35,15 @@ func ProcessCSVWorkflow(ctx workflow.Context, req *models.CSVInfo) (*models.CSVI
 		slog.Any("type", req.Type))
 
 	count := 0
-	configErr := false
 	resp, err := processCSV(ctx, req)
-	for err != nil && count < 10 && !configErr {
+	for err != nil && count < 10 {
 		count++
 		switch wkflErr := err.(type) {
 		case *temporal.ServerError:
 			l.Error("ProcessCSVWorkflow - temporal generic error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return req, err
 		case *temporal.TimeoutError:
 			l.Error("ProcessCSVWorkflow - time out error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return req, err
 		case *temporal.ApplicationError:
 			l.Error("ProcessCSVWorkflow - temporal application error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
@@ -55,28 +52,20 @@ func ProcessCSVWorkflow(ctx workflow.Context, req *models.CSVInfo) (*models.CSVI
 				resp, err = processCSV(ctx, resp)
 				continue
 			case comwkfl.ERR_WRONG_HOST:
-				configErr = true
 				return req, err
 			case comwkfl.ERR_MISSING_FILE_NAME:
-				configErr = true
 				return req, err
 			case comwkfl.ERR_MISSING_REQSTR:
-				configErr = true
 				return req, err
 			case comwkfl.ERR_MISSING_FILE:
-				configErr = true
 				return req, err
 			case ERR_MISSING_START_OFFSET:
-				configErr = true
 				return req, err
 			case ERR_BUILDING_OFFSETS:
-				configErr = true
 				return req, err
 			case ERR_MISSING_OFFSETS:
-				configErr = true
 				return req, err
 			case comwkfl.ERR_MISSING_SCHEDULER_CLIENT:
-				configErr = true
 				return req, err
 			default:
 				resp, err = processCSV(ctx, resp)
@@ -84,11 +73,9 @@ func ProcessCSVWorkflow(ctx workflow.Context, req *models.CSVInfo) (*models.CSVI
 			}
 		case *temporal.PanicError:
 			l.Error("ProcessCSVWorkflow - temporal panic error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return resp, err
 		case *temporal.CanceledError:
 			l.Error("ProcessCSVWorkflow - temporal canceled error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return resp, err
 		default:
 			l.Error("ProcessCSVWorkflow - other error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
@@ -101,7 +88,6 @@ func ProcessCSVWorkflow(ctx workflow.Context, req *models.CSVInfo) (*models.CSVI
 			"ProcessCSVWorkflow - failed",
 			slog.String("err-msg", err.Error()),
 			slog.Int("tries", count),
-			slog.Bool("config-err", configErr),
 		)
 		return resp, temporal.NewApplicationErrorWithCause(ERR_PROCESS_CSV_WKFL, ERR_PROCESS_CSV_WKFL, errors.WrapError(err, ERR_PROCESS_CSV_WKFL))
 	}

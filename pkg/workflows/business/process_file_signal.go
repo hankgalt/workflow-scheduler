@@ -26,18 +26,15 @@ func ProcessFileSignalWorkflow(ctx workflow.Context, req *models.CSVInfo) (*mode
 		slog.String("reqstr", req.RequestedBy))
 
 	count := 0
-	configErr := false
 	resp, err := processFileSignal(ctx, req)
-	for err != nil && count < 10 && !configErr {
+	for err != nil && count < 10 {
 		count++
 		switch wkflErr := err.(type) {
 		case *temporal.ServerError:
 			l.Error("temporal server error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return req, err
 		case *temporal.TimeoutError:
 			l.Error("time out error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return req, err
 		case *temporal.ApplicationError:
 			l.Error("temporal custom error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
@@ -46,19 +43,14 @@ func ProcessFileSignalWorkflow(ctx workflow.Context, req *models.CSVInfo) (*mode
 				resp, err = processFileSignal(ctx, resp)
 				continue
 			case comwkfl.ERR_WRONG_HOST:
-				configErr = true
 				return req, err
 			case comwkfl.ERR_MISSING_FILE_NAME:
-				configErr = true
 				return req, err
 			case comwkfl.ERR_MISSING_REQSTR:
-				configErr = true
 				return req, err
 			case ERR_MISSING_OFFSETS:
-				configErr = true
 				return req, err
 			case comwkfl.ERR_QUERY_HANDLER:
-				configErr = true
 				return req, err
 			default:
 				resp, err = processFileSignal(ctx, resp)
@@ -66,11 +58,9 @@ func ProcessFileSignalWorkflow(ctx workflow.Context, req *models.CSVInfo) (*mode
 			}
 		case *temporal.PanicError:
 			l.Error("temporal panic error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return resp, err
 		case *temporal.CanceledError:
 			l.Error("temporal canceled error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return resp, err
 		default:
 			l.Error("other error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
@@ -83,7 +73,6 @@ func ProcessFileSignalWorkflow(ctx workflow.Context, req *models.CSVInfo) (*mode
 			"ProcessFileSignalWorkflow - failed",
 			slog.String("err-msg", err.Error()),
 			slog.Int("tries", count),
-			slog.Bool("config-err", configErr),
 		)
 		return resp, temporal.NewApplicationErrorWithCause(ERR_PROCESS_FILE_WKFL, ERR_PROCESS_FILE_WKFL, errors.WrapError(err, ERR_PROCESS_FILE_WKFL))
 	}

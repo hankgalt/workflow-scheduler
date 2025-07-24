@@ -32,33 +32,26 @@ func ReadCSVWorkflow(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo
 		slog.String("p-wkfl-id", req.ProcessWorkflowId))
 
 	count := 0
-	configErr := false
 	resp, err := readCSV(ctx, req)
-	for err != nil && count < 10 && !configErr {
+	for err != nil && count < 10 {
 		count++
 		switch wkflErr := err.(type) {
 		case *temporal.ServerError:
 			l.Error("ReadCSVWorkflow - temporal generic error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return req, err
 		case *temporal.TimeoutError:
 			l.Error("ReadCSVWorkflow - time out error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return req, err
 		case *temporal.ApplicationError:
 			l.Error("ReadCSVWorkflow - temporal application error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
 			switch wkflErr.Type() {
 			case comwkfl.ERR_WRONG_HOST:
-				configErr = true
 				return req, err
 			case comwkfl.ERR_MISSING_FILE_NAME:
-				configErr = true
 				return req, err
 			case comwkfl.ERR_MISSING_REQSTR:
-				configErr = true
 				return req, err
 			case ERR_MISSING_OFFSETS:
-				configErr = true
 				return req, err
 			default:
 				resp, err = readCSV(ctx, resp)
@@ -66,11 +59,9 @@ func ReadCSVWorkflow(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo
 			}
 		case *temporal.PanicError:
 			l.Error("ReadCSVWorkflow - temporal panic error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return resp, err
 		case *temporal.CanceledError:
 			l.Error("ReadCSVWorkflow - temporal canceled error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return resp, err
 		default:
 			l.Error("ReadCSVWorkflow - other error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
@@ -83,7 +74,6 @@ func ReadCSVWorkflow(ctx workflow.Context, req *models.CSVInfo) (*models.CSVInfo
 			"ReadCSVWorkflow - failed",
 			slog.String("err-msg", err.Error()),
 			slog.Int("tries", count),
-			slog.Bool("config-err", configErr),
 		)
 		return resp, temporal.NewApplicationErrorWithCause(ERR_READ_CSV_WKFL, ERR_READ_CSV_WKFL, errors.WrapError(err, ERR_READ_CSV_WKFL))
 	}

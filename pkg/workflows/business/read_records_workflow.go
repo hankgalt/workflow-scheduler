@@ -48,39 +48,30 @@ func ReadCSVRecordsWorkflow(ctx workflow.Context, req *models.ReadRecordsParams)
 		slog.String("reqstr", req.RequestedBy))
 
 	count := 0
-	configErr := false
 	resp, err := readCSVRecords(ctx, req)
-	for err != nil && count < 10 && !configErr {
+	for err != nil && count < 10 {
 		count++
 		switch wkflErr := err.(type) {
 		case *temporal.ServerError:
 			l.Error("ReadCSVRecordsWorkflow - temporal server error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return req, err
 		case *temporal.TimeoutError:
 			l.Error("ReadCSVRecordsWorkflow - time out error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return req, err
 		case *temporal.ApplicationError:
 			l.Error("ReadCSVRecordsWorkflow - temporal application error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
 			switch wkflErr.Type() {
 			case comwkfl.ERR_MISSING_SCHEDULER_CLIENT:
-				configErr = true
 				return req, err
 			case comwkfl.ERR_WRONG_HOST:
-				configErr = true
 				return req, err
 			case comwkfl.ERR_MISSING_FILE_NAME:
-				configErr = true
 				return req, err
 			case comwkfl.ERR_MISSING_REQSTR:
-				configErr = true
 				return req, err
 			case comwkfl.ERR_MISSING_FILE:
-				configErr = true
 				return req, err
 			case ERR_UNKNOW_ENTITY_TYPE:
-				configErr = true
 				return req, err
 			default:
 				resp, err = readCSVRecords(ctx, resp)
@@ -88,11 +79,9 @@ func ReadCSVRecordsWorkflow(ctx workflow.Context, req *models.ReadRecordsParams)
 			}
 		case *temporal.PanicError:
 			l.Error("ReadCSVRecordsWorkflow - temporal panic error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return resp, err
 		case *temporal.CanceledError:
 			l.Error("ReadCSVRecordsWorkflow - temporal canceled error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
-			configErr = true
 			return resp, err
 		default:
 			l.Error("ReadCSVRecordsWorkflow - other error", slog.Any("error", err), slog.String("type", fmt.Sprintf("%T", err)))
@@ -105,7 +94,6 @@ func ReadCSVRecordsWorkflow(ctx workflow.Context, req *models.ReadRecordsParams)
 			"ReadCSVRecordsWorkflow - failed",
 			slog.String("err-msg", err.Error()),
 			slog.Int("tries", count),
-			slog.Bool("config-err", configErr),
 		)
 		return resp, temporal.NewApplicationErrorWithCause(ERR_CSV_RECORDS_WKFL, ERR_CSV_RECORDS_WKFL, errors.WrapError(err, ERR_CSV_RECORDS_WKFL))
 	}
@@ -303,13 +291,14 @@ func addEntityAndSignal(
 		var activityErr error
 		var resultId string
 
-		if req.Type == models.AGENT {
+		switch req.Type {
+		case models.AGENT:
 			resultId, activityErr = ExecuteAddAgentActivity(ctx, fields)
-		} else if req.Type == models.PRINCIPAL {
+		case models.PRINCIPAL:
 			resultId, activityErr = ExecuteAddPrincipalActivity(ctx, fields)
-		} else if req.Type == models.FILING {
+		case models.FILING:
 			resultId, activityErr = ExecuteAddFilingActivity(ctx, fields)
-		} else {
+		default:
 			activityErr = ErrorUnknownEntity
 		}
 

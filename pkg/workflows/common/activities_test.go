@@ -66,13 +66,15 @@ func (s *CommonActivitiesTestSuite) Test_ActivityRegistration() {
 	encodedValue, err := env.ExecuteActivity(activityFn, input)
 	s.NoError(err)
 	output := ""
-	encodedValue.Get(&output)
+	err = encodedValue.Get(&output)
+	s.NoError(err)
 	s.Equal(input, output)
 
 	encodedValue, err = env.ExecuteActivity(ActivityAlias, input)
 	s.NoError(err)
 	output = ""
-	encodedValue.Get(&output)
+	err = encodedValue.Get(&output)
+	s.NoError(err)
 	fmt.Println("output: ", output)
 	s.Equal(input, output)
 }

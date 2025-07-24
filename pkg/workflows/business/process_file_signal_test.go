@@ -84,7 +84,7 @@ func (s *ProcessFileSignalWorkflowTestSuite) SetupTest() {
 
 	cloudCfg, err := cloud.NewCloudConfig("", TEST_DIR)
 	if err != nil {
-		l.Error(fiwkfl.ERR_CLOUD_CFG_INIT, slog.Any("error", err))
+		l.Error(fiwkfl.ERR_CLOUD_CFG_INIT, slog.String("error", err.Error()))
 		panic(err)
 	}
 
@@ -97,7 +97,7 @@ func (s *ProcessFileSignalWorkflowTestSuite) SetupTest() {
 	bucket := os.Getenv("BUCKET")
 	if bucket == "" {
 		l.Error(fiwkfl.ERR_MISSING_CLOUD_BUCKET)
-		panic(err)
+		return
 	}
 
 	schClient, err := scheduler.NewClient(clog, scheduler.NewDefaultClientOption())
@@ -215,7 +215,8 @@ func (s *ProcessFileSignalWorkflowTestSuite) Test_ProcessFileSignalWorkflow_NewR
 			l.Info("Test_ProcessFileSignalWorkflow_NewRun error", slog.Any("error", err))
 		} else {
 			var result models.CSVInfo
-			s.env.GetWorkflowResult(&result)
+			err := s.env.GetWorkflowResult(&result)
+			s.NoError(err)
 
 			l.Info("cleaning up", slog.String("wkfl", bizwkfl.ProcessFileSignalWorkflowName))
 
@@ -233,10 +234,11 @@ func (s *ProcessFileSignalWorkflowTestSuite) Test_ProcessFileSignalWorkflow_NewR
 				resultCount = resultCount + len(v.Results)
 				recCount = recCount + len(v.Errors) + len(v.Results)
 				for _, res := range v.Results {
-					deleteEntity(schClient, &api.EntityRequest{
+					err := deleteEntity(schClient, &api.EntityRequest{
 						Type: models.MapEntityTypeToProto(req.Type),
 						Id:   res.Id,
 					})
+					s.NoError(err)
 				}
 			}
 
@@ -364,7 +366,8 @@ func (s *ProcessFileSignalWorkflowTestSuite) Test_FileSignalWorkflow_ExistingRun
 			l.Error("Test_FileSignalWorkflow_ExistingRun error", slog.Any("error", err))
 		} else {
 			var result models.CSVInfo
-			s.env.GetWorkflowResult(&result)
+			err := s.env.GetWorkflowResult(&result)
+			s.NoError(err)
 
 			l.Info("cleaning up", slog.String("wkfl", bizwkfl.ProcessFileSignalWorkflowName))
 
@@ -376,10 +379,11 @@ func (s *ProcessFileSignalWorkflowTestSuite) Test_FileSignalWorkflow_ExistingRun
 				resultCount = resultCount + len(v.Results)
 				recCount = recCount + len(v.Errors) + len(v.Results)
 				for _, res := range v.Results {
-					deleteEntity(schClient, &api.EntityRequest{
+					err := deleteEntity(schClient, &api.EntityRequest{
 						Type: models.MapEntityTypeToProto(req.Type),
 						Id:   res.Id,
 					})
+					s.NoError(err)
 				}
 			}
 

@@ -76,7 +76,7 @@ func (s *EntityWorkflowTestSuite) SetupTest() {
 	bucket := os.Getenv("BUCKET")
 	if bucket == "" {
 		l.Error(fiwkfl.ERR_MISSING_CLOUD_BUCKET)
-		panic(err)
+		return
 	}
 
 	schClient, err := scheduler.NewClient(l, scheduler.NewDefaultClientOption())
