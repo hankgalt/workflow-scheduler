@@ -76,7 +76,7 @@ func MapToRunProto(wkfl *WorkflowRun) *api.WorkflowRun {
 }
 
 func MapToRunProtos(wfs []*WorkflowRun) []*api.WorkflowRun {
-	if wfs == nil || len(wfs) < 1 {
+	if len(wfs) < 1 {
 		return nil
 	}
 	wkfls := []*api.WorkflowRun{}
@@ -100,7 +100,7 @@ func MapToRunModel(wkfl *api.WorkflowRun) *WorkflowRun {
 }
 
 func MapToRunModels(wfs []*api.WorkflowRun) []*WorkflowRun {
-	if wfs == nil || len(wfs) < 1 {
+	if len(wfs) < 1 {
 		return nil
 	}
 	wkfls := []*WorkflowRun{}

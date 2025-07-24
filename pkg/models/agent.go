@@ -18,11 +18,22 @@ const (
 	UNKNOWN   EntityType = "UNKNOWN"
 )
 
-type BusinessAgent struct {
+type BusinessAgentMongo struct {
+	EntityName string            `bson:"entityName"`
+	EntityID   uint64            `bson:"entityId"`
+	OrgName    string            `bson:"orgName"`
+	FirstName  string            `bson:"firstName"`
+	MiddleName string            `bson:"middleName,omitempty"`
+	LastName   string            `bson:"lastName"`
+	Address    string            `bson:"address"`
+	AgentType  string            `bson:"agentType"`
+	CreatedAt  time.Time         `bson:"createdAt"`
+	UpdatedAt  time.Time         `bson:"updatedAt"`
+	Metadata   map[string]string `bson:"metadata,omitempty"` // additional metadata for the agent
+}
+
+type BusinessAgentSql struct {
 	ID              string `gorm:"primary_key;not null"`
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	DeletedAt       gorm.DeletedAt `gorm:"index"`
 	EntityName      string
 	EntityID        uint64 `gorm:"primary_key;not null"`
 	OrgName         string
@@ -31,22 +42,25 @@ type BusinessAgent struct {
 	LastName        string `gorm:"primary_key;not null"`
 	PhysicalAddress string
 	AgentType       string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	DeletedAt       gorm.DeletedAt `gorm:"index"`
 }
 
-func (ba *BusinessAgent) TableName() string {
+func (ba *BusinessAgentSql) TableName() string {
 	return "business_agents"
 }
 
-func (ba *BusinessAgent) BeforeCreate(tx *gorm.DB) (err error) {
+func (ba *BusinessAgentSql) BeforeCreate(tx *gorm.DB) (err error) {
 	return nil
 }
 
-func (ba *BusinessAgent) AfterDelete(tx *gorm.DB) (err error) {
+func (ba *BusinessAgentSql) AfterDelete(tx *gorm.DB) (err error) {
 	return nil
 }
 
-func MapAgentFieldsToModel(fields map[string]string) *BusinessAgent {
-	agent := BusinessAgent{}
+func MapAgentFieldsToModel(fields map[string]string) *BusinessAgentSql {
+	agent := BusinessAgentSql{}
 	for k, v := range fields {
 		switch k {
 		case "entity_name":
@@ -74,7 +88,7 @@ func MapAgentFieldsToModel(fields map[string]string) *BusinessAgent {
 	return &agent
 }
 
-func MapAgentModelToProto(ag *BusinessAgent) *api.BusinessAgent {
+func MapAgentModelToProto(ag *BusinessAgentSql) *api.BusinessAgent {
 	return &api.BusinessAgent{
 		Id:         ag.ID,
 		EntityId:   uint64(ag.EntityID),
@@ -86,6 +100,36 @@ func MapAgentModelToProto(ag *BusinessAgent) *api.BusinessAgent {
 		Address:    ag.PhysicalAddress,
 		AgentType:  ag.AgentType,
 	}
+}
+
+func MapAgentFieldsToMongoModel(fields map[string]string) BusinessAgentMongo {
+	agent := BusinessAgentMongo{}
+	for k, v := range fields {
+		switch k {
+		case "entity_name":
+			agent.EntityName = v
+		case "entity_num":
+			num, err := strconv.Atoi(v)
+			if err == nil {
+				agent.EntityID = uint64(num)
+			} else {
+				agent.EntityID = 0 // Default to 0 if conversion fails
+			}
+		case "org_name":
+			agent.OrgName = v
+		case "first_name":
+			agent.FirstName = v
+		case "middle_name":
+			agent.MiddleName = v
+		case "last_name":
+			agent.LastName = v
+		case "agent_type":
+			agent.AgentType = v
+		}
+	}
+
+	agent.Address = fields["physical_address1"] + " " + fields["physical_city"] + " " + fields["physical_state"] + " " + fields["physical_postal_code"] + " " + fields["physical_country"]
+	return agent
 }
 
 func MapEntityTypeToProto(et EntityType) api.EntityType {

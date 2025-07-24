@@ -8,11 +8,8 @@ import (
 	"gorm.io/gorm"
 )
 
-type BusinessPrincipal struct {
+type BusinessPrincipalSql struct {
 	ID           string `gorm:"primary_key;not null"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	DeletedAt    gorm.DeletedAt `gorm:"index"`
 	EntityName   string
 	EntityID     uint64 `gorm:"primary_key;not null"`
 	OrgName      string
@@ -21,22 +18,25 @@ type BusinessPrincipal struct {
 	LastName     string `gorm:"primary_key;not null"`
 	Address      string
 	PositionType string `gorm:"primary_key;not null"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	DeletedAt    gorm.DeletedAt `gorm:"index"`
 }
 
-func (bp *BusinessPrincipal) TableName() string {
+func (bp *BusinessPrincipalSql) TableName() string {
 	return "business_principals"
 }
 
-func (bp *BusinessPrincipal) BeforeCreate(tx *gorm.DB) (err error) {
+func (bp *BusinessPrincipalSql) BeforeCreate(tx *gorm.DB) (err error) {
 	return
 }
 
-func (bp *BusinessPrincipal) AfterDelete(tx *gorm.DB) (err error) {
+func (bp *BusinessPrincipalSql) AfterDelete(tx *gorm.DB) (err error) {
 	return
 }
 
-func MapPrincipalFieldsToModel(fields map[string]string) *BusinessPrincipal {
-	bp := BusinessPrincipal{}
+func MapPrincipalFieldsToModel(fields map[string]string) *BusinessPrincipalSql {
+	bp := BusinessPrincipalSql{}
 	for k, v := range fields {
 		switch k {
 		case "entity_name":
@@ -64,7 +64,7 @@ func MapPrincipalFieldsToModel(fields map[string]string) *BusinessPrincipal {
 	return &bp
 }
 
-func MapPrincipalModelToProto(bp *BusinessPrincipal) *api.BusinessPrincipal {
+func MapPrincipalModelToProto(bp *BusinessPrincipalSql) *api.BusinessPrincipal {
 	return &api.BusinessPrincipal{
 		Id:           bp.ID,
 		EntityId:     uint64(bp.EntityID),

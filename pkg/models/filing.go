@@ -9,11 +9,33 @@ import (
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
 )
 
-type BusinessFiling struct {
+type BusinessFilingMongo struct {
+	EntityName             string            `bson:"entityName"`
+	EntityID               uint64            `bson:"entityId"`
+	InitialFilingDate      uint64            `bson:"initialFilingDate"`
+	Jurisdiction           string            `bson:"jurisdiction"`
+	EntityStatus           string            `bson:"entityStatus"`
+	StandingSOS            string            `bson:"standingSos"`
+	EntityType             string            `bson:"entityType"`
+	FilingType             string            `bson:"filingType"`
+	ForeignName            string            `bson:"foreignName"`
+	StandingFTB            string            `bson:"standingFtb"`
+	StandingVCFCF          string            `bson:"standingVcfcf"`
+	SuspensionDate         uint64            `bson:"suspensionDate"`
+	LastSIFileNumber       string            `bson:"lastSiFileNumber"`
+	LastSIFileDate         uint64            `bson:"lastSiFileDate"`
+	PrincipalAddress       string            `bson:"principalAddress"`
+	MailingAddress         string            `bson:"mailingAddress"`
+	PrincipalAddressInCA   string            `bson:"principalAddressInCa"`
+	LLCManagementStructure string            `bson:"llcManagementStructure"`
+	TypeOfBusiness         string            `bson:"typeOfBusiness"`
+	CreatedAt              time.Time         `bson:"createdAt"`
+	UpdatedAt              time.Time         `bson:"updatedAt"`
+	Metadata               map[string]string `bson:"metadata,omitempty"` // additional metadata for the agent
+}
+
+type BusinessFilingSql struct {
 	ID                     string `gorm:"primary_key;not null"`
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
-	DeletedAt              gorm.DeletedAt `gorm:"index"`
 	EntityName             string
 	EntityID               uint64 `gorm:"primary_key;not null"`
 	InitialFilingDate      uint64
@@ -33,22 +55,25 @@ type BusinessFiling struct {
 	PrincipalAddressInCA   string
 	LLCManagementStructure string
 	TypeOfBusiness         string
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+	DeletedAt              gorm.DeletedAt `gorm:"index"`
 }
 
-func (bf *BusinessFiling) TableName() string {
+func (bf *BusinessFilingSql) TableName() string {
 	return "business_filings"
 }
 
-func (bf *BusinessFiling) BeforeCreate(tx *gorm.DB) (err error) {
+func (bf *BusinessFilingSql) BeforeCreate(tx *gorm.DB) (err error) {
 	return
 }
 
-func (bf *BusinessFiling) AfterDelete(tx *gorm.DB) (err error) {
+func (bf *BusinessFilingSql) AfterDelete(tx *gorm.DB) (err error) {
 	return
 }
 
-func MapFilingFieldsToModel(fields map[string]string) *BusinessFiling {
-	bf := BusinessFiling{}
+func MapFilingFieldsToModel(fields map[string]string) *BusinessFilingSql {
+	bf := BusinessFilingSql{}
 	for k, v := range fields {
 		switch k {
 		case "entity_name":
@@ -107,7 +132,7 @@ func MapFilingFieldsToModel(fields map[string]string) *BusinessFiling {
 	return &bf
 }
 
-func MapFilingModelToProto(bf *BusinessFiling) *api.BusinessFiling {
+func MapFilingModelToProto(bf *BusinessFilingSql) *api.BusinessFiling {
 	return &api.BusinessFiling{
 		Id:                  bf.ID,
 		EntityId:            uint64(bf.EntityID),
