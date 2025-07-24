@@ -77,12 +77,12 @@ func (tc *TemporalClient) Close() {
 }
 
 // RegisterWorkflow registers a workflow
-func (cc *TemporalClient) RegisterWorkflow(workflow interface{}) {
+func (cc *TemporalClient) RegisterWorkflow(workflow any) {
 	cc.RegisterWorkflowWithAlias(workflow, "")
 }
 
 // RegisterWorkflowWithAlias registers a workflow with alias
-func (cc *TemporalClient) RegisterWorkflowWithAlias(workflow interface{}, alias string) {
+func (cc *TemporalClient) RegisterWorkflowWithAlias(workflow any, alias string) {
 	registryOption := registryOption{
 		registry: workflow,
 		alias:    alias,
@@ -91,12 +91,12 @@ func (cc *TemporalClient) RegisterWorkflowWithAlias(workflow interface{}, alias 
 }
 
 // RegisterActivity registers a activity
-func (cc *TemporalClient) RegisterActivity(activity interface{}) {
+func (cc *TemporalClient) RegisterActivity(activity any) {
 	cc.RegisterActivityWithAlias(activity, "")
 }
 
 // RegisterActivityWithAlias registers a activity with alias
-func (cc *TemporalClient) RegisterActivityWithAlias(activity interface{}, alias string) {
+func (cc *TemporalClient) RegisterActivityWithAlias(activity any, alias string) {
 	registryOption := registryOption{
 		registry: activity,
 		alias:    alias,
@@ -130,7 +130,7 @@ func (cc *TemporalClient) StartWorkflowWithCtx(
 	return we, nil
 }
 
-func (cc *TemporalClient) SignalWorkflow(workflowID, signal string, data interface{}) error {
+func (cc *TemporalClient) SignalWorkflow(workflowID, signal string, data any) error {
 	err := cc.client.SignalWorkflow(context.Background(), workflowID, "", signal, data)
 	if err != nil {
 		cc.Error("failed to signal workflow", zap.Error(err))
