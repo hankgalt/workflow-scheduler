@@ -25,7 +25,6 @@ import (
 )
 
 const SERVICE_PORT = 65051
-const DATA_DIR = "data"
 
 func main() {
 	ctx := context.Background()
@@ -49,11 +48,6 @@ func main() {
 	if err != nil {
 		l.Error("error opening a tcp socket address", zap.Error(err))
 		panic(err)
-	}
-
-	dataDir := os.Getenv("DATA_DIR")
-	if dataDir == "" {
-		dataDir = DATA_DIR
 	}
 
 	l.Info("setting up scheduler service config")

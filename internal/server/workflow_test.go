@@ -2,7 +2,6 @@ package server_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 
@@ -34,23 +33,23 @@ func TestSchedulerServiceWorkflows(t *testing.T) {
 	}
 }
 
-func testProcessFileSignalWorkflowRun(t *testing.T, client, nbClient api.SchedulerClient, config *server.Config) {
-	t.Helper()
+// func testProcessFileSignalWorkflowRun(t *testing.T, client, nbClient api.SchedulerClient, config *server.Config) {
+// 	t.Helper()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+// 	ctx, cancel := context.WithCancel(context.Background())
+// 	defer cancel()
 
-	reqstr := "process-file-signal-workflow-server-test@test.com"
-	filePath := fmt.Sprintf("%s/%s", DATA_PATH, "Agents-sm.csv")
-	wfRun, err := client.ProcessFileSignalWorkflow(ctx, &api.FileSignalRequest{
-		FilePath:    filePath,
-		Type:        api.EntityType_AGENT,
-		RequestedBy: reqstr,
-	})
+// 	reqstr := "process-file-signal-workflow-server-test@test.com"
+// 	filePath := fmt.Sprintf("%s/%s", DATA_PATH, "Agents-sm.csv")
+// 	wfRun, err := client.ProcessFileSignalWorkflow(ctx, &api.FileSignalRequest{
+// 		FilePath:    filePath,
+// 		Type:        api.EntityType_AGENT,
+// 		RequestedBy: reqstr,
+// 	})
 
-	require.NoError(t, err)
-	require.Equal(t, "file-scheduler/Agents-sm.csv", wfRun.Run.WorkflowId)
-}
+// 	require.NoError(t, err)
+// 	require.Equal(t, "file-scheduler/Agents-sm.csv", wfRun.Run.WorkflowId)
+// }
 
 func testQueryWorkflowState(t *testing.T, client, nbClient api.SchedulerClient, config *server.Config) {
 	t.Helper()

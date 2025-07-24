@@ -176,7 +176,6 @@ func (s *grpcServer) GetEntity(ctx context.Context, req *api.EntityRequest) (*ap
 		} else {
 			err = agErr
 		}
-		break
 	case api.EntityType_PRINCIPAL:
 		errModel = "principal"
 		if ag, agErr := s.SchedulerService.GetPrincipal(ctx, req.Id); agErr == nil {
@@ -186,7 +185,6 @@ func (s *grpcServer) GetEntity(ctx context.Context, req *api.EntityRequest) (*ap
 		} else {
 			err = agErr
 		}
-		break
 	case api.EntityType_FILING:
 		errModel = "filing"
 		if ag, agErr := s.SchedulerService.GetFiling(ctx, req.Id); agErr == nil {
@@ -196,7 +194,6 @@ func (s *grpcServer) GetEntity(ctx context.Context, req *api.EntityRequest) (*ap
 		} else {
 			err = agErr
 		}
-		break
 	}
 
 	if err != nil {
