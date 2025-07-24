@@ -30,7 +30,7 @@ var (
 	ErrDuplicateFiling    = errors.NewAppError(ERR_DUPLICATE_FILING)
 )
 
-func (bs *schedulerService) AddAgent(ctx context.Context, ba *models.BusinessAgent) (*models.BusinessAgent, error) {
+func (bs *schedulerService) AddAgent(ctx context.Context, ba *models.BusinessAgentSql) (*models.BusinessAgentSql, error) {
 	res := bs.db.WithContext(ctx).Create(ba)
 	if res.Error != nil {
 		if driverErr, ok := res.Error.(*gomysql.MySQLError); ok {
@@ -45,7 +45,7 @@ func (bs *schedulerService) AddAgent(ctx context.Context, ba *models.BusinessAge
 }
 
 func (bs *schedulerService) DeleteAgent(ctx context.Context, id string) error {
-	res := bs.db.WithContext(ctx).Where("id = ?", id).Unscoped().Delete(&models.BusinessAgent{})
+	res := bs.db.WithContext(ctx).Where("id = ?", id).Unscoped().Delete(&models.BusinessAgentSql{})
 	if res.Error != nil {
 		bs.Error(ERR_AGENT_DELETE, zap.Error(res.Error), zap.String("id", id))
 		if driverErr, ok := res.Error.(*gomysql.MySQLError); ok {
@@ -56,8 +56,8 @@ func (bs *schedulerService) DeleteAgent(ctx context.Context, id string) error {
 	return nil
 }
 
-func (bs *schedulerService) GetAgent(ctx context.Context, id string) (*models.BusinessAgent, error) {
-	var agent models.BusinessAgent
+func (bs *schedulerService) GetAgent(ctx context.Context, id string) (*models.BusinessAgentSql, error) {
+	var agent models.BusinessAgentSql
 	res := bs.db.WithContext(ctx).Where("id = ?", id).First(&agent)
 	if res.Error != nil {
 		bs.Error(ERR_AGENT_GET, zap.Error(res.Error), zap.String("id", id))
@@ -66,7 +66,7 @@ func (bs *schedulerService) GetAgent(ctx context.Context, id string) (*models.Bu
 	return &agent, nil
 }
 
-func (bs *schedulerService) AddPrincipal(ctx context.Context, bp *models.BusinessPrincipal) (*models.BusinessPrincipal, error) {
+func (bs *schedulerService) AddPrincipal(ctx context.Context, bp *models.BusinessPrincipalSql) (*models.BusinessPrincipalSql, error) {
 	res := bs.db.WithContext(ctx).Create(bp)
 	if res.Error != nil {
 		if driverErr, ok := res.Error.(*gomysql.MySQLError); ok {
@@ -80,7 +80,7 @@ func (bs *schedulerService) AddPrincipal(ctx context.Context, bp *models.Busines
 }
 
 func (bs *schedulerService) DeletePrincipal(ctx context.Context, id string) error {
-	res := bs.db.WithContext(ctx).Where("id = ?", id).Unscoped().Delete(&models.BusinessPrincipal{})
+	res := bs.db.WithContext(ctx).Where("id = ?", id).Unscoped().Delete(&models.BusinessPrincipalSql{})
 	if res.Error != nil {
 		bs.Error(ERR_PRINCIPAL_DELETE, zap.Error(res.Error), zap.String("id", id))
 		if driverErr, ok := res.Error.(*gomysql.MySQLError); ok {
@@ -91,8 +91,8 @@ func (bs *schedulerService) DeletePrincipal(ctx context.Context, id string) erro
 	return nil
 }
 
-func (bs *schedulerService) GetPrincipal(ctx context.Context, id string) (*models.BusinessPrincipal, error) {
-	var pri models.BusinessPrincipal
+func (bs *schedulerService) GetPrincipal(ctx context.Context, id string) (*models.BusinessPrincipalSql, error) {
+	var pri models.BusinessPrincipalSql
 	res := bs.db.WithContext(ctx).Where("id = ?", id).First(&pri)
 	if res.Error != nil {
 		bs.Error(ERR_PRINCIPAL_GET, zap.Error(res.Error), zap.String("id", id))
@@ -101,7 +101,7 @@ func (bs *schedulerService) GetPrincipal(ctx context.Context, id string) (*model
 	return &pri, nil
 }
 
-func (bs *schedulerService) AddFiling(ctx context.Context, bf *models.BusinessFiling) (*models.BusinessFiling, error) {
+func (bs *schedulerService) AddFiling(ctx context.Context, bf *models.BusinessFilingSql) (*models.BusinessFilingSql, error) {
 	res := bs.db.WithContext(ctx).Create(bf)
 	if res.Error != nil {
 		if driverErr, ok := res.Error.(*gomysql.MySQLError); ok {
@@ -115,7 +115,7 @@ func (bs *schedulerService) AddFiling(ctx context.Context, bf *models.BusinessFi
 }
 
 func (bs *schedulerService) DeleteFiling(ctx context.Context, id string) error {
-	res := bs.db.WithContext(ctx).Where("id = ?", id).Unscoped().Delete(&models.BusinessFiling{})
+	res := bs.db.WithContext(ctx).Where("id = ?", id).Unscoped().Delete(&models.BusinessFilingSql{})
 	if res.Error != nil {
 		bs.Error(ERR_FILING_DELETE, zap.Error(res.Error), zap.String("id", id))
 		if driverErr, ok := res.Error.(*gomysql.MySQLError); ok {
@@ -126,8 +126,8 @@ func (bs *schedulerService) DeleteFiling(ctx context.Context, id string) error {
 	return nil
 }
 
-func (bs *schedulerService) GetFiling(ctx context.Context, id string) (*models.BusinessFiling, error) {
-	var fil models.BusinessFiling
+func (bs *schedulerService) GetFiling(ctx context.Context, id string) (*models.BusinessFilingSql, error) {
+	var fil models.BusinessFilingSql
 	res := bs.db.WithContext(ctx).Where("id = ?", id).First(&fil)
 	if res.Error != nil {
 		bs.Error(ERR_FILING_GET, zap.Error(res.Error), zap.String("id", id))

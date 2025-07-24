@@ -45,7 +45,7 @@ func testAgentCRUD(t *testing.T, bs scheduler.SchedulerService) {
 	ctx, cancel1 := context.WithCancel(context.Background())
 	defer cancel1()
 
-	agent1, err := bs.AddAgent(ctx, &models.BusinessAgent{
+	agent1, err := bs.AddAgent(ctx, &models.BusinessAgentSql{
 		ID:              id,
 		EntityID:        uint64(num),
 		EntityName:      "T3s7Ru41d",
@@ -59,7 +59,7 @@ func testAgentCRUD(t *testing.T, bs scheduler.SchedulerService) {
 	require.NoError(t, err)
 	require.Equal(t, int(agent1.EntityID), num)
 
-	agent2, err := bs.AddAgent(ctx, &models.BusinessAgent{
+	agent2, err := bs.AddAgent(ctx, &models.BusinessAgentSql{
 		ID:              id,
 		EntityID:        uint64(num),
 		EntityName:      "T3s7Ru41d",
@@ -94,7 +94,7 @@ func testPrincipalCRUD(t *testing.T, bs scheduler.SchedulerService) {
 	num, err := strconv.Atoi(id)
 	require.NoError(t, err)
 
-	p1, err := bs.AddPrincipal(ctx, &models.BusinessPrincipal{
+	p1, err := bs.AddPrincipal(ctx, &models.BusinessPrincipalSql{
 		ID:           id,
 		EntityID:     uint64(num),
 		EntityName:   "T3s7Ru41d",
@@ -117,7 +117,7 @@ func testPrincipalCRUD(t *testing.T, bs scheduler.SchedulerService) {
 		require.NoError(t, err)
 	}()
 
-	p2, err := bs.AddPrincipal(ctx, &models.BusinessPrincipal{
+	p2, err := bs.AddPrincipal(ctx, &models.BusinessPrincipalSql{
 		ID:           id,
 		EntityName:   "T3s7Ru41d",
 		EntityID:     uint64(num),

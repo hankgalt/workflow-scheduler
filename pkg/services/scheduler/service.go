@@ -33,15 +33,15 @@ type SchedulerService interface {
 	DeleteRun(ctx context.Context, runId string) error
 	SearchRuns(ctx context.Context, searchBy *models.RunParams) ([]*models.WorkflowRun, error)
 	// entities
-	AddAgent(ctx context.Context, ba *models.BusinessAgent) (*models.BusinessAgent, error)
+	AddAgent(ctx context.Context, ba *models.BusinessAgentSql) (*models.BusinessAgentSql, error)
 	DeleteAgent(ctx context.Context, id string) error
-	GetAgent(ctx context.Context, id string) (*models.BusinessAgent, error)
-	AddPrincipal(ctx context.Context, bp *models.BusinessPrincipal) (*models.BusinessPrincipal, error)
+	GetAgent(ctx context.Context, id string) (*models.BusinessAgentSql, error)
+	AddPrincipal(ctx context.Context, bp *models.BusinessPrincipalSql) (*models.BusinessPrincipalSql, error)
 	DeletePrincipal(ctx context.Context, id string) error
-	GetPrincipal(ctx context.Context, id string) (*models.BusinessPrincipal, error)
-	AddFiling(ctx context.Context, bf *models.BusinessFiling) (*models.BusinessFiling, error)
+	GetPrincipal(ctx context.Context, id string) (*models.BusinessPrincipalSql, error)
+	AddFiling(ctx context.Context, bf *models.BusinessFilingSql) (*models.BusinessFilingSql, error)
 	DeleteFiling(ctx context.Context, id string) error
-	GetFiling(ctx context.Context, id string) (*models.BusinessFiling, error)
+	GetFiling(ctx context.Context, id string) (*models.BusinessFilingSql, error)
 	// workflows
 	ProcessFileSignalWorkflow(ctx context.Context, params *models.FileSignalParams) (*models.WorkflowRun, error)
 	QueryWorkflowState(ctx context.Context, params *models.WorkflowQueryParams) (interface{}, error)
@@ -139,27 +139,27 @@ func (bs *schedulerService) setupDatabase() error {
 		}
 	}
 
-	ok = bs.db.Migrator().HasTable(models.BusinessAgent{})
+	ok = bs.db.Migrator().HasTable(models.BusinessAgentSql{})
 	if !ok {
-		err := bs.db.AutoMigrate(models.BusinessAgent{})
+		err := bs.db.AutoMigrate(models.BusinessAgentSql{})
 		if err != nil {
 			bs.Error(ERR_DB_AGENTS_INIT, zap.Error(err))
 			return errors.WrapError(err, ERR_DB_AGENTS_INIT)
 		}
 	}
 
-	ok = bs.db.Migrator().HasTable(models.BusinessFiling{})
+	ok = bs.db.Migrator().HasTable(models.BusinessFilingSql{})
 	if !ok {
-		err := bs.db.AutoMigrate(models.BusinessFiling{})
+		err := bs.db.AutoMigrate(models.BusinessFilingSql{})
 		if err != nil {
 			bs.Error(ERR_DB_FILINGS_INIT, zap.Error(err))
 			return errors.WrapError(err, ERR_DB_FILINGS_INIT)
 		}
 	}
 
-	ok = bs.db.Migrator().HasTable(models.BusinessPrincipal{})
+	ok = bs.db.Migrator().HasTable(models.BusinessPrincipalSql{})
 	if !ok {
-		err := bs.db.AutoMigrate(models.BusinessPrincipal{})
+		err := bs.db.AutoMigrate(models.BusinessPrincipalSql{})
 		if err != nil {
 			bs.Error(ERR_DB_PRINCIPALS_INIT, zap.Error(err))
 			return errors.WrapError(err, ERR_DB_PRINCIPALS_INIT)

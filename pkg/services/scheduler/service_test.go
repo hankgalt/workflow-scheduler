@@ -119,38 +119,38 @@ func testWorkflowRunMigration(t *testing.T, ss *schedulerService) {
 func testAgentsMigration(t *testing.T, ss *schedulerService) {
 	t.Helper()
 
-	ok := ss.db.Migrator().HasTable(models.BusinessAgent{})
+	ok := ss.db.Migrator().HasTable(models.BusinessAgentSql{})
 	if ok {
-		err := ss.db.Migrator().DropTable(models.BusinessAgent{})
+		err := ss.db.Migrator().DropTable(models.BusinessAgentSql{})
 		require.NoError(t, err)
 	}
 
-	err := ss.db.AutoMigrate(models.BusinessAgent{})
+	err := ss.db.AutoMigrate(models.BusinessAgentSql{})
 	require.NoError(t, err)
 }
 
 func testPrincipalsMigration(t *testing.T, ss *schedulerService) {
 	t.Helper()
 
-	ok := ss.db.Migrator().HasTable(models.BusinessPrincipal{})
+	ok := ss.db.Migrator().HasTable(models.BusinessPrincipalSql{})
 	if ok {
-		err := ss.db.Migrator().DropTable(models.BusinessPrincipal{})
+		err := ss.db.Migrator().DropTable(models.BusinessPrincipalSql{})
 		require.NoError(t, err)
 	}
 
-	err := ss.db.AutoMigrate(models.BusinessPrincipal{})
+	err := ss.db.AutoMigrate(models.BusinessPrincipalSql{})
 	require.NoError(t, err)
 }
 
 func testFilingsMigration(t *testing.T, ss *schedulerService) {
 	t.Helper()
 
-	ok := ss.db.Migrator().HasTable(models.BusinessFiling{})
+	ok := ss.db.Migrator().HasTable(models.BusinessFilingSql{})
 	if ok {
-		err := ss.db.Migrator().DropTable(models.BusinessFiling{})
+		err := ss.db.Migrator().DropTable(models.BusinessFilingSql{})
 		require.NoError(t, err)
 	}
 
-	err := ss.db.AutoMigrate(models.BusinessFiling{})
+	err := ss.db.AutoMigrate(models.BusinessFilingSql{})
 	require.NoError(t, err)
 }
