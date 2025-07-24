@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"log/slog"
 	"os"
 	"strings"
 	"testing"
@@ -10,24 +9,6 @@ import (
 	"github.com/hankgalt/workflow-scheduler/pkg/clients"
 	"github.com/hankgalt/workflow-scheduler/pkg/models/batch"
 )
-
-func GetTestLogger() *slog.Logger {
-	logLevel := &slog.LevelVar{}
-
-	logLevel.Set(slog.LevelInfo)
-	if os.Getenv("INFRA") == "local" {
-		logLevel.Set(slog.LevelDebug)
-	}
-
-	opts := &slog.HandlerOptions{
-		Level: logLevel,
-	}
-
-	handler := slog.NewTextHandler(os.Stdout, opts)
-	l := slog.New(handler)
-	slog.SetDefault(l)
-	return l
-}
 
 func BuildUserMigrationFilters() []clients.Filter {
 	filters := []clients.Filter{}

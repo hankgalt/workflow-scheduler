@@ -8,13 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/hankgalt/workflow-scheduler/pkg/stores/mongostore"
-	"github.com/hankgalt/workflow-scheduler/pkg/test"
 	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 func TestMongoStore(t *testing.T) {
 	// Initialize logger
-	l := test.GetTestLogger()
+	l := logger.GetSlogLogger()
 	t.Log("TestMongoStore Logger initialized")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)

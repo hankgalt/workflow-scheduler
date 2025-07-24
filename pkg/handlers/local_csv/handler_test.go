@@ -27,7 +27,7 @@ func TestLocalCSVFileHandler(t *testing.T) {
 
 	batchSize := uint64(400)
 
-	l := test.GetTestLogger()
+	l := logger.GetSlogLogger()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -8,14 +8,13 @@ import (
 	"github.com/hankgalt/workflow-scheduler/pkg/models"
 	"github.com/hankgalt/workflow-scheduler/pkg/repos/vypar"
 	"github.com/hankgalt/workflow-scheduler/pkg/stores/mongostore"
-	"github.com/hankgalt/workflow-scheduler/pkg/test"
 	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 	"github.com/stretchr/testify/require"
 )
 
 func TestVyparRepoAgentCRUD(t *testing.T) {
 	// Initialize logger
-	l := test.GetTestLogger()
+	l := logger.GetSlogLogger()
 	t.Log("TestVyparRepo Logger initialized")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
@@ -78,7 +77,7 @@ func TestVyparRepoAgentCRUD(t *testing.T) {
 
 func TestYvparRepoFilingCRUD(t *testing.T) {
 	// Initialize logger
-	l := test.GetTestLogger()
+	l := logger.GetSlogLogger()
 	t.Log("TestVyparRepo Logger initialized")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)

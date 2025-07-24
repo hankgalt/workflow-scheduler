@@ -14,7 +14,7 @@ import (
 	"go.temporal.io/sdk/worker"
 
 	"github.com/hankgalt/workflow-scheduler/pkg/models/batch"
-	"github.com/hankgalt/workflow-scheduler/pkg/test"
+	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/pkg/workflows/batch"
 )
 
@@ -31,7 +31,7 @@ func TestProcessLocalCSVWorkflowTestSuite(t *testing.T) {
 
 func (s *ProcessLocalCSVWorkflowTestSuite) SetupTest() {
 	// get test logger
-	l := test.GetTestLogger()
+	l := logger.GetSlogLogger()
 
 	// set environment logger
 	s.SetLogger(l)

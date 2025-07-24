@@ -27,7 +27,7 @@ func TestLocalCSVToMongoHandler(t *testing.T) {
 	handlerCfg := localcsv.NewLocalCSVFileHandlerConfig(fileName, testFilePath)
 	nmCfg := mongostore.GetMongoConfig()
 
-	l := test.GetTestLogger()
+	l := logger.GetSlogLogger()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
