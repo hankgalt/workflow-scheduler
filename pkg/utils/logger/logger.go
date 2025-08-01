@@ -3,6 +3,7 @@ package logger
 import (
 	"context"
 	"errors"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -56,6 +57,43 @@ func GetSlogLogger() *slog.Logger {
 	}
 
 	handler := slog.NewTextHandler(os.Stdout, opts)
+
+	l := slog.New(handler)
+	slog.SetDefault(l)
+	return l
+}
+
+func GetSlogMultiLogger(dir string) *slog.Logger {
+	filePath := DEFAULT_LOG_FILE_PATH
+	if dir != "" {
+		filePath = filepath.Join(dir, filePath)
+	}
+
+	logLevel := &slog.LevelVar{}
+	logLevel.Set(slog.LevelInfo)
+	if os.Getenv("INFRA") == "local" {
+		logLevel.Set(slog.LevelDebug)
+	}
+
+	opts := &slog.HandlerOptions{
+		Level: logLevel,
+	}
+
+	// Create lumberjack writer
+	logWriter := &lumberjack.Logger{
+		Filename:   filePath,
+		MaxSize:    100, // megabytes
+		MaxBackups: 5,
+		MaxAge:     28,   // days
+		Compress:   true, // compress rotated logs
+	}
+
+	// Create a MultiWriter if you want logs in both file and console
+	multiWriter := io.MultiWriter(os.Stdout, logWriter)
+
+	// Use TextHandler or JSONHandler
+	handler := slog.NewTextHandler(multiWriter, opts)
+
 	l := slog.New(handler)
 	slog.SetDefault(l)
 	return l

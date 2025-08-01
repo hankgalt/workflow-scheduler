@@ -12,7 +12,8 @@ import (
 
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	"github.com/hankgalt/workflow-scheduler/internal/server"
-	"github.com/hankgalt/workflow-scheduler/pkg/services/scheduler"
+
+	// "github.com/hankgalt/workflow-scheduler/pkg/services/scheduler"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
@@ -20,7 +21,6 @@ import (
 
 	config "github.com/comfforts/comff-config"
 	"github.com/comfforts/errors"
-	"github.com/comfforts/logger"
 )
 
 const TEST_DIR = "data"
@@ -75,24 +75,24 @@ func setupTest(t *testing.T, fn func(*server.Config)) (
 	cc, client, _ := newClient(config.CLIENT)
 	nbcc, nbClient, _ := newClient(config.NOBODY_CLIENT)
 
-	l := logger.NewTestAppZapLogger(TEST_DIR)
-	serviceCfg, err := scheduler.NewServiceConfig("localhost", "", "", "", true)
-	require.NoError(t, err)
+	// l := logger.NewTestAppZapLogger(TEST_DIR)
+	// serviceCfg, err := scheduler.NewServiceConfig("localhost", "", "", "", true)
+	// require.NoError(t, err)
 
-	ps, err := scheduler.NewSchedulerService(serviceCfg, l)
-	require.NoError(t, err)
+	// ps, err := scheduler.NewSchedulerService(serviceCfg, l)
+	// require.NoError(t, err)
 
-	authorizer, err := config.SetupAuthorizer(l)
-	require.NoError(t, err)
+	// authorizer, err := config.SetupAuthorizer(l)
+	// require.NoError(t, err)
 
-	cfg = &server.Config{
-		SchedulerService: ps,
-		Authorizer:       authorizer,
-		Logger:           l,
-	}
-	if fn != nil {
-		fn(cfg)
-	}
+	// cfg = &server.Config{
+	// 	SchedulerService: ps,
+	// 	Authorizer:       authorizer,
+	// 	Logger:           l,
+	// }
+	// if fn != nil {
+	// 	fn(cfg)
+	// }
 
 	// Server TLS config
 	srvTLSConfig, err := config.SetupTLSConfig(&config.ConfigOpts{
@@ -121,8 +121,8 @@ func setupTest(t *testing.T, fn func(*server.Config)) (
 		err = nbcc.Close()
 		require.NoError(t, err)
 
-		err = ps.Close()
-		require.NoError(t, err)
+		// err = ps.Close()
+		// require.NoError(t, err)
 
 		err = os.RemoveAll(TEST_DIR)
 		require.NoError(t, err)

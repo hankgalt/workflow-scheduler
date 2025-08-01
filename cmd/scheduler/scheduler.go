@@ -21,7 +21,7 @@ import (
 	"github.com/comfforts/logger"
 
 	"github.com/hankgalt/workflow-scheduler/internal/server"
-	"github.com/hankgalt/workflow-scheduler/pkg/services/scheduler"
+	// "github.com/hankgalt/workflow-scheduler/pkg/services/scheduler"
 )
 
 const SERVICE_PORT = 65051
@@ -51,18 +51,18 @@ func main() {
 	}
 
 	l.Info("setting up scheduler service config")
-	serviceCfg, err := scheduler.NewServiceConfig("", "", "", "", true)
-	if err != nil {
-		l.Error("error creating scheduler service config", zap.Error(err))
-		panic(err)
-	}
+	// serviceCfg, err := scheduler.NewServiceConfig("", "", "", "", true)
+	// if err != nil {
+	// 	l.Error("error creating scheduler service config", zap.Error(err))
+	// 	panic(err)
+	// }
 
-	l.Info("setting up scheduler service")
-	schServ, err := scheduler.NewSchedulerService(serviceCfg, l)
-	if err != nil {
-		l.Error("error creating scheduler service", zap.Error(err))
-		panic(err)
-	}
+	// l.Info("setting up scheduler service")
+	// schServ, err := scheduler.NewSchedulerService(serviceCfg, l)
+	// if err != nil {
+	// 	l.Error("error creating scheduler service", zap.Error(err))
+	// 	panic(err)
+	// }
 
 	l.Info("setting up scheduler authorizer")
 	authorizer, err := config.SetupAuthorizer(l)
@@ -72,9 +72,9 @@ func main() {
 	}
 
 	servCfg := &server.Config{
-		SchedulerService: schServ,
-		Authorizer:       authorizer,
-		Logger:           l,
+		// SchedulerService: schServ,
+		Authorizer: authorizer,
+		Logger:     l,
 	}
 
 	l.Info("setting up scheduler server TLS config")

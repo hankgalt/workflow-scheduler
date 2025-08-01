@@ -14,7 +14,7 @@ import (
 	config "github.com/comfforts/comff-config"
 
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
-	"github.com/hankgalt/workflow-scheduler/pkg/models"
+	// "github.com/hankgalt/workflow-scheduler/pkg/models"
 )
 
 const SERVICE_PORT = 65051
@@ -68,7 +68,7 @@ func testWorkflowCRUD(client api.SchedulerClient, l logger.AppLogger) error {
 	wfRun, err = client.UpdateRun(ctx, &api.UpdateRunRequest{
 		WorkflowId: wfRun.Run.WorkflowId,
 		RunId:      wfRun.Run.RunId,
-		Status:     string(models.UPLOADED),
+		// Status:     string(models.UPLOADED),
 	})
 	if err != nil {
 		l.Error("error updating run", zap.Error(err))

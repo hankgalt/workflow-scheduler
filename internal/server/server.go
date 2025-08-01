@@ -23,7 +23,7 @@ import (
 	"github.com/comfforts/errors"
 
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
-	"github.com/hankgalt/workflow-scheduler/pkg/services/scheduler"
+	// "github.com/hankgalt/workflow-scheduler/pkg/services/scheduler"
 )
 
 var _ api.SchedulerServer = (*grpcServer)(nil)
@@ -54,8 +54,8 @@ type Authorizer interface {
 
 type Config struct {
 	*zap.Logger
-	Authorizer       Authorizer
-	SchedulerService scheduler.SchedulerService
+	Authorizer Authorizer
+	// SchedulerService scheduler.SchedulerService
 }
 
 type grpcServer struct {
@@ -171,9 +171,9 @@ func (s *grpcServer) buildError(params errorParams) *status.Status {
 
 	switch params.errModel {
 	case "run":
-		if appErr == scheduler.ErrDuplicateRun {
-			return status.New(codes.AlreadyExists, appErr.Message)
-		}
+		// if appErr == scheduler.ErrDuplicateRun {
+		// 	return status.New(codes.AlreadyExists, appErr.Message)
+		// }
 		return status.New(params.errCode, appErr.Message)
 	default:
 		return status.New(params.errCode, appErr.Message)
