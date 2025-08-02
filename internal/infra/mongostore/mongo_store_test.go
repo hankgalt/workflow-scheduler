@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
+	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
@@ -20,8 +21,8 @@ func TestMongoStore(t *testing.T) {
 	defer cancel()
 	ctx = logger.WithLogger(ctx, l)
 
-	nmCfg := mongostore.GetMongoConfig()
-	cl, err := mongostore.GetMongoStore(ctx, nmCfg)
+	nmCfg := envutils.BuildMongoStoreConfig()
+	cl, err := mongostore.NewMongoStore(ctx, nmCfg)
 	require.NoError(t, err)
 
 	defer func() {

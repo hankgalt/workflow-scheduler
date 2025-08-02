@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -35,11 +34,11 @@ func NewLocalCSVToMongoHandler(ctx context.Context, cfg localcsv.LocalCSVFileHan
 		return nil, err
 	}
 
-	mongoStore, err := mongostore.GetMongoStore(ctx, sCfg)
+	mongoStore, err := mongostore.NewMongoStore(ctx, sCfg)
 	if err != nil {
 		return nil, err
 	}
-	vr, err := vypar.NewVyparRepo(mongoStore)
+	vr, err := vypar.NewVyparRepo(ctx, mongoStore)
 	if err != nil {
 		return nil, err
 	}
@@ -60,14 +59,14 @@ func (h *LocalCSVToMongoHandler) ReadData(ctx context.Context, offset, limit uin
 }
 
 func (h *LocalCSVToMongoHandler) HandleData(ctx context.Context, start uint64, data any, headers []string) (<-chan batch.Result, error) {
-	chnk, ok := data.([]byte)
-	if !ok {
-		return nil, errors.New("invalid data type, expected []byte")
-	}
-
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("LocalCSVToMongoHandler:HandleData - error getting logger from context: %w", err)
+	}
+
+	chnk, ok := data.([]byte)
+	if !ok {
+		return nil, localcsv.ErrInvalidDataType
 	}
 
 	resStream := make(chan batch.Result)
@@ -85,7 +84,7 @@ func (h *LocalCSVToMongoHandler) HandleData(ctx context.Context, start uint64, d
 			record, err := csvReader.Read()
 			if err != nil {
 				if err == io.EOF {
-					l.Debug("HandleData - reached EOF, ending go routine",
+					l.Debug("LocalCSVToMongoHandler:HandleData - reached EOF, ending go routine",
 						"lastRecordStart", lastOffset,
 						"lastRecordEnd", currOffset,
 					)
@@ -113,21 +112,20 @@ func (h *LocalCSVToMongoHandler) HandleData(ctx context.Context, start uint64, d
 			}
 
 			mongoModel := stores.MapAgentFieldsToMongoModel(fields)
-			if agID, err := h.mongoHandler.AddAgent(ctx, mongoModel); err != nil {
+			agID, err := h.mongoHandler.AddAgent(ctx, mongoModel)
+			if err != nil {
 				resStream <- batch.Result{
 					Start: start + uint64(lastOffset),
 					End:   start + uint64(currOffset),
 					Error: err.Error(),
 				}
 				continue
-			} else {
-				fields["recordId"] = agID
 			}
 
 			resStream <- batch.Result{
 				Start:  start + uint64(lastOffset),
 				End:    start + uint64(currOffset),
-				Record: fields,
+				Record: map[string]string{"recordId": agID},
 			}
 		}
 	}()

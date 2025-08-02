@@ -15,8 +15,14 @@ import (
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
 
+const (
+	ERR_MISSING_FILE_NAME = "missing file name"
+	ERR_INVALID_DATA_TYPE = "invalid data type, expected []byte"
+)
+
 var (
-	ErrMissingFileName = errors.New("missing file name")
+	ErrMissingFileName = errors.New(ERR_MISSING_FILE_NAME)
+	ErrInvalidDataType = errors.New(ERR_INVALID_DATA_TYPE)
 )
 
 type LocalCSVFileHandlerConfig struct {

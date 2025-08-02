@@ -15,7 +15,7 @@ import (
 
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/env"
+	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
@@ -67,7 +67,7 @@ func (s *ProcessLocalCSVMongoWorkflowTestSuite) Test_ProcessLocalCSVMongoWorkflo
 	s.Run("valid csv to mongo request", func() {
 		start := time.Now()
 
-		req, err := env.BuildLocalCSVMongoBatchRequest(2, 700)
+		req, err := envutils.BuildLocalCSVMongoBatchRequest(2, 700)
 		s.NoError(err)
 
 		expectedCall := []string{

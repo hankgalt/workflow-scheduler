@@ -9,7 +9,7 @@ import (
 
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/services/scheduler"
-	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/env"
+	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
@@ -18,11 +18,19 @@ func TestProcessLocalCSVToMongoWorkflow(t *testing.T) {
 	l := logger.GetSlogLogger()
 	l.Info("SchedulerService - TestProcessLocalCSVToMongoWorkflow initialized logger")
 
+	mCfg := envutils.BuildMongoStoreConfig()
+	require.NotEmpty(t, mCfg.Host, "MongoDB host should not be empty")
+
+	tCfg := envutils.BuildTemporalConfig()
+	require.NotEmpty(t, tCfg.Host, "Temporal host should not be empty")
+
+	svcCfg := scheduler.NewSchedulerServiceConfig(tCfg, mCfg)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 	ctx = logger.WithLogger(ctx, l)
 
-	ss, err := scheduler.NewSchedulerService(ctx)
+	ss, err := scheduler.NewSchedulerService(ctx, svcCfg)
 	require.NoError(t, err)
 	defer func() {
 		err := ss.Close(ctx)

@@ -3,7 +3,6 @@ package temporal
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"go.temporal.io/sdk/client"
 
@@ -12,9 +11,9 @@ import (
 )
 
 const (
-	ERR_MISSING_NAMESPACE = "error: missing namespace information"
-	ERR_MISSING_HOST      = "error: missing server host information"
-	ERR_TEMPORAL_CLIENT   = "error: creating temporal client"
+	ERR_MISSING_NAMESPACE = "missing namespace information"
+	ERR_MISSING_HOST      = "missing server host information"
+	ERR_TEMPORAL_CLIENT   = "error creating temporal client"
 )
 
 var (
@@ -23,9 +22,16 @@ var (
 	ErrTemporalClient   = errors.NewAppError(ERR_TEMPORAL_CLIENT)
 )
 
-type Configuration struct {
-	Namespace       string `yaml:"namespace"`
-	HostNameAndPort string `yaml:"host"`
+type TemporalConfig struct {
+	Namespace string
+	Host      string
+}
+
+func NewTemporalConfig(namespace, host string) TemporalConfig {
+	return TemporalConfig{
+		Namespace: namespace,
+		Host:      host,
+	}
 }
 
 type registryOption struct {
@@ -40,27 +46,24 @@ type TemporalClient struct {
 	activityRegistries []registryOption
 }
 
-func NewTemporalClient(ctx context.Context) (*TemporalClient, error) {
+func NewTemporalClient(ctx context.Context, cfg TemporalConfig) (*TemporalClient, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("temporalClient:NewTemporalClient - failed to get logger from context: %w", err)
 	}
 
-	namespace := os.Getenv("WORKFLOW_DOMAIN")
-	host := os.Getenv("TEMPORAL_HOST")
-
-	if namespace == "" {
+	if cfg.Namespace == "" {
 		l.Error(ERR_MISSING_NAMESPACE)
 		return nil, ErrMissingNamespace
 	}
-	if host == "" {
+	if cfg.Host == "" {
 		l.Error(ERR_MISSING_HOST)
 		return nil, ErrMissingHost
 	}
 
 	clientOptions := client.Options{
-		Namespace: namespace,
-		HostPort:  host,
+		Namespace: cfg.Namespace,
+		HostPort:  cfg.Host,
 	}
 	tClient, err := client.Dial(clientOptions)
 	if err != nil {

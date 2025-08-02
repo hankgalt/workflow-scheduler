@@ -8,34 +8,38 @@ import (
 
 	cloudcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/cloud_csv"
 	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
-	"github.com/hankgalt/workflow-scheduler/pkg/test"
+	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 func TestCloudCSVFileHandler(t *testing.T) {
 	t.Helper()
 
-	fileName := "Agents-sm.csv"
-	filePath := "scheduler"
+	// Ensure the environment is set up correctly
+	// requires GCP credentials path set in the environment
+	testCfg := envutils.BuildTestConfig()
+	require.NotEmpty(t, testCfg.Bucket(), "Bucket should not be empty")
+	require.NotEmpty(t, testCfg.DataDir(), "Data directory should not be empty")
 
-	testCfg := test.GetTestConfig()
+	fileName := envutils.BuildFileName()
+	require.NotEmpty(t, fileName, "File name should not be empty")
 
-	handlerCfg := cloudcsv.NewCloudCSVFileHandlerConfig(fileName, filePath, testCfg.Bucket())
+	handlerCfg := cloudcsv.NewCloudCSVFileHandlerConfig(fileName, envutils.DEFAULT_DATA_PATH, testCfg.Bucket())
+
 	fileHndlr, err := cloudcsv.NewCloudCSVFileHandler(handlerCfg)
+	require.NoError(t, err)
 	defer func() {
 		err := fileHndlr.Close()
 		require.NoError(t, err, "Error closing file handler")
 	}()
-	require.NoError(t, err)
-
-	batchSize := uint64(1000)
-
-	l := logger.GetSlogLogger()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	l := logger.GetSlogLogger()
 	ctx = logger.WithLogger(ctx, l)
 
+	batchSize := uint64(1000)
 	data, n, endOfFile, err := fileHndlr.ReadData(ctx, 0, batchSize)
 	require.NoError(t, err)
 

@@ -1,10 +1,8 @@
 package mongostore
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/hankgalt/workflow-scheduler/internal/infra"
@@ -132,29 +130,4 @@ type MongoStoreOption struct {
 	*infra.ClientOption
 	DBName   string
 	PoolSize uint64
-}
-
-func GetMongoConfig() infra.StoreConfig {
-	dbProtocol := os.Getenv("MONGO_PROTOCOL")
-	dbHost := os.Getenv("MONGO_HOSTNAME")
-	dbUser := os.Getenv("MONGO_USERNAME")
-	dbPwd := os.Getenv("MONGO_PASSWORD")
-	dbParams := os.Getenv("MONGO_CONN_PARAMS")
-	dbName := os.Getenv("MONGO_DBNAME")
-	return NewMongoDBConfig(dbProtocol, dbHost, dbUser, dbPwd, dbParams, dbName)
-}
-
-func GetMongoStore(ctx context.Context, cfg infra.StoreConfig) (infra.DBStore, error) {
-	builder := NewMongoConnectionBuilder(cfg.Protocol(), cfg.Host()).WithUser(cfg.User()).WithPassword(cfg.Pwd()).WithConnectionParams(cfg.Params())
-	opts := &MongoStoreOption{
-		ClientOption: infra.DefaultClientOption(),
-		DBName:       cfg.Name(), // Database name is required for MongoDB operations
-		PoolSize:     10,         // Default pool size, can be adjusted based on application needs
-	}
-
-	cl, err := NewMongoStore(ctx, opts, builder)
-	if err != nil {
-		return nil, err
-	}
-	return cl, nil
 }

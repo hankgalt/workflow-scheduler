@@ -17,7 +17,7 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
 	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
-	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/env"
+	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 	"github.com/hankgalt/workflow-scheduler/pkg/utils/future"
 	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )

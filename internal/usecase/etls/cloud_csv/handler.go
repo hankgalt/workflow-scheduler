@@ -16,11 +16,18 @@ import (
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
 
+const (
+	ERR_MISSING_CREDS_PATH = "missing credentials path for GCP Storage"
+	ERR_MISSING_BUCKET     = "missing bucket name"
+	ERR_MISSING_FILE_NAME  = "missing file name"
+	ERR_FILE_ACCESS        = "error accessing storage file"
+)
+
 var (
-	ErrObjectClosed      = errors.New("object is closed, cannot read from it")
-	ErrMissingFileName   = errors.New("missing file name")
-	ErrMissingBucketName = errors.New("missing bucket name")
-	ErrMissingCredsPath  = errors.New("missing credentials path for GCP Storage")
+	ErrMissingCredsPath  = errors.New(ERR_MISSING_CREDS_PATH)
+	ErrMissingFileName   = errors.New(ERR_MISSING_FILE_NAME)
+	ErrMissingBucketName = errors.New(ERR_MISSING_BUCKET)
+	ErrFileAccess        = errors.New(ERR_FILE_ACCESS)
 )
 
 type GCPStorageReadAtAdapter struct {
@@ -29,7 +36,7 @@ type GCPStorageReadAtAdapter struct {
 
 func (g *GCPStorageReadAtAdapter) ReadAt(p []byte, off int64) (n int, err error) {
 	if g.Reader == nil {
-		return 0, ErrObjectClosed
+		return 0, ErrFileAccess
 	}
 
 	// seek to the specified offset
@@ -78,7 +85,8 @@ func NewCloudCSVFileHandler(cfg CloudCSVFileHandlerConfig) (*CloudCSVFileHandler
 		return nil, ErrMissingBucketName
 	}
 
-	cPath := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") // Ensure the environment variable is set for GCP credentials
+	// Ensure the environment variable is set for GCP credentials
+	cPath := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 	if cPath == "" {
 		return nil, ErrMissingCredsPath
 	}

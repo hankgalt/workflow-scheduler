@@ -5,11 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 	"github.com/hankgalt/workflow-scheduler/internal/repo/vypar"
+	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
-	"github.com/stretchr/testify/require"
 )
 
 func TestVyparRepoAgentCRUD(t *testing.T) {
@@ -17,13 +19,13 @@ func TestVyparRepoAgentCRUD(t *testing.T) {
 	l := logger.GetSlogLogger()
 	t.Log("TestVyparRepo Logger initialized")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 	ctx = logger.WithLogger(ctx, l)
 
 	// Get MongoDB configuration
-	nmCfg := mongostore.GetMongoConfig()
-	ms, err := mongostore.GetMongoStore(ctx, nmCfg)
+	nmCfg := envutils.BuildMongoStoreConfig()
+	ms, err := mongostore.NewMongoStore(ctx, nmCfg)
 	require.NoError(t, err)
 
 	defer func() {
@@ -32,7 +34,7 @@ func TestVyparRepoAgentCRUD(t *testing.T) {
 	}()
 
 	// Initialize Vypar repository
-	vr, err := vypar.NewVyparRepo(ms)
+	vr, err := vypar.NewVyparRepo(ctx, ms)
 	require.NoError(t, err)
 
 	entityId := uint64(1234567)
@@ -44,6 +46,10 @@ func TestVyparRepoAgentCRUD(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, agentId, "Agent ID should not be empty")
 	t.Logf("Agent added successfully with ID: %s", agentId)
+
+	_, err = vr.AddAgent(ctx, agM)
+	require.Error(t, err)
+	require.Equal(t, vypar.ErrDuplicateAgent, err, "Expected duplicate agent error")
 
 	// Test item count
 	count, err := vr.GetItemCount(ctx, vypar.AGENT_COLLECTION)
@@ -85,8 +91,8 @@ func TestYvparRepoFilingCRUD(t *testing.T) {
 	ctx = logger.WithLogger(ctx, l)
 
 	// Get MongoDB configuration
-	nmCfg := mongostore.GetMongoConfig()
-	ms, err := mongostore.GetMongoStore(ctx, nmCfg)
+	nmCfg := envutils.BuildMongoStoreConfig()
+	ms, err := mongostore.NewMongoStore(ctx, nmCfg)
 	require.NoError(t, err)
 
 	defer func() {
@@ -95,7 +101,7 @@ func TestYvparRepoFilingCRUD(t *testing.T) {
 	}()
 
 	// Initialize Vypar repository
-	vr, err := vypar.NewVyparRepo(ms)
+	vr, err := vypar.NewVyparRepo(ctx, ms)
 	require.NoError(t, err)
 
 	entityId := uint64(1234567)

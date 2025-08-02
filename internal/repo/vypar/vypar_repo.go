@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
 	"github.com/hankgalt/workflow-scheduler/internal/infra"
@@ -42,7 +43,24 @@ type vyparRepo struct {
 	infra.DBStore
 }
 
-func NewVyparRepo(rc infra.DBStore) (*vyparRepo, error) {
+func NewVyparRepo(ctx context.Context, rc infra.DBStore) (*vyparRepo, error) {
+	agIndxs := []mongo.IndexModel{
+		{
+			Keys: bson.D{
+				{Key: "entityId", Value: 1},
+				{Key: "firstName", Value: 1},
+				{Key: "lastName", Value: 1},
+				{Key: "agentType", Value: 1},
+			},
+			Options: options.Index().SetUnique(true), // Composite unique index
+		},
+	}
+
+	err := rc.EnsureIndexes(ctx, AGENT_COLLECTION, agIndxs)
+	if err != nil {
+		return nil, fmt.Errorf("error adding agent indexes: %w", err)
+	}
+
 	return &vyparRepo{
 		DBStore: rc,
 	}, nil

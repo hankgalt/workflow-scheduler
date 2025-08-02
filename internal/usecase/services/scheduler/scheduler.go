@@ -9,6 +9,7 @@ import (
 
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
+	"github.com/hankgalt/workflow-scheduler/internal/infra"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/temporal"
 	"github.com/hankgalt/workflow-scheduler/internal/repo/daud"
@@ -22,19 +23,31 @@ type SchedulerService interface {
 	Close(ctx context.Context) error
 }
 
+type schedulerServiceConfig struct {
+	TemporalConfig temporal.TemporalConfig
+	MongoConfig    infra.StoreConfig
+}
+
+func NewSchedulerServiceConfig(temporalCfg temporal.TemporalConfig, mongoCfg infra.StoreConfig) schedulerServiceConfig {
+	return schedulerServiceConfig{
+		TemporalConfig: temporalCfg,
+		MongoConfig:    mongoCfg,
+	}
+}
+
 type schedulerService struct {
 	temporal *temporal.TemporalClient
 	daud     daud.DaudRepo
 }
 
 // NewSchedulerService initializes a new SchedulerService instance
-func NewSchedulerService(ctx context.Context) (*schedulerService, error) {
+func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*schedulerService, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("SchedulerService:NewSchedulerService - error getting logger from context: %w", err)
 	}
 
-	tc, err := temporal.NewTemporalClient(ctx)
+	tc, err := temporal.NewTemporalClient(ctx, cfg.TemporalConfig)
 	if err != nil {
 		l.Error("error creating temporal client", "error", err.Error())
 		return nil, err
@@ -43,9 +56,7 @@ func NewSchedulerService(ctx context.Context) (*schedulerService, error) {
 		temporal: tc,
 	}
 
-	// Get MongoDB configuration
-	nmCfg := mongostore.GetMongoConfig()
-	ms, err := mongostore.GetMongoStore(ctx, nmCfg)
+	ms, err := mongostore.NewMongoStore(ctx, cfg.MongoConfig)
 	if err != nil {
 		l.Error("error getting MongoDB store", "error", err.Error())
 
@@ -89,7 +100,7 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 		WorkflowTaskTimeout:      time.Minute * 5, // set to max, as there are decision tasks that'll take as long as max
 		WorkflowIDReusePolicy:    1,
 	}
-	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessLocalCSVMongoWorkflow, req)
+	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessLocalCSVMongo, &req)
 	if err != nil {
 		l.Error("error starting workflow", "error", err.Error())
 		return stores.WorkflowRun{}, err

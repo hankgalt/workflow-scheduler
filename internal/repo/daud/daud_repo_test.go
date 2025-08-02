@@ -10,6 +10,7 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 	"github.com/hankgalt/workflow-scheduler/internal/repo/daud"
+	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
@@ -23,8 +24,8 @@ func TestDaudRepoWorkflowCRUD(t *testing.T) {
 	ctx = logger.WithLogger(ctx, l)
 
 	// Get MongoDB configuration
-	nmCfg := mongostore.GetMongoConfig()
-	ms, err := mongostore.GetMongoStore(ctx, nmCfg)
+	nmCfg := envutils.BuildMongoStoreConfig()
+	ms, err := mongostore.NewMongoStore(ctx, nmCfg)
 	require.NoError(t, err)
 
 	defer func() {

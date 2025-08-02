@@ -2,48 +2,46 @@ package localcsv_test
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	localcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv"
 	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
-	"github.com/hankgalt/workflow-scheduler/pkg/test"
+	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 func TestLocalCSVFileHandler(t *testing.T) {
 	t.Helper()
 
-	fileName := "Agents-sm.csv"
-	filePath := "scheduler"
+	testCfg := envutils.BuildTestConfig()
+	require.NotEmpty(t, testCfg.DataDir(), "Data directory should not be empty")
 
-	testCfg := test.GetTestConfig()
-	testFilePath := filepath.Join(testCfg.DataDir(), filePath)
+	fileName := envutils.BuildFileName()
+	require.NotEmpty(t, fileName, "File name should not be empty")
 
-	handlerCfg := localcsv.NewLocalCSVFileHandlerConfig(fileName, testFilePath)
+	filePath, err := envutils.BuildFilePath()
+	require.NoError(t, err)
+	require.NotEmpty(t, filePath, "File path should not be empty")
+
+	handlerCfg := localcsv.NewLocalCSVFileHandlerConfig(fileName, filePath)
 	fileHndlr, err := localcsv.NewLocalCSVFileHandler(handlerCfg)
 	require.NoError(t, err)
 
-	batchSize := uint64(400)
-
-	l := logger.GetSlogLogger()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	l := logger.GetSlogLogger()
 	ctx = logger.WithLogger(ctx, l)
 
+	batchSize := uint64(400)
 	data, n, endOfFile, err := fileHndlr.ReadData(ctx, 0, batchSize)
-	if err != nil {
-		t.Logf("Error reading data: %v", err)
-		return
-	}
+	require.NoError(t, err)
 	require.Equal(t, true, n < batchSize, "Read less than batch size")
+	t.Logf("Read data from file %s, with batch size: %d, next offset: %d", fileName, batchSize, n)
 
 	headers := fileHndlr.Headers()
-
-	t.Logf("Read data from file %s, with batch size: %d, next offset: %d", fileName, batchSize, n)
 	t.Logf("File headers: %v", headers)
 
 	resStream, err := fileHndlr.HandleData(ctx, 0, data, headers)

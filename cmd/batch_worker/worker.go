@@ -11,6 +11,7 @@ import (
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
+	"go.temporal.io/sdk/workflow"
 
 	"github.com/hankgalt/workflow-scheduler/internal/infra/temporal"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
@@ -86,8 +87,8 @@ func main() {
 
 func registerBatchWorkflow(worker worker.Worker) {
 	// register batch task processing workflows
-	worker.RegisterWorkflow(btchwkfl.ProcessLocalCSV)
-	worker.RegisterWorkflow(btchwkfl.ProcessLocalCSVMongo)
+	worker.RegisterWorkflowWithOptions(btchwkfl.ProcessLocalCSV, workflow.RegisterOptions{Name: btchwkfl.ProcessLocalCSVWorkflow})
+	worker.RegisterWorkflowWithOptions(btchwkfl.ProcessLocalCSVMongo, workflow.RegisterOptions{Name: btchwkfl.ProcessLocalCSVMongoWorkflow})
 
 	// register batch task processing activities
 	worker.RegisterActivityWithOptions(btchwkfl.SetupLocalCSVBatch, activity.RegisterOptions{Name: btchwkfl.SetupLocalCSVBatchActivity})

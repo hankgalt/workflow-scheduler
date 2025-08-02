@@ -15,6 +15,7 @@ var (
 
 type DBStore interface {
 	Store() *mongo.Database
+	EnsureIndexes(ctx context.Context, collectionName string, indexes []mongo.IndexModel) error
 	Stats(ctx context.Context, db string)
 	Close(ctx context.Context) error
 }

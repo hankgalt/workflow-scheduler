@@ -15,7 +15,7 @@ import (
 
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/env"
+	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
@@ -67,7 +67,7 @@ func (s *ProcessLocalCSVWorkflowTestSuite) Test_ProcessLocalCSVWorkflow() {
 	s.Run("valid collection migration request", func() {
 		start := time.Now()
 
-		req, err := env.BuildLocalCSVBatchRequest(2, 600)
+		req, err := envutils.BuildLocalCSVBatchRequest(2, 600)
 		s.NoError(err)
 
 		expectedCall := []string{
