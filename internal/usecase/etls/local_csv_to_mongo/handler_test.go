@@ -7,11 +7,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/comfforts/logger"
+
 	localcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv"
 	localcsvtomongo "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv_to_mongo"
 	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 func TestLocalCSVToMongoHandler(t *testing.T) {

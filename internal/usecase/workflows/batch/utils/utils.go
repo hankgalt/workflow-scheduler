@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/comfforts/logger"
+
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 func GenerateBatchID(cfg any, start, end uint64) (string, error) {

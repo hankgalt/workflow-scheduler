@@ -7,6 +7,8 @@ import (
 
 	"go.temporal.io/sdk/client"
 
+	"github.com/comfforts/logger"
+
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
 	"github.com/hankgalt/workflow-scheduler/internal/infra"
@@ -15,7 +17,6 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/repo/daud"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
 	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 type SchedulerService interface {

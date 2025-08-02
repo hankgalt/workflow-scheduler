@@ -7,10 +7,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/comfforts/logger"
+
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/services/scheduler"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 func TestProcessLocalCSVToMongoWorkflow(t *testing.T) {

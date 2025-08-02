@@ -10,8 +10,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/comfforts/logger"
+
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
 

@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"os"
@@ -10,17 +11,14 @@ import (
 	"sync"
 	"testing"
 
-	api "github.com/hankgalt/workflow-scheduler/api/v1"
-	"github.com/hankgalt/workflow-scheduler/internal/server"
-
-	// "github.com/hankgalt/workflow-scheduler/pkg/services/scheduler"
-
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
 	config "github.com/comfforts/comff-config"
-	"github.com/comfforts/errors"
+
+	api "github.com/hankgalt/workflow-scheduler/api/v1"
+	"github.com/hankgalt/workflow-scheduler/internal/server"
 )
 
 const TEST_DIR = "data"
@@ -195,7 +193,7 @@ func testAddBusinessEntities(t *testing.T, client, nbClient api.SchedulerClient,
 					} else if r.GetError() != "" {
 						// error aggregation
 						t.Log("received error: ", r.GetError())
-						errs = append(errs, errors.NewAppError(r.GetError()))
+						errs = append(errs, errors.New(r.GetError()))
 					}
 				}
 			case err, ok := <-errCh:

@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -21,7 +20,6 @@ import (
 	"github.com/comfforts/logger"
 
 	"github.com/hankgalt/workflow-scheduler/internal/server"
-	// "github.com/hankgalt/workflow-scheduler/pkg/services/scheduler"
 )
 
 const SERVICE_PORT = 65051
@@ -30,11 +28,7 @@ func main() {
 	ctx := context.Background()
 
 	fmt.Println("  initializing app logger instance")
-	logCfg := &logger.AppLoggerConfig{
-		Level: zapcore.DebugLevel,
-		Name:  "scheduler",
-	}
-	l := logger.NewAppZapLogger(logCfg)
+	l := logger.GetZapLogger("data", "scheduler")
 
 	serverPort, err := strconv.Atoi(os.Getenv("SERVER_PORT"))
 	if err != nil || serverPort == 0 {
@@ -65,7 +59,7 @@ func main() {
 	// }
 
 	l.Info("setting up scheduler authorizer")
-	authorizer, err := config.SetupAuthorizer(l)
+	authorizer, err := config.SetupAuthorizer()
 	if err != nil {
 		l.Error("error initializing scheduler authorizer instance", zap.Error(err))
 		panic(err)

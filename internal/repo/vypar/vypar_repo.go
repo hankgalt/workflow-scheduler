@@ -12,9 +12,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"github.com/comfforts/logger"
+
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
 	"github.com/hankgalt/workflow-scheduler/internal/infra"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 const AGENT_COLLECTION = "vypar.agents"

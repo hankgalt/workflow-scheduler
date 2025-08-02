@@ -13,9 +13,10 @@ import (
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 
+	"github.com/comfforts/logger"
+
 	"github.com/hankgalt/workflow-scheduler/internal/infra/temporal"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 const DEFAULT_WORKER_HOST = "batch-worker"

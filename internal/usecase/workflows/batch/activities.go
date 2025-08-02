@@ -8,12 +8,13 @@ import (
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/temporal"
 
+	"github.com/comfforts/logger"
+
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 	cloudcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/cloud_csv"
 	localcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv"
 	localcsvtomongo "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv_to_mongo"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 const (
@@ -70,6 +71,7 @@ func SetupLocalCSVMongoBatch(ctx context.Context, hndlrCfg batch.LocalCSVMongoBa
 
 	mCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	mCtx = logger.WithLogger(mCtx, l)
 
 	// Create a new LocalCSVToMongoHandler with the provided configurations
 	hndlr, err := localcsvtomongo.NewLocalCSVToMongoHandler(mCtx, csvCfg, mdbCfg)
@@ -276,11 +278,14 @@ func getCloudCSVFileHandler(name, path, bucket string) (*cloudcsv.CloudCSVFileHa
 }
 
 func getLocalCSVToMongoHandler(ctx context.Context, cfg batch.LocalCSVMongoBatchConfig) (*localcsvtomongo.LocalCSVToMongoHandler, error) {
+	l := activity.GetLogger(ctx)
+
 	csvCfg := localcsv.NewLocalCSVFileHandlerConfig(cfg.LocalCSVBatchConfig.Name, cfg.LocalCSVBatchConfig.Path)
 	mdbCfg := mongostore.NewMongoDBConfig(cfg.MongoBatchConfig.Protocol, cfg.MongoBatchConfig.Host, cfg.MongoBatchConfig.User, cfg.MongoBatchConfig.Pwd, cfg.MongoBatchConfig.Params, cfg.MongoBatchConfig.Name)
 
 	mCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
+	mCtx = logger.WithLogger(mCtx, l)
 
 	// Create a new LocalCSVToMongoHandler with the provided configurations
 	hndlr, err := localcsvtomongo.NewLocalCSVToMongoHandler(mCtx, csvCfg, mdbCfg)

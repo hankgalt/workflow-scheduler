@@ -10,9 +10,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
+	"github.com/comfforts/logger"
+
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
 	"github.com/hankgalt/workflow-scheduler/internal/infra"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 const RUN_COLLECTION = "daud.workflow_run"

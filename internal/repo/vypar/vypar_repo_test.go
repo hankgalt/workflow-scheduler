@@ -7,11 +7,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/comfforts/logger"
+
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 	"github.com/hankgalt/workflow-scheduler/internal/repo/vypar"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 func TestVyparRepoAgentCRUD(t *testing.T) {

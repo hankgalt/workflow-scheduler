@@ -20,8 +20,6 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 
-	"github.com/comfforts/errors"
-
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
 	// "github.com/hankgalt/workflow-scheduler/pkg/services/scheduler"
 )
@@ -68,7 +66,7 @@ func newGrpcServer(config *Config) (srv *grpcServer, err error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		config.Error("error getting host name", zap.Error(err))
-		return nil, errors.WrapError(err, "error getting host name")
+		return nil, fmt.Errorf("error getting host name: %w", err)
 	}
 
 	srv = &grpcServer{
@@ -159,23 +157,4 @@ type errorParams struct {
 	err      error
 	errTxt   string
 	errCode  codes.Code
-}
-
-func (s *grpcServer) buildError(params errorParams) *status.Status {
-	appErr, ok := params.err.(errors.AppError)
-	if !ok {
-		msg := fmt.Sprintf("%s - %s", params.errTxt, "unknown error")
-		s.Error(msg, zap.Error(params.err))
-		return status.New(codes.Unknown, msg)
-	}
-
-	switch params.errModel {
-	case "run":
-		// if appErr == scheduler.ErrDuplicateRun {
-		// 	return status.New(codes.AlreadyExists, appErr.Message)
-		// }
-		return status.New(params.errCode, appErr.Message)
-	default:
-		return status.New(params.errCode, appErr.Message)
-	}
 }

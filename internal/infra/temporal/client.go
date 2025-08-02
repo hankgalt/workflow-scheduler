@@ -2,12 +2,12 @@ package temporal
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"go.temporal.io/sdk/client"
 
-	"github.com/comfforts/errors"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
+	"github.com/comfforts/logger"
 )
 
 const (
@@ -17,9 +17,9 @@ const (
 )
 
 var (
-	ErrMissingNamespace = errors.NewAppError(ERR_MISSING_NAMESPACE)
-	ErrMissingHost      = errors.NewAppError(ERR_MISSING_HOST)
-	ErrTemporalClient   = errors.NewAppError(ERR_TEMPORAL_CLIENT)
+	ErrMissingNamespace = errors.New(ERR_MISSING_NAMESPACE)
+	ErrMissingHost      = errors.New(ERR_MISSING_HOST)
+	ErrTemporalClient   = errors.New(ERR_TEMPORAL_CLIENT)
 )
 
 type TemporalConfig struct {
@@ -135,7 +135,7 @@ func (cc *TemporalClient) StartWorkflowWithCtx(
 	we, err := cc.client.ExecuteWorkflow(ctx, options, workflow, args...)
 	if err != nil {
 		l.Error("failed to create workflow", "error", err.Error())
-		return nil, errors.WrapError(err, "failed to create workflow")
+		return nil, fmt.Errorf("failed to create workflow: %w", err)
 	}
 
 	l.Info("started Workflow", "WorkflowID", we.GetID(), "RunID", we.GetRunID())
@@ -151,7 +151,7 @@ func (cc *TemporalClient) SignalWorkflow(ctx context.Context, workflowID, signal
 	err = cc.client.SignalWorkflow(context.Background(), workflowID, "", signal, data)
 	if err != nil {
 		l.Error("failed to signal workflow", "error", err.Error())
-		return errors.WrapError(err, "failed to signal workflow")
+		return fmt.Errorf("failed to signal workflow: %w", err)
 	}
 	return nil
 }
@@ -174,7 +174,7 @@ func (cc *TemporalClient) SignalWithStartWorkflowWithCtx(
 	we, err := cc.client.SignalWithStartWorkflow(ctx, workflowID, signalName, signalArg, options, workflow, workflowArgs...)
 	if err != nil {
 		l.Error("failed to signal with start workflow", "error", err.Error())
-		return nil, errors.WrapError(err, "failed to signal with start workflow")
+		return nil, fmt.Errorf("failed to signal with start workflow: %w", err)
 	}
 
 	l.Info("signaled and started Workflow", "WorkflowID", we.GetID(), "RunID", we.GetRunID())
@@ -190,7 +190,7 @@ func (cc *TemporalClient) CancelWorkflow(ctx context.Context, workflowID string)
 	err = cc.client.CancelWorkflow(ctx, workflowID, "")
 	if err != nil {
 		l.Error("failed to cancel workflow", "error", err.Error())
-		return errors.WrapError(err, "failed to cancel workflow")
+		return fmt.Errorf("failed to cancel workflow: %w", err)
 	}
 	return nil
 }
@@ -208,12 +208,12 @@ func (cc *TemporalClient) QueryWorkflow(
 	resp, err := cc.client.QueryWorkflow(ctx, workflowID, runID, queryType, args...)
 	if err != nil {
 		l.Error("failed to query workflow", "error", err.Error())
-		return nil, errors.WrapError(err, "failed to query workflow")
+		return nil, fmt.Errorf("failed to query workflow: %w", err)
 	}
 	var result any
 	if err := resp.Get(&result); err != nil {
 		l.Error("failed to decode query result", "error", err.Error())
-		return nil, errors.WrapError(err, "failed to decode query result")
+		return nil, fmt.Errorf("failed to decode query result: %w", err)
 	}
 	// l.Debug("received query result", "result", result)
 	return result, nil

@@ -13,10 +13,11 @@ import (
 	"go.temporal.io/sdk/testsuite"
 	"go.temporal.io/sdk/worker"
 
+	"github.com/comfforts/logger"
+
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 type ProcessLocalCSVWorkflowTestSuite struct {

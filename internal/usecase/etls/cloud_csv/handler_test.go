@@ -6,10 +6,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/comfforts/logger"
+
 	cloudcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/cloud_csv"
 	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 func TestCloudCSVFileHandler(t *testing.T) {

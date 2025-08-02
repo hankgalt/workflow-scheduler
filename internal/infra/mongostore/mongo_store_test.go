@@ -7,9 +7,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/comfforts/logger"
+
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 )
 
 func TestMongoStore(t *testing.T) {

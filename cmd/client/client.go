@@ -3,18 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
-	"github.com/comfforts/logger"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
 	config "github.com/comfforts/comff-config"
+	"github.com/comfforts/logger"
 
 	api "github.com/hankgalt/workflow-scheduler/api/v1"
-	// "github.com/hankgalt/workflow-scheduler/pkg/models"
 )
 
 const SERVICE_PORT = 65051
@@ -23,16 +20,13 @@ const SERVICE_DOMAIN = "127.0.0.1"
 func main() {
 
 	// initialize app logger instance
-	logCfg := &logger.AppLoggerConfig{
-		FilePath: filepath.Join("logs", "client.log"),
-		Level:    zapcore.DebugLevel,
-		Name:     "scheduler-client",
-	}
-	l := logger.NewAppZapLogger(logCfg)
+	// l := logger.GetZapLogger("data", "scheduler-client")
+	l := logger.GetSlogLogger()
 
 	tlsConfig, err := config.SetupTLSConfig(&config.ConfigOpts{Target: config.CLIENT})
 	if err != nil {
-		l.Fatal("error setting client TLS", zap.Error(err))
+		l.Error("error setting client TLS", "error", err.Error())
+		panic(err)
 	}
 	tlsCreds := credentials.NewTLS(tlsConfig)
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(tlsCreds)}
@@ -40,18 +34,20 @@ func main() {
 	servicePort := fmt.Sprintf("%s:%d", SERVICE_DOMAIN, SERVICE_PORT)
 	conn, err := grpc.Dial(servicePort, opts...)
 	if err != nil {
-		l.Fatal("client failed to connect", zap.Error(err))
+		l.Error("client failed to connect", "error", err.Error())
+		panic(err)
 	}
 	defer conn.Close()
 
 	client := api.NewSchedulerClient(conn)
 	err = testWorkflowCRUD(client, l)
 	if err != nil {
-		l.Fatal("error: workflow CRUD", zap.Error(err))
+		l.Error("error: workflow CRUD", "error", err.Error())
+		return
 	}
 }
 
-func testWorkflowCRUD(client api.SchedulerClient, l logger.AppLogger) error {
+func testWorkflowCRUD(client api.SchedulerClient, l logger.Logger) error {
 	ctx := context.Background()
 
 	requester := "test-create-run@gmail.com"

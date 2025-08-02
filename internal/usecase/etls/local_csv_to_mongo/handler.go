@@ -8,13 +8,14 @@ import (
 	"io"
 	"strings"
 
+	"github.com/comfforts/logger"
+
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
 	"github.com/hankgalt/workflow-scheduler/internal/infra"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 	"github.com/hankgalt/workflow-scheduler/internal/repo/vypar"
 	localcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv"
-	"github.com/hankgalt/workflow-scheduler/pkg/utils/logger"
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
 
