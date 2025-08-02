@@ -126,7 +126,7 @@ func (h *LocalCSVToMongoHandler) HandleData(ctx context.Context, start uint64, d
 			resStream <- batch.Result{
 				Start:  start + uint64(lastOffset),
 				End:    start + uint64(currOffset),
-				Record: map[string]string{"recordId": agID},
+				Record: map[string]string{"mongoId": agID},
 			}
 		}
 	}()
