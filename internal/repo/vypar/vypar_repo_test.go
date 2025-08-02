@@ -145,8 +145,8 @@ func TestYvparRepoFilingCRUD(t *testing.T) {
 	t.Log("All filings cleaned up successfully")
 }
 
-func getDummyBusinessAgentMongo(entityId uint64) stores.BusinessAgentMongo {
-	return stores.BusinessAgentMongo{
+func getDummyBusinessAgentMongo(entityId uint64) stores.Agent {
+	return stores.Agent{
 		EntityID:   entityId,
 		EntityName: "TestEntity",
 		OrgName:    "TestOrg",
@@ -158,8 +158,8 @@ func getDummyBusinessAgentMongo(entityId uint64) stores.BusinessAgentMongo {
 	}
 }
 
-func getDummyBusinessFilingMongo(entityId uint64) stores.BusinessFilingMongo {
-	return stores.BusinessFilingMongo{
+func getDummyBusinessFilingMongo(entityId uint64) stores.Filing {
+	return stores.Filing{
 		EntityID:               entityId,
 		EntityName:             "TestEntity",
 		InitialFilingDate:      uint64(time.Now().UnixNano()),

@@ -31,12 +31,14 @@ var (
 	ErrDuplicateFiling       = errors.New("filing already exists")
 	ErrDecodeObjectId        = errors.New("error decoding object ID from MongoDB")
 	ErrMissingEntityId       = errors.New("missing entity ID")
+	ErrMissingID             = errors.New("missing ID")
+	ErrInvalidHex            = errors.New("invalid hex string for ObjectID")
 	ErrNoAgentFound          = errors.New("no agent found")
 	ErrNoFilingFound         = errors.New("no filing found for the given entity ID")
 )
 
 type VyparRepo interface {
-	AddAgent(ctx context.Context, ag stores.BusinessAgentMongo) (string, error)
+	AddAgent(ctx context.Context, ag stores.Agent) (string, error)
 	Close(ctx context.Context) error
 }
 
@@ -67,29 +69,7 @@ func NewVyparRepo(ctx context.Context, rc infra.DBStore) (*vyparRepo, error) {
 	}, nil
 }
 
-func (vr *vyparRepo) GetItemCount(ctx context.Context, collection string) (int64, error) {
-	logger, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("error getting logger from context: %w", err)
-	}
-
-	logger.Debug("GetItemCount", slog.String("collection", collection))
-	if collection == "" {
-		return 0, ErrMissingCollectionName
-	}
-
-	coll := vr.Store().Collection(collection)
-
-	filter := bson.M{}
-	totalCount, err := coll.CountDocuments(ctx, filter)
-	if err != nil {
-		logger.Error("GetItemCount error", slog.String("collection", collection), slog.String("error", err.Error()))
-		return 0, fmt.Errorf("error fetching item count: %w", err)
-	}
-	return totalCount, nil
-}
-
-func (vr *vyparRepo) AddAgent(ctx context.Context, ag stores.BusinessAgentMongo) (string, error) {
+func (vr *vyparRepo) AddAgent(ctx context.Context, ag stores.Agent) (string, error) {
 	logger, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return "", fmt.Errorf("error getting logger from context: %w", err)
@@ -122,6 +102,61 @@ func (vr *vyparRepo) AddAgent(ctx context.Context, ag stores.BusinessAgentMongo)
 	return id.Hex(), err
 }
 
+func (vr *vyparRepo) GetAgent(ctx context.Context, entityId uint64) (*stores.Agent, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error getting logger from context: %w", err)
+	}
+
+	if entityId == 0 {
+		return nil, ErrMissingEntityId
+	}
+
+	coll := vr.Store().Collection(AGENT_COLLECTION)
+	filter := bson.M{"entityId": entityId}
+
+	var agent stores.Agent
+	err = coll.FindOne(ctx, filter).Decode(&agent)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, ErrNoAgentFound
+		}
+		l.Error("GetAgent error", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("error getting agent: %w", err)
+	}
+	return &agent, nil
+}
+
+func (vr *vyparRepo) GetAgentById(ctx context.Context, idHex string) (*stores.Agent, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error getting logger from context: %w", err)
+	}
+
+	if idHex == "" {
+		return nil, ErrMissingID
+	}
+
+	coll := vr.Store().Collection(AGENT_COLLECTION)
+	objID, err := primitive.ObjectIDFromHex(idHex)
+	if err != nil {
+		l.Error("GetAgentById error", "error", err.Error())
+		return nil, ErrInvalidHex
+	}
+	filter := bson.M{"_id": objID}
+
+	var agent stores.Agent
+	err = coll.FindOne(ctx, filter).Decode(&agent)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, ErrNoAgentFound
+		}
+		l.Error("GetAgent error", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("error getting agent: %w", err)
+	}
+	return &agent, nil
+}
+
 func (vr *vyparRepo) DeleteAgent(ctx context.Context, entityId uint64) (bool, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
@@ -142,32 +177,7 @@ func (vr *vyparRepo) DeleteAgent(ctx context.Context, entityId uint64) (bool, er
 	return result.DeletedCount > 0, nil
 }
 
-func (vr *vyparRepo) GetAgent(ctx context.Context, entityId uint64) (*stores.BusinessAgentMongo, error) {
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error getting logger from context: %w", err)
-	}
-
-	if entityId == 0 {
-		return nil, ErrMissingEntityId
-	}
-
-	coll := vr.Store().Collection(AGENT_COLLECTION)
-	filter := bson.M{"entityId": entityId}
-
-	var agent stores.BusinessAgentMongo
-	err = coll.FindOne(ctx, filter).Decode(&agent)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, ErrNoAgentFound
-		}
-		l.Error("GetAgent error", slog.String("error", err.Error()))
-		return nil, fmt.Errorf("error getting agent: %w", err)
-	}
-	return &agent, nil
-}
-
-func (vr *vyparRepo) AddFiling(ctx context.Context, bf stores.BusinessFilingMongo) (string, error) {
+func (vr *vyparRepo) AddFiling(ctx context.Context, bf stores.Filing) (string, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return "", fmt.Errorf("error getting logger from context: %w", err)
@@ -198,7 +208,7 @@ func (vr *vyparRepo) AddFiling(ctx context.Context, bf stores.BusinessFilingMong
 	return id.Hex(), nil
 }
 
-func (vr *vyparRepo) GetFiling(ctx context.Context, entityId uint64) (*stores.BusinessFilingMongo, error) {
+func (vr *vyparRepo) GetFiling(ctx context.Context, entityId uint64) (*stores.Filing, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("error getting logger from context: %w", err)
@@ -211,13 +221,43 @@ func (vr *vyparRepo) GetFiling(ctx context.Context, entityId uint64) (*stores.Bu
 	coll := vr.Store().Collection(FILING_COLLECTION)
 	filter := bson.M{"entityId": entityId}
 
-	var filing stores.BusinessFilingMongo
+	var filing stores.Filing
 	err = coll.FindOne(ctx, filter).Decode(&filing)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, fmt.Errorf("no filing found for entity ID %d: %w", entityId, ErrNoFilingFound)
 		}
 		l.Error("GetFiling error", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("error getting filing: %w", err)
+	}
+	return &filing, nil
+}
+
+func (vr *vyparRepo) GetFilingById(ctx context.Context, idHex string) (*stores.Filing, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error getting logger from context: %w", err)
+	}
+
+	if idHex == "" {
+		return nil, ErrMissingID
+	}
+
+	coll := vr.Store().Collection(FILING_COLLECTION)
+	objID, err := primitive.ObjectIDFromHex(idHex)
+	if err != nil {
+		l.Error("GetFilingById error", "error", err.Error())
+		return nil, ErrInvalidHex
+	}
+	filter := bson.M{"_id": objID}
+
+	var filing stores.Filing
+	err = coll.FindOne(ctx, filter).Decode(&filing)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, ErrNoFilingFound
+		}
+		l.Error("GetFilingById error", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("error getting filing: %w", err)
 	}
 	return &filing, nil
@@ -241,4 +281,26 @@ func (vr *vyparRepo) DeleteFiling(ctx context.Context, entityId uint64) (bool, e
 		return false, fmt.Errorf("error deleting filing: %w", err)
 	}
 	return result.DeletedCount > 0, nil
+}
+
+func (vr *vyparRepo) GetItemCount(ctx context.Context, collection string) (int64, error) {
+	logger, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("error getting logger from context: %w", err)
+	}
+
+	logger.Debug("GetItemCount", slog.String("collection", collection))
+	if collection == "" {
+		return 0, ErrMissingCollectionName
+	}
+
+	coll := vr.Store().Collection(collection)
+
+	filter := bson.M{}
+	totalCount, err := coll.CountDocuments(ctx, filter)
+	if err != nil {
+		logger.Error("GetItemCount error", slog.String("collection", collection), slog.String("error", err.Error()))
+		return 0, fmt.Errorf("error fetching item count: %w", err)
+	}
+	return totalCount, nil
 }

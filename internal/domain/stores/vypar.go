@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type BusinessAgentMongo struct {
+type Agent struct {
 	EntityName string            `bson:"entityName"`
 	EntityID   uint64            `bson:"entityId"`
 	OrgName    string            `bson:"orgName"`
@@ -19,7 +19,7 @@ type BusinessAgentMongo struct {
 	Metadata   map[string]string `bson:"metadata,omitempty"` // additional metadata for the agent
 }
 
-type BusinessFilingMongo struct {
+type Filing struct {
 	EntityName             string            `bson:"entityName"`
 	EntityID               uint64            `bson:"entityId"`
 	InitialFilingDate      uint64            `bson:"initialFilingDate"`
@@ -44,8 +44,8 @@ type BusinessFilingMongo struct {
 	Metadata               map[string]string `bson:"metadata,omitempty"` // additional metadata for the agent
 }
 
-func MapAgentFieldsToMongoModel(fields map[string]string) BusinessAgentMongo {
-	agent := BusinessAgentMongo{}
+func MapAgentFieldsToMongoModel(fields map[string]string) Agent {
+	agent := Agent{}
 	for k, v := range fields {
 		switch k {
 		case "entity_name":

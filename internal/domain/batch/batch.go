@@ -101,15 +101,15 @@ type CSVBatchRequest struct {
 
 type LocalCSVBatchRequest struct {
 	CSVBatchRequest `json:"csvBatchRequest"` // CSV batch request with additional fields
-	Config          LocalCSVBatchConfig      // Configuration for the local CSV source
+	Config          LocalCSVBatchConfig      `json:"config"` // Configuration for the local CSV source
 }
 
 type CloudCSVBatchRequest struct {
 	CSVBatchRequest `json:"csvBatchRequest"` // CSV batch request with additional fields
-	Config          CloudCSVBatchConfig      // Configuration for the cloud CSV source
+	Config          CloudCSVBatchConfig      `json:"config"` // Configuration for the cloud CSV source
 }
 
 type LocalCSVMongoBatchRequest struct {
 	CSVBatchRequest `json:"csvBatchRequest"` // CSV batch request with additional fields
-	Config          LocalCSVMongoBatchConfig // Configuration for the local CSV and MongoDB source
+	Config          LocalCSVMongoBatchConfig `json:"config"` // Configuration for the local CSV and MongoDB source
 }
