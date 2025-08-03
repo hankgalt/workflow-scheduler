@@ -31,14 +31,17 @@ var (
 	ErrMissingCollectionName = errors.New(ERR_MISSING_COLLECTION_NAME)
 	ErrMissingWorkflowId     = errors.New(ERR_MISSING_WORKFLOW_ID)
 	ErrMissingRunId          = errors.New(ERR_MISSING_RUN_ID)
+	ErrMissingID             = errors.New("missing ID")
 	ErrDuplicateRun          = errors.New(ERR_DUPLICATE_RUN)
 	ErrDecodeObjectId        = errors.New("error decoding object ID from MongoDB")
 	ErrNotFound              = errors.New(ERR_NOT_FOUND)
+	ErrInvalidHex            = errors.New("invalid hex string for ObjectID")
 )
 
 type DaudRepo interface {
 	CreateRun(ctx context.Context, params *stores.WorkflowRun) (string, error)
 	GetRun(ctx context.Context, runId string) (*stores.WorkflowRun, error)
+	GetRunById(ctx context.Context, idHex string) (*stores.WorkflowRun, error)
 	DeleteRun(ctx context.Context, runId string) error
 	Close(ctx context.Context) error
 }
@@ -113,6 +116,38 @@ func (dr *daudRepo) GetRun(ctx context.Context, runId string) (*stores.WorkflowR
 		}
 
 		l.Error("GetRun error", "error", err.Error(), "run_id", runId)
+		return nil, fmt.Errorf("error fetching workflow run: %w", err)
+	}
+	return &wkflRun, nil
+}
+
+func (dr *daudRepo) GetRunById(ctx context.Context, idHex string) (*stores.WorkflowRun, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error getting logger from context: %w", err)
+	}
+
+	if idHex == "" {
+		return nil, ErrMissingID
+	}
+
+	objID, err := primitive.ObjectIDFromHex(idHex)
+	if err != nil {
+		l.Error("GetRunById error", "error", err.Error())
+		return nil, ErrInvalidHex
+	}
+
+	coll := dr.Store().Collection(RUN_COLLECTION)
+	filter := bson.M{"_id": objID}
+
+	res := coll.FindOne(ctx, filter)
+	var wkflRun stores.WorkflowRun
+	if err := res.Decode(&wkflRun); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, ErrNotFound
+		}
+
+		l.Error("GetRunById error", "error", err.Error(), "obj_id", idHex)
 		return nil, fmt.Errorf("error fetching workflow run: %w", err)
 	}
 	return &wkflRun, nil

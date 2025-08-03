@@ -47,17 +47,24 @@ func TestDaudRepoWorkflowCRUD(t *testing.T) {
 	wkflRunId, err := dr.CreateRun(ctx, wfRun)
 	require.NoError(t, err)
 	require.NotEmpty(t, wkflRunId)
-
 	t.Logf("Workflow run created successfully with ID: %s", wkflRunId)
+
 	// Test getting the workflow run
-	fetchedRun, err := dr.GetRun(ctx, runId)
+	// fetch by object ID
+	fetchedRun, err := dr.GetRunById(ctx, wkflRunId)
+	require.NoError(t, err)
+	require.Equal(t, runId, fetchedRun.RunId)
+	t.Logf("Workflow run fetched successfully with obj_id: %+v", fetchedRun)
+
+	// fetch by run ID
+	fetchedRun, err = dr.GetRun(ctx, runId)
 	require.NoError(t, err)
 	require.NotNil(t, fetchedRun)
 	require.Equal(t, runId, fetchedRun.RunId)
-	t.Logf("Workflow run fetched successfully: %+v", fetchedRun)
+	t.Logf("Workflow run fetched successfully with run_id: %+v", fetchedRun)
 
 	// Test deleting the workflow run
 	err = dr.DeleteRun(ctx, runId)
 	require.NoError(t, err)
-	t.Logf("Workflow run deleted successfully with ID: %s", runId)
+	t.Logf("Workflow run deleted successfully with run_id: %s", runId)
 }
