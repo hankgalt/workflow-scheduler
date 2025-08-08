@@ -49,7 +49,7 @@ type TemporalClient struct {
 func NewTemporalClient(ctx context.Context, cfg TemporalConfig) (*TemporalClient, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("temporalClient:NewTemporalClient - failed to get logger from context: %w", err)
+		return nil, fmt.Errorf("temporalClient:NewTemporalClient - %w", err)
 	}
 
 	if cfg.Namespace == "" {
@@ -129,7 +129,7 @@ func (cc *TemporalClient) StartWorkflowWithCtx(
 ) (client.WorkflowRun, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("TemporalClient:StartWorkflowWithCtx - error getting logger from context: %w", err)
+		return nil, fmt.Errorf("TemporalClient:StartWorkflowWithCtx - %w", err)
 	}
 
 	we, err := cc.client.ExecuteWorkflow(ctx, options, workflow, args...)
@@ -168,7 +168,7 @@ func (cc *TemporalClient) SignalWithStartWorkflowWithCtx(
 ) (client.WorkflowRun, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("temporalClient:SignalWithStartWorkflowWithCtx - failed to get logger from context: %w", err)
+		return nil, fmt.Errorf("temporalClient:SignalWithStartWorkflowWithCtx - %w", err)
 	}
 
 	we, err := cc.client.SignalWithStartWorkflow(ctx, workflowID, signalName, signalArg, options, workflow, workflowArgs...)
@@ -202,7 +202,7 @@ func (cc *TemporalClient) QueryWorkflow(
 ) (any, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("TemporalClient:QueryWorkflow - error getting logger from context: %w", err)
+		return nil, fmt.Errorf("TemporalClient:QueryWorkflow - %w", err)
 	}
 
 	resp, err := cc.client.QueryWorkflow(ctx, workflowID, runID, queryType, args...)

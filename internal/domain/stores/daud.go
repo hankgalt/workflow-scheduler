@@ -2,6 +2,8 @@ package stores
 
 import (
 	"time"
+
+	api "github.com/hankgalt/workflow-scheduler/api/v1"
 )
 
 type RunStatus string
@@ -34,4 +36,14 @@ type RunParams struct {
 	Status      string
 	Type        string
 	ExternalRef string
+}
+
+func MapWorkflowRunToProto(wkflRun *WorkflowRun) *api.WorkflowRun {
+	return &api.WorkflowRun{
+		RunId:       wkflRun.RunId,
+		WorkflowId:  wkflRun.WorkflowId,
+		Status:      wkflRun.Status,
+		Type:        wkflRun.Type,
+		ExternalRef: wkflRun.ExternalRef,
+	}
 }

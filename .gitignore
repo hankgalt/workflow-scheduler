@@ -2,6 +2,7 @@
 vendor
 
 creds
+certs
 
 go.sum
 

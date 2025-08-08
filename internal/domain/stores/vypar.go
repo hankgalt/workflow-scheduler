@@ -3,6 +3,15 @@ package stores
 import (
 	"strconv"
 	"time"
+
+	api "github.com/hankgalt/workflow-scheduler/api/v1"
+)
+
+type BusinessEntityType string
+
+const (
+	EntityTypeAgent  BusinessEntityType = "agent"
+	EntityTypeFiling BusinessEntityType = "filing"
 )
 
 type Agent struct {
@@ -72,4 +81,89 @@ func MapAgentFieldsToMongoModel(fields map[string]string) Agent {
 
 	agent.Address = fields["physical_address1"] + " " + fields["physical_city"] + " " + fields["physical_state"] + " " + fields["physical_postal_code"] + " " + fields["physical_country"]
 	return agent
+}
+
+func MapEntityTypeToModel(ty api.EntityType) BusinessEntityType {
+	switch ty {
+	case api.EntityType_AGENT:
+		return EntityTypeAgent
+	case api.EntityType_FILING:
+		return EntityTypeFiling
+	default:
+		return ""
+	}
+}
+
+func MapAgentModelToProto(agent *Agent, id string) *api.Agent {
+	if agent == nil {
+		return nil
+	}
+
+	return &api.Agent{
+		Id:         id,
+		EntityName: agent.EntityName,
+		EntityId:   agent.EntityID,
+		EntityOrg:  agent.OrgName,
+		FirstName:  agent.FirstName,
+		MiddleName: agent.MiddleName,
+		LastName:   agent.LastName,
+		Address:    agent.Address,
+		AgentType:  agent.AgentType,
+	}
+}
+
+func MapFilingFieldsToMongoModel(fields map[string]string) Filing {
+	filing := Filing{}
+	for k, v := range fields {
+		switch k {
+		case "entity_name":
+			filing.EntityName = v
+		case "entity_num":
+			num, err := strconv.Atoi(v)
+			if err == nil {
+				filing.EntityID = uint64(num)
+			} else {
+				filing.EntityID = 0 // Default to 0 if conversion fails
+			}
+		case "initial_filing_date":
+			if date, err := strconv.ParseUint(v, 10, 64); err == nil {
+				filing.InitialFilingDate = date
+			}
+		case "jurisdiction":
+			filing.Jurisdiction = v
+		case "filing_type":
+			filing.FilingType = v
+		case "foreign_name":
+			filing.ForeignName = v
+		case "suspension_date":
+			if date, err := strconv.ParseUint(v, 10, 64); err == nil {
+				filing.SuspensionDate = date
+			}
+		case "principal_address":
+			filing.PrincipalAddress = v
+		case "mailing_address":
+			filing.MailingAddress = v
+		}
+	}
+
+	return filing
+}
+
+func MapFilingModelToProto(filing *Filing, id string) *api.Filing {
+	if filing == nil {
+		return nil
+	}
+
+	return &api.Filing{
+		Id:                id,
+		EntityName:        filing.EntityName,
+		EntityId:          filing.EntityID,
+		InitialFilingDate: filing.InitialFilingDate,
+		Jurisdiction:      filing.Jurisdiction,
+		FilingType:        filing.FilingType,
+		ForeignName:       filing.ForeignName,
+		SuspensionDate:    filing.SuspensionDate,
+		PrincipalAddress:  filing.PrincipalAddress,
+		MailingAddress:    filing.MailingAddress,
+	}
 }

@@ -4,7 +4,7 @@ go 1.23.6
 
 require (
 	github.com/stretchr/testify v1.10.0
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.0 // indirect
 	google.golang.org/grpc v1.66.0
 	google.golang.org/protobuf v1.36.5
 )

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -20,7 +19,6 @@ const SERVICE_DOMAIN = "127.0.0.1"
 func main() {
 
 	// initialize app logger instance
-	// l := logger.GetZapLogger("data", "scheduler-client")
 	l := logger.GetSlogLogger()
 
 	tlsConfig, err := config.SetupTLSConfig(&config.ConfigOpts{Target: config.CLIENT})
@@ -50,31 +48,27 @@ func main() {
 func testWorkflowCRUD(client api.SchedulerClient, l logger.Logger) error {
 	ctx := context.Background()
 
-	requester := "test-create-run@gmail.com"
 	wfRun, err := client.CreateRun(ctx, &api.RunRequest{
-		WorkflowId:  "S3r43r-T3s73k7l0w",
-		RunId:       "S3r43r-T3s7Ru41d",
-		RequestedBy: requester,
+		WorkflowId: "S3r43r-T3s73k7l0w",
+		RunId:      "S3r43r-T3s7Ru41d",
 	})
 	if err != nil {
-		l.Error("error creating run", zap.Error(err))
+		l.Error("error creating run", "error", err.Error())
 		return err
 	}
 
-	wfRun, err = client.UpdateRun(ctx, &api.UpdateRunRequest{
-		WorkflowId: wfRun.Run.WorkflowId,
-		RunId:      wfRun.Run.RunId,
-		// Status:     string(models.UPLOADED),
+	wfRun, err = client.GetRun(ctx, &api.RunRequest{
+		RunId: wfRun.Run.RunId,
 	})
 	if err != nil {
-		l.Error("error updating run", zap.Error(err))
+		l.Error("error fetching run", "error", err.Error())
 		return err
 	}
 
 	if _, err := client.DeleteRun(ctx, &api.DeleteRunRequest{
 		Id: wfRun.Run.RunId,
 	}); err != nil {
-		l.Error("error deleting run", zap.Error(err))
+		l.Error("error deleting run", "error", err.Error())
 		return err
 	}
 

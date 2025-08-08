@@ -35,7 +35,7 @@ func TestDaudRepoWorkflowCRUD(t *testing.T) {
 	}()
 
 	// Initialize Daud repository
-	dr, err := daud.NewDaudRepo(ms)
+	dr, err := daud.NewDaudRepo(ctx, ms)
 	require.NoError(t, err)
 
 	wkflId, runId := "T3s73k7l0w", "T3s7Ru41d"

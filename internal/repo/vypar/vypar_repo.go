@@ -39,6 +39,15 @@ var (
 
 type VyparRepo interface {
 	AddAgent(ctx context.Context, ag stores.Agent) (string, error)
+	GetAgent(ctx context.Context, entityId uint64) (*stores.Agent, error)
+	GetAgentById(ctx context.Context, idHex string) (*stores.Agent, error)
+	DeleteAgent(ctx context.Context, entityId uint64) (bool, error)
+	DeleteAgentById(ctx context.Context, id string) (bool, error)
+	AddFiling(ctx context.Context, bf stores.Filing) (string, error)
+	GetFiling(ctx context.Context, entityId uint64) (*stores.Filing, error)
+	GetFilingById(ctx context.Context, idHex string) (*stores.Filing, error)
+	DeleteFiling(ctx context.Context, entityId uint64) (bool, error)
+	DeleteFilingById(ctx context.Context, idHex string) (bool, error)
 	Close(ctx context.Context) error
 }
 
@@ -177,6 +186,32 @@ func (vr *vyparRepo) DeleteAgent(ctx context.Context, entityId uint64) (bool, er
 	return result.DeletedCount > 0, nil
 }
 
+func (vr *vyparRepo) DeleteAgentById(ctx context.Context, id string) (bool, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return false, fmt.Errorf("error getting logger from context: %w", err)
+	}
+
+	if id == "" {
+		return false, ErrMissingID
+	}
+
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		l.Error("DeleteAgentById error", "error", err.Error())
+		return false, ErrInvalidHex
+	}
+	filter := bson.M{"_id": objID}
+
+	coll := vr.Store().Collection(AGENT_COLLECTION)
+	result, err := coll.DeleteOne(ctx, filter)
+	if err != nil {
+		l.Error("DeleteAgentById error", "error", err.Error())
+		return false, fmt.Errorf("error deleting agent: %w", err)
+	}
+	return result.DeletedCount > 0, nil
+}
+
 func (vr *vyparRepo) AddFiling(ctx context.Context, bf stores.Filing) (string, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
@@ -281,6 +316,41 @@ func (vr *vyparRepo) DeleteFiling(ctx context.Context, entityId uint64) (bool, e
 		return false, fmt.Errorf("error deleting filing: %w", err)
 	}
 	return result.DeletedCount > 0, nil
+}
+
+func (vr *vyparRepo) DeleteFilingById(ctx context.Context, idHex string) (bool, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return false, fmt.Errorf("error getting logger from context: %w", err)
+	}
+
+	if idHex == "" {
+		return false, ErrMissingID
+	}
+
+	coll := vr.Store().Collection(FILING_COLLECTION)
+	objID, err := primitive.ObjectIDFromHex(idHex)
+	if err != nil {
+		l.Error("DeleteFilingById error", "error", err.Error())
+		return false, ErrInvalidHex
+	}
+	filter := bson.M{"_id": objID}
+
+	res := coll.FindOneAndDelete(ctx, filter)
+	if res.Err() != nil {
+		if res.Err() == mongo.ErrNoDocuments {
+			return false, ErrNoFilingFound
+		}
+		l.Error("DeleteFilingById error", "error", res.Err().Error())
+		return false, fmt.Errorf("error deleting filing: %w", res.Err())
+	}
+
+	var filing stores.Filing
+	if err := res.Decode(&filing); err != nil {
+		l.Error("Decode error", "error", err.Error())
+		return false, fmt.Errorf("error decoding deleted filing: %w", err)
+	}
+	return true, nil
 }
 
 func (vr *vyparRepo) GetItemCount(ctx context.Context, collection string) (int64, error) {

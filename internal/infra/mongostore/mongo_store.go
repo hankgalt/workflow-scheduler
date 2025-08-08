@@ -36,7 +36,7 @@ type mongoStore struct {
 func NewMongoStore(ctx context.Context, cfg infra.StoreConfig) (*mongoStore, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("NewMongoStore - error getting logger from context: %w", err)
+		return nil, fmt.Errorf("NewMongoStore - %w", err)
 	}
 
 	builder := NewMongoConnectionBuilder(cfg.Protocol(), cfg.Host()).WithUser(cfg.User()).WithPassword(cfg.Pwd()).WithConnectionParams(cfg.Params())
@@ -91,7 +91,7 @@ func (ms *mongoStore) Store() *mongo.Database {
 }
 
 func (ms *mongoStore) Close(ctx context.Context) error {
-	if err := ms.client.Disconnect(ctx); err != nil {
+	if err := ms.client.Disconnect(ctx); err != nil && err != mongo.ErrClientDisconnected {
 		return ErrMongoClientDisconn
 	}
 	return nil
@@ -104,7 +104,6 @@ func (ms *mongoStore) Stats(ctx context.Context, db string) {
 	}
 
 	var stats infra.ConnPoolStats
-	// var stats map[string]interface{}
 	err = ms.client.Database(db).RunCommand(ctx, bson.D{{Key: "connPoolStats", Value: 1}}).Decode(&stats)
 	if err != nil {
 		l.Error("stats error", slog.String("error", err.Error()))
