@@ -29,6 +29,7 @@ services:
   
   temporal:
     container_name: temporal
+    image: temporalio/auto-setup:1.22.4
     environment:
       - CASSANDRA_SEEDS=cassandra
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-cass.yaml
@@ -36,7 +37,6 @@ services:
       - ES_SEEDS=elasticsearch
       - ES_VERSION=v7
       - PROMETHEUS_ENDPOINT=0.0.0.0:8000   # <— enables metrics on :8000
-    image: temporalio/auto-setup:1.22.4
     ports:
       - 7233:7233  # Temporal gRPC API
       - "8000:8000"  # <— publish metrics to host for Prometheus scrape
@@ -52,10 +52,10 @@ services:
   
   temporal-admin-tools:
     container_name: temporal-admin-tools
+    image: temporalio/admin-tools:1.22.4
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_CLI_ADDRESS=temporal:7233
-    image: temporalio/admin-tools:1.22.4
     stdin_open: true
     tty: true
     depends_on:
@@ -65,10 +65,10 @@ services:
   
   temporal-ui:
     container_name: temporal-ui
+    image: temporalio/ui:2.21.0
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3000
-    image: temporalio/ui:2.21.0
     ports:
       - 8080:8080
     depends_on:
