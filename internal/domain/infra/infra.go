@@ -7,6 +7,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+type ShutdownFunc func(context.Context) error
+
 var (
 	defaultDialTimeout      = 5 * time.Second
 	defaultKeepAlive        = 30 * time.Second

@@ -29,50 +29,52 @@ services:
   
   temporal:
     container_name: temporal
-    depends_on:
-      - cassandra
-      - elasticsearch
     environment:
       - CASSANDRA_SEEDS=cassandra
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-cass.yaml
       - ENABLE_ES=true
       - ES_SEEDS=elasticsearch
       - ES_VERSION=v7
+      - PROMETHEUS_ENDPOINT=0.0.0.0:8000   # <— enables metrics on :8000
     image: temporalio/auto-setup:1.22.4
-    networks:
-      - schenet
     ports:
-      - 7233:7233
+      - 7233:7233  # Temporal gRPC API
+      - "8000:8000"  # <— publish metrics to host for Prometheus scrape
     volumes:
       - ./dynamicconfig:/etc/temporal/config/dynamicconfig
     labels:
       kompose.volume.type: configMap
+    depends_on:
+      - cassandra
+      - elasticsearch
+    networks:
+      - schenet
   
   temporal-admin-tools:
     container_name: temporal-admin-tools
-    depends_on:
-      - temporal
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_CLI_ADDRESS=temporal:7233
     image: temporalio/admin-tools:1.22.4
-    networks:
-      - schenet
     stdin_open: true
     tty: true
+    depends_on:
+      - temporal
+    networks:
+      - schenet
   
   temporal-ui:
     container_name: temporal-ui
-    depends_on:
-      - temporal
     environment:
       - TEMPORAL_ADDRESS=temporal:7233
       - TEMPORAL_CORS_ORIGINS=http://localhost:3000
     image: temporalio/ui:2.21.0
-    networks:
-      - schenet
     ports:
       - 8080:8080
+    depends_on:
+      - temporal
+    networks:
+      - schenet
 
 networks:
   schenet:

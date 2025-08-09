@@ -8,6 +8,7 @@ import (
 	"go.temporal.io/sdk/client"
 
 	"github.com/comfforts/logger"
+	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 )
 
 const (
@@ -23,14 +24,16 @@ var (
 )
 
 type TemporalConfig struct {
-	Namespace string
-	Host      string
+	Namespace  string
+	Host       string
+	ClientName string
 }
 
-func NewTemporalConfig(namespace, host string) TemporalConfig {
+func NewTemporalConfig(namespace, host, clientName string) TemporalConfig {
 	return TemporalConfig{
-		Namespace: namespace,
-		Host:      host,
+		Namespace:  namespace,
+		Host:       host,
+		ClientName: clientName,
 	}
 }
 
@@ -42,6 +45,7 @@ type registryOption struct {
 type TemporalClient struct {
 	// client is the client used for temporal
 	client             client.Client
+	oTelShutdown       infra.ShutdownFunc
 	workflowRegistries []registryOption
 	activityRegistries []registryOption
 }
@@ -52,35 +56,59 @@ func NewTemporalClient(ctx context.Context, cfg TemporalConfig) (*TemporalClient
 		return nil, fmt.Errorf("temporalClient:NewTemporalClient - %w", err)
 	}
 
-	if cfg.Namespace == "" {
-		l.Error(ERR_MISSING_NAMESPACE)
-		return nil, ErrMissingNamespace
-	}
-	if cfg.Host == "" {
-		l.Error(ERR_MISSING_HOST)
-		return nil, ErrMissingHost
+	connBuilder := NewTemporalClientConnectionBuilder(cfg.Namespace, cfg.Host).WithMetrics(cfg.ClientName, ":9464", "otel-collector:4317")
+
+	clOpts, shutdown, _, err := connBuilder.Build(ctx)
+	if err != nil {
+		l.Error("error building temporal client options", "error", err.Error())
+		if shutdown != nil {
+			sErr := shutdown(ctx)
+			if sErr != nil {
+				l.Error("error shutting down OTel", "error", sErr.Error())
+				err = errors.Join(sErr, err)
+			}
+		}
+		return nil, fmt.Errorf("error building temporal client options: %w", err)
 	}
 
-	clientOptions := client.Options{
-		Namespace: cfg.Namespace,
-		HostPort:  cfg.Host,
-	}
-	tClient, err := client.Dial(clientOptions)
+	tClient, err := client.Dial(clOpts)
 	if err != nil {
-		l.Error(ERR_TEMPORAL_CLIENT)
-		return nil, ErrTemporalClient
+		l.Error("error connecting temporal server", "error", err.Error())
+		if shutdown != nil {
+			sErr := shutdown(ctx)
+			if sErr != nil {
+				l.Error("error shutting down OTel", "error", sErr.Error())
+				err = errors.Join(sErr, err)
+			}
+		}
+		return nil, err
 	}
 
 	temporalCl := TemporalClient{
-		client: tClient,
+		client:       tClient,
+		oTelShutdown: shutdown,
 	}
 
 	return &temporalCl, nil
 }
 
 // Close closes the temporal service client
-func (tc *TemporalClient) Close() {
+func (tc *TemporalClient) Close(ctx context.Context) error {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return fmt.Errorf("temporalClient:NewTemporalClient - %w", err)
+	}
+
 	tc.client.Close()
+
+	if tc.oTelShutdown != nil {
+		err := tc.oTelShutdown(ctx)
+		if err != nil {
+			l.Error("error shutting down OTel", "error", err.Error())
+			return fmt.Errorf("error shutting down OTel: %w", err)
+		}
+	}
+	return nil
 }
 
 // RegisterWorkflow registers a workflow
@@ -145,7 +173,7 @@ func (cc *TemporalClient) StartWorkflowWithCtx(
 func (cc *TemporalClient) SignalWorkflow(ctx context.Context, workflowID, signal string, data any) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("TemporalClient:SignalWorkflow - %w", err)
 	}
 
 	err = cc.client.SignalWorkflow(context.Background(), workflowID, "", signal, data)

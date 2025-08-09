@@ -96,5 +96,12 @@ stop-service:
 start-worker:
 	scripts/start-worker.sh ${TARGET}
 
+# start observability
+start-obs:
+	@echo "starting observability"
+	docker-compose -f deploy/scheduler/docker-compose-observability.yml up -d --build
 
-
+# stop observability
+stop-obs:
+	@echo "stopping observability"
+	docker-compose -f deploy/scheduler/docker-compose-observability.yml down

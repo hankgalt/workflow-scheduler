@@ -22,7 +22,7 @@ func TestProcessLocalCSVToMongoWorkflow(t *testing.T) {
 	mCfg := envutils.BuildMongoStoreConfig()
 	require.NotEmpty(t, mCfg.Host, "MongoDB host should not be empty")
 
-	tCfg := envutils.BuildTemporalConfig()
+	tCfg := envutils.BuildTemporalConfig("TestProcessLocalCSVToMongoWorkflow")
 	require.NotEmpty(t, tCfg.Host, "Temporal host should not be empty")
 
 	svcCfg := scheduler.NewSchedulerServiceConfig(tCfg, mCfg)

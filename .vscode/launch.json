@@ -25,6 +25,14 @@
             "request": "launch",
             "mode": "auto",
             "program": "cmd/client/client.go"
+        },
+        {
+            "name": "Launch batch worker",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "cmd/batch_worker/worker.go",
+            "envFile": "${workspaceFolder}/env/batch.env",
         }
     ]
 }

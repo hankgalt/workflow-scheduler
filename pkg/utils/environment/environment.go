@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
+	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/test"
-	"github.com/hankgalt/workflow-scheduler/internal/infra"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/temporal"
 )
@@ -179,10 +179,10 @@ func BuildMongoStoreConfig() infra.StoreConfig {
 	return mongostore.NewMongoDBConfig(dbProtocol, dbHost, dbUser, dbPwd, dbParams, dbName)
 }
 
-func BuildTemporalConfig() temporal.TemporalConfig {
+func BuildTemporalConfig(clientName string) temporal.TemporalConfig {
 	namespace := os.Getenv("WORKFLOW_DOMAIN")
 	host := os.Getenv("TEMPORAL_HOST")
-	return temporal.NewTemporalConfig(namespace, host)
+	return temporal.NewTemporalConfig(namespace, host, clientName)
 }
 
 func BuildTestConfig() test.TestConfig {

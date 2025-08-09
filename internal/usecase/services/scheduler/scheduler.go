@@ -10,8 +10,8 @@ import (
 	"github.com/comfforts/logger"
 
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
+	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
-	"github.com/hankgalt/workflow-scheduler/internal/infra"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/temporal"
 	"github.com/hankgalt/workflow-scheduler/internal/repo/daud"
@@ -74,7 +74,10 @@ func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*sche
 		l.Error("error getting MongoDB store", "error", err.Error())
 
 		// Close the temporal client before returning
-		tc.Close()
+		err := tc.Close(ctx)
+		if err != nil {
+			l.Error("error closing temporal client", "error", err.Error())
+		}
 		return nil, err
 	}
 
@@ -84,7 +87,10 @@ func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*sche
 		l.Error("error getting MongoDB store for Vypar", "error", err.Error())
 
 		// Close the temporal client before returning
-		tc.Close()
+		err := tc.Close(ctx)
+		if err != nil {
+			l.Error("error closing temporal client", "error", err.Error())
+		}
 
 		// Close the MongoDB store before returning
 		if err := dms.Close(ctx); err != nil {
@@ -98,8 +104,12 @@ func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*sche
 	dr, err := daud.NewDaudRepo(ctx, dms)
 	if err != nil {
 		l.Error("error creating Daud repository", "error", err.Error())
+
 		// Close the temporal client before returning
-		tc.Close()
+		err := tc.Close(ctx)
+		if err != nil {
+			l.Error("error closing temporal client", "error", err.Error())
+		}
 
 		// Close the daud MongoDB store before returning
 		if err := dms.Close(ctx); err != nil {
@@ -119,8 +129,12 @@ func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*sche
 	vr, err := vypar.NewVyparRepo(ctx, vms)
 	if err != nil {
 		l.Error("error creating Vypar repository", "error", err.Error())
+
 		// Close the temporal client before returning
-		tc.Close()
+		err := tc.Close(ctx)
+		if err != nil {
+			l.Error("error closing temporal client", "error", err.Error())
+		}
 
 		// Close the daud MongoDB store before returning
 		if err := dms.Close(ctx); err != nil {
@@ -323,10 +337,14 @@ func (bs *schedulerService) Close(ctx context.Context) error {
 		return fmt.Errorf("SchedulerService:Close - error getting logger from context: %w", err)
 	}
 
-	bs.temporal.Close()
+	err = bs.temporal.Close(ctx)
+	if err != nil {
+		l.Error("error closing temporal client", "error", err.Error())
+		return err
+	}
 
 	if err := bs.daud.Close(ctx); err != nil {
-		l.Error("error closing Daud repository", "error", err.Error())
+		l.Error("error closing Daud repository connection", "error", err.Error())
 		return err
 	}
 	return nil

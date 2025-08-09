@@ -12,8 +12,8 @@ import (
 
 	"github.com/comfforts/logger"
 
+	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
-	"github.com/hankgalt/workflow-scheduler/internal/infra"
 )
 
 const RUN_COLLECTION = "daud.workflow_run"

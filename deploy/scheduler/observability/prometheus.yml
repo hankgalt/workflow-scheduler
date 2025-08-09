@@ -1,0 +1,18 @@
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+scrape_configs:
+  # scrape your Go process (client/worker) exposing /metrics from observability.Init
+  # - job_name: "workflow-scheduler"
+  #   static_configs:
+  #     - targets: ["host.docker.internal:9464"] # adjust for your container network
+
+  # Optional: scrape Temporal Server metrics if you expose them (default port often 8000)
+  - job_name: "temporal-server"
+    static_configs:
+      - targets: ["temporal:8000"]  # expose PROMETHEUS_ENDPOINT=0.0.0.0:8000 on server container
+  
+  - job_name: "otel-collector"
+    static_configs:
+      - targets: ["otel-collector:8888"]  # Collector own metrics

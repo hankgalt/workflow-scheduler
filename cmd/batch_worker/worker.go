@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -10,6 +11,7 @@ import (
 
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/interceptor"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 
@@ -27,39 +29,48 @@ func main() {
 
 	host, err := os.Hostname()
 	if err != nil {
-		l.Error("error getting host name, using default", "error", err.Error())
+		l.Debug("error getting host name, using default", "error", err.Error())
 		host = DEFAULT_WORKER_HOST
 	} else {
 		host = fmt.Sprintf("%s-%s", host, DEFAULT_WORKER_HOST)
 	}
 
 	namespace := os.Getenv("WORKFLOW_DOMAIN")
-	if namespace == "" {
-		l.Error(temporal.ERR_MISSING_NAMESPACE)
-		panic(temporal.ErrMissingNamespace)
-	}
-
 	temporalHost := os.Getenv("TEMPORAL_HOST")
-	if host == "" {
-		l.Error(temporal.ERR_MISSING_HOST)
-		panic(temporal.ErrMissingHost)
+
+	startupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	startupCtx = logger.WithLogger(startupCtx, l)
+
+	connBuilder := temporal.NewTemporalClientConnectionBuilder(namespace, temporalHost).WithMetrics(host, ":9464", "otel-collector:4317")
+	clientOpts, shutdown, tracingInt, err := connBuilder.Build(startupCtx)
+	if err != nil {
+		l.Error("error building temporal client options", "error", err.Error())
+		if shutdown != nil {
+			sErr := shutdown(startupCtx)
+			if sErr != nil {
+				l.Error("error shutting down OTel", "error", sErr.Error())
+				err = errors.Join(sErr, err)
+			}
+		}
+		panic(fmt.Errorf("error building temporal client options: %w", err))
 	}
 
-	clientOpts := client.Options{
-		Namespace: namespace,
-		HostPort:  temporalHost,
-	}
 	tClient, err := client.Dial(clientOpts)
 	if err != nil {
 		l.Error("error connecting temporal server", "error", err.Error())
 		panic(err)
 	}
-	defer tClient.Close()
+	defer func() {
+		l.Info("closing temporal client", "host", host)
+		tClient.Close()
+	}()
 
 	workerOptions := worker.Options{
+		BackgroundActivityContext: context.Background(),
+		Interceptors:              []interceptor.WorkerInterceptor{tracingInt},
 		EnableLoggingInReplay:     true,
 		EnableSessionWorker:       true,
-		BackgroundActivityContext: context.Background(),
 	}
 	worker := worker.New(tClient, btchwkfl.ApplicationName, workerOptions)
 
@@ -70,20 +81,19 @@ func main() {
 		l.Error("error starting temporal batch worker", "error", err.Error())
 		panic(err)
 	}
+	l.Info("Batch worker started, will wait for interrupt signal to gracefully shutdown the worker", "host", host, "worker", btchwkfl.ApplicationName)
 
-	l.Info("Started batch worker, will wait for interrupt signal to gracefully shutdown the worker", "worker", btchwkfl.ApplicationName)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer func() {
-		l.Info("batch worker stopped", "worker", btchwkfl.ApplicationName)
-		cancel()
-	}()
-	<-ctx.Done()
-	l.Info("batch worker exiting", "worker", btchwkfl.ApplicationName)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	tClient.Close()
+
+	<-shutdownCtx.Done()
+	l.Info("batch worker exiting", "host", host)
 }
 
 func registerBatchWorkflow(worker worker.Worker) {

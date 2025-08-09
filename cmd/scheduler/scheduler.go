@@ -23,10 +23,19 @@ import (
 )
 
 const SERVICE_PORT = 65051
+const DEFAULT_SERVICE_HOST = "scheduler-service"
 
 func main() {
 	// Initialize logger
 	l := logger.GetSlogMultiLogger("data")
+
+	host, err := os.Hostname()
+	if err != nil {
+		l.Debug("error getting host name, using default", "error", err.Error())
+		host = DEFAULT_SERVICE_HOST
+	} else {
+		host = fmt.Sprintf("%s-%s", host, DEFAULT_SERVICE_HOST)
+	}
 
 	// Set up server port from environment variable or use default
 	serverPort, err := strconv.Atoi(os.Getenv("SERVER_PORT"))
@@ -47,7 +56,7 @@ func main() {
 	// Build MongoDB and Temporal configurations for the scheduler service
 	l.Info("setting up scheduler server config")
 	mCfg := envutils.BuildMongoStoreConfig()
-	tCfg := envutils.BuildTemporalConfig()
+	tCfg := envutils.BuildTemporalConfig(host)
 	svcCfg := scheduler.NewSchedulerServiceConfig(tCfg, mCfg)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)

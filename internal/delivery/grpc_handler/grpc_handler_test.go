@@ -418,7 +418,7 @@ func setupTest(t *testing.T, fn func(*grpchandler.Config)) (
 	mCfg := envutils.BuildMongoStoreConfig()
 	require.NotEmpty(t, mCfg.Host, "MongoDB host should not be empty")
 
-	tCfg := envutils.BuildTemporalConfig()
+	tCfg := envutils.BuildTemporalConfig("GRPCHandlerTest")
 	require.NotEmpty(t, tCfg.Host, "Temporal host should not be empty")
 
 	svcCfg := scheduler.NewSchedulerServiceConfig(tCfg, mCfg)

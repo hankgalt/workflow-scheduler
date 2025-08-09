@@ -13,7 +13,7 @@ import (
 
 	"github.com/comfforts/logger"
 
-	"github.com/hankgalt/workflow-scheduler/internal/infra"
+	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 )
 
 const (
