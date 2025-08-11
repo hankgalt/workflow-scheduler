@@ -16,18 +16,6 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 )
 
-const (
-	ERR_MISSING_DB_NAME      = "missing database name"
-	ERR_MONGO_CLIENT_CONN    = "error connecting with mongo client"
-	ERR_MONGO_CLIENT_DISCONN = "error disconnecting with mongo client"
-)
-
-var (
-	ErrMissingDBName      = errors.New(ERR_MISSING_DB_NAME)
-	ErrMongoClientConn    = errors.New(ERR_MONGO_CLIENT_CONN)
-	ErrMongoClientDisconn = errors.New(ERR_MONGO_CLIENT_DISCONN)
-)
-
 type mongoStore struct {
 	client *mongo.Client
 	store  *mongo.Database

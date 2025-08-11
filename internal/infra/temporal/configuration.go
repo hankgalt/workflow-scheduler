@@ -13,12 +13,42 @@ import (
 )
 
 const (
-	ERR_REQUIRED_PARAMS = "namespace & host port are required"
+	ERR_REQUIRED_PARAMS   = "namespace & host port are required"
+	ERR_MISSING_NAMESPACE = "missing namespace information"
+	ERR_MISSING_HOST      = "missing server host information"
+	ERR_TEMPORAL_CLIENT   = "error creating temporal client"
 )
 
 var (
-	ErrRequiredParams = errors.New(ERR_REQUIRED_PARAMS)
+	ErrRequiredParams   = errors.New(ERR_REQUIRED_PARAMS)
+	ErrMissingNamespace = errors.New(ERR_MISSING_NAMESPACE)
+	ErrMissingHost      = errors.New(ERR_MISSING_HOST)
+	ErrTemporalClient   = errors.New(ERR_TEMPORAL_CLIENT)
 )
+
+type TemporalConfig struct {
+	namespace    string
+	host         string
+	clientName   string
+	metricsAddr  string
+	otelEndpoint string
+}
+
+func NewTemporalConfig(namespace, host, clientName, metricsAddr, otelEndpoint string) TemporalConfig {
+	return TemporalConfig{
+		namespace:    namespace,
+		host:         host,
+		clientName:   clientName,
+		metricsAddr:  metricsAddr,
+		otelEndpoint: otelEndpoint,
+	}
+}
+
+func (rc TemporalConfig) Namespace() string    { return rc.namespace }
+func (rc TemporalConfig) Host() string         { return rc.host }
+func (rc TemporalConfig) ClientName() string   { return rc.clientName }
+func (rc TemporalConfig) MetricsAddr() string  { return rc.metricsAddr }
+func (rc TemporalConfig) OtelEndpoint() string { return rc.otelEndpoint }
 
 type TemporalConnectionBuilder interface {
 	Build(ctx context.Context) (client.Options, infra.ShutdownFunc, interceptor.Interceptor, error)

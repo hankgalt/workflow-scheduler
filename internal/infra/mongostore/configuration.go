@@ -11,11 +11,17 @@ import (
 const (
 	ERR_REQUIRED_PARAMS      = "host & protocol are required"
 	ERR_REQUIRED_CONN_PARAMS = "connection params are required"
+	ERR_MISSING_DB_NAME      = "missing database name"
+	ERR_MONGO_CLIENT_CONN    = "error connecting with mongo client"
+	ERR_MONGO_CLIENT_DISCONN = "error disconnecting with mongo client"
 )
 
 var (
 	ErrRequiredParams     = errors.New(ERR_REQUIRED_PARAMS)
 	ErrRequiredConnParams = errors.New(ERR_REQUIRED_CONN_PARAMS)
+	ErrMissingDBName      = errors.New(ERR_MISSING_DB_NAME)
+	ErrMongoClientConn    = errors.New(ERR_MONGO_CLIENT_CONN)
+	ErrMongoClientDisconn = errors.New(ERR_MONGO_CLIENT_DISCONN)
 )
 
 type MongoDBConfig struct {

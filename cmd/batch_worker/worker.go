@@ -28,6 +28,7 @@ func main() {
 	fmt.Println("Starting batch worker - setting up logger instance")
 	l := logger.GetSlogMultiLogger("data")
 
+	// setup host identity for worker
 	host, err := os.Hostname()
 	if err != nil {
 		l.Debug("error getting host name, using default", "error", err.Error())
@@ -36,17 +37,28 @@ func main() {
 		host = fmt.Sprintf("%s-%s", host, DEFAULT_WORKER_HOST)
 	}
 
+	// build temporal client config from environment variables
 	tCfg := envutils.BuildTemporalConfig(host)
 
+	// setup startup context with timeout
 	startupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	startupCtx = logger.WithLogger(startupCtx, l)
 
-	connBuilder := temporal.NewTemporalClientConnectionBuilder(tCfg.Namespace(), tCfg.Host()).WithMetrics(tCfg.ClientName(), tCfg.MetricsAddr(), tCfg.OtelEndpoint())
+	// build temporal client connection options
+	connBuilder := temporal.NewTemporalClientConnectionBuilder(
+		tCfg.Namespace(),
+		tCfg.Host(),
+	).WithMetrics(
+		tCfg.ClientName(),
+		tCfg.MetricsAddr(),
+		tCfg.OtelEndpoint(),
+	)
 	clientOpts, shutdown, tracingInt, err := connBuilder.Build(startupCtx)
 	if err != nil {
 		l.Error("error building temporal client options", "error", err.Error())
 		if shutdown != nil {
+			// shutdown OTel if it was initialized, using startup context
 			sErr := shutdown(startupCtx)
 			if sErr != nil {
 				l.Error("error shutting down OTel", "error", sErr.Error())
@@ -56,6 +68,7 @@ func main() {
 		panic(fmt.Errorf("error building temporal client options: %w", err))
 	}
 
+	// get temporal client instance
 	tClient, err := client.Dial(clientOpts)
 	if err != nil {
 		l.Error("error connecting temporal server", "error", err.Error())
@@ -66,6 +79,8 @@ func main() {
 		tClient.Close()
 	}()
 
+	// build worker options with tracing interceptor & initialize worker instance
+	// TODO - add worker context
 	workerOptions := worker.Options{
 		BackgroundActivityContext: context.Background(),
 		Interceptors:              []interceptor.WorkerInterceptor{tracingInt},
@@ -74,23 +89,32 @@ func main() {
 	}
 	worker := worker.New(tClient, btchwkfl.ApplicationName, workerOptions)
 
+	// register workflows and activities
 	registerBatchWorkflow(worker)
 
-	// Start worker
+	// start worker
 	if err := worker.Start(); err != nil {
 		l.Error("error starting temporal batch worker", "error", err.Error())
 		panic(err)
 	}
 	l.Info("Batch worker started, will wait for interrupt signal to gracefully shutdown the worker", "host", host, "worker", btchwkfl.ApplicationName)
 
+	// wait for interrupt signal to gracefully shutdown the worker
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// setup shutdown context with timeout
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// close temporal client and shutdown OTel if initialized
 	tClient.Close()
+	if shutdown != nil {
+		if err := shutdown(shutdownCtx); err != nil {
+			l.Error("error shutting down OTel", "error", err.Error())
+		}
+	}
 
 	<-shutdownCtx.Done()
 	l.Info("batch worker exiting", "host", host)

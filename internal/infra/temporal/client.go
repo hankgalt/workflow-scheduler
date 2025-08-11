@@ -11,49 +11,12 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 )
 
-const (
-	ERR_MISSING_NAMESPACE = "missing namespace information"
-	ERR_MISSING_HOST      = "missing server host information"
-	ERR_TEMPORAL_CLIENT   = "error creating temporal client"
-)
-
-var (
-	ErrMissingNamespace = errors.New(ERR_MISSING_NAMESPACE)
-	ErrMissingHost      = errors.New(ERR_MISSING_HOST)
-	ErrTemporalClient   = errors.New(ERR_TEMPORAL_CLIENT)
-)
-
-type TemporalConfig struct {
-	namespace    string
-	host         string
-	clientName   string
-	metricsAddr  string
-	otelEndpoint string
-}
-
-func (rc TemporalConfig) Namespace() string    { return rc.namespace }
-func (rc TemporalConfig) Host() string         { return rc.host }
-func (rc TemporalConfig) ClientName() string   { return rc.clientName }
-func (rc TemporalConfig) MetricsAddr() string  { return rc.metricsAddr }
-func (rc TemporalConfig) OtelEndpoint() string { return rc.otelEndpoint }
-
-func NewTemporalConfig(namespace, host, clientName, metricsAddr, otelEndpoint string) TemporalConfig {
-	return TemporalConfig{
-		namespace:    namespace,
-		host:         host,
-		clientName:   clientName,
-		metricsAddr:  metricsAddr,
-		otelEndpoint: otelEndpoint,
-	}
-}
-
 type registryOption struct {
 	registry any
 	alias    string
 }
 
 type TemporalClient struct {
-	// client is the client used for temporal
 	client             client.Client
 	oTelShutdown       infra.ShutdownFunc
 	workflowRegistries []registryOption
@@ -84,14 +47,15 @@ func NewTemporalClient(ctx context.Context, cfg TemporalConfig) (*TemporalClient
 	tClient, err := client.Dial(clOpts)
 	if err != nil {
 		l.Error("error connecting temporal server", "error", err.Error())
+		tErr := ErrTemporalClient
 		if shutdown != nil {
 			sErr := shutdown(ctx)
 			if sErr != nil {
 				l.Error("error shutting down OTel", "error", sErr.Error())
-				err = errors.Join(sErr, err)
+				err = errors.Join(sErr, tErr)
 			}
 		}
-		return nil, err
+		return nil, tErr
 	}
 
 	temporalCl := TemporalClient{
@@ -100,6 +64,14 @@ func NewTemporalClient(ctx context.Context, cfg TemporalConfig) (*TemporalClient
 	}
 
 	return &temporalCl, nil
+}
+
+func (tc *TemporalClient) RegisteredWorkflows() []registryOption {
+	return tc.workflowRegistries
+}
+
+func (tc *TemporalClient) RegisteredActivities() []registryOption {
+	return tc.activityRegistries
 }
 
 // Close closes the temporal service client
