@@ -182,7 +182,8 @@ func BuildMongoStoreConfig() infra.StoreConfig {
 func BuildTemporalConfig(clientName string) temporal.TemporalConfig {
 	namespace := os.Getenv("WORKFLOW_DOMAIN")
 	host := os.Getenv("TEMPORAL_HOST")
-	return temporal.NewTemporalConfig(namespace, host, clientName)
+	metricsPort, otelEndpoint := BuildMetricsConfig()
+	return temporal.NewTemporalConfig(namespace, host, clientName, metricsPort, otelEndpoint)
 }
 
 func BuildTestConfig() test.TestConfig {
@@ -192,4 +193,18 @@ func BuildTestConfig() test.TestConfig {
 	}
 	bucket := os.Getenv("BUCKET")
 	return test.NewTestConfig(dataDir, bucket)
+}
+
+func BuildMetricsConfig() (string, string) {
+	metricsPort := os.Getenv("METRICS_PORT")
+	if metricsPort == "" {
+		metricsPort = "9464"
+	} else {
+		metricsPort = fmt.Sprintf(":%s", metricsPort)
+	}
+	otelEndpoint := os.Getenv("OTEL_ENDPOINT")
+	if otelEndpoint == "" {
+		otelEndpoint = "otel-collector:4317"
+	}
+	return metricsPort, otelEndpoint
 }

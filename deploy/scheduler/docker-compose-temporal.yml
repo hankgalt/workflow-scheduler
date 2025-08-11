@@ -36,9 +36,10 @@ services:
       - ENABLE_ES=true
       - ES_SEEDS=elasticsearch
       - ES_VERSION=v7
+      - LOG_LEVEL=info
       - PROMETHEUS_ENDPOINT=0.0.0.0:8000   # <— enables metrics on :8000
     ports:
-      - 7233:7233  # Temporal gRPC API
+      - "7233:7233"  # Temporal gRPC API
       - "8000:8000"  # <— publish metrics to host for Prometheus scrape
     volumes:
       - ./dynamicconfig:/etc/temporal/config/dynamicconfig

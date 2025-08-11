@@ -1,21 +1,24 @@
 services:
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.53.0
     container_name: prometheus
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=15d"]
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    ports: ["9090:9090"]
+    ports:
+      - "9090:9090"
     networks:
       - schenet
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.1.0
     container_name: grafana
-    ports: ["3000:3000"]
+    ports:
+      - "3000:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
-    depends_on: [prometheus]
+    depends_on:
+      - prometheus
     networks:
       - schenet
 
@@ -26,7 +29,7 @@ services:
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     ports:
-      - "16686:16686"   # UI
+      - "16686:16686"   # JaegerUI
       # - "4317:4317"
       # - "4318:4318"
     networks:
@@ -34,15 +37,16 @@ services:
 
   # Recommended: OTEL Collector in front of Jaeger/Tempo/etc.
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
+    image: otel/opentelemetry-collector-contrib:0.103.0
     container_name: otel-collector
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
       - ./observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     ports:
       - "4317:4317"     # OTLP gRPC (from your app)
-      - "8888:8888"     # Collector metrics
-    depends_on: [jaeger]
+      - "8889:8889"     # Collector metrics
+    depends_on:
+      - jaeger
     networks:
       - schenet
 

@@ -16,7 +16,7 @@ exporters:
 service:
   telemetry:
     logs:
-      level: info
+      level: debug
     metrics:
       level: normal
       readers:
@@ -24,7 +24,7 @@ service:
             exporter:
               prometheus:
                 host: 0.0.0.0
-                port: 8888    # Prometheus scrapes http://otel-collector:8888/metrics
+                port: 8889    # Prometheus scrapes http://otel-collector:8889/metrics
 
   pipelines:
     traces:

@@ -97,9 +97,12 @@ start-worker:
 	scripts/start-worker.sh ${TARGET}
 
 # start observability
-start-obs:
+obs:
 	@echo "starting observability"
-	docker-compose -f deploy/scheduler/docker-compose-observability.yml up -d --build
+	docker-compose -f deploy/scheduler/docker-compose-observability.yml up -d --force-recreate --build
+
+# start observability
+start-obs: network obs
 
 # stop observability
 stop-obs:

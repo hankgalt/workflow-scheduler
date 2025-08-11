@@ -24,16 +24,26 @@ var (
 )
 
 type TemporalConfig struct {
-	Namespace  string
-	Host       string
-	ClientName string
+	namespace    string
+	host         string
+	clientName   string
+	metricsAddr  string
+	otelEndpoint string
 }
 
-func NewTemporalConfig(namespace, host, clientName string) TemporalConfig {
+func (rc TemporalConfig) Namespace() string    { return rc.namespace }
+func (rc TemporalConfig) Host() string         { return rc.host }
+func (rc TemporalConfig) ClientName() string   { return rc.clientName }
+func (rc TemporalConfig) MetricsAddr() string  { return rc.metricsAddr }
+func (rc TemporalConfig) OtelEndpoint() string { return rc.otelEndpoint }
+
+func NewTemporalConfig(namespace, host, clientName, metricsAddr, otelEndpoint string) TemporalConfig {
 	return TemporalConfig{
-		Namespace:  namespace,
-		Host:       host,
-		ClientName: clientName,
+		namespace:    namespace,
+		host:         host,
+		clientName:   clientName,
+		metricsAddr:  metricsAddr,
+		otelEndpoint: otelEndpoint,
 	}
 }
 
@@ -56,7 +66,7 @@ func NewTemporalClient(ctx context.Context, cfg TemporalConfig) (*TemporalClient
 		return nil, fmt.Errorf("temporalClient:NewTemporalClient - %w", err)
 	}
 
-	connBuilder := NewTemporalClientConnectionBuilder(cfg.Namespace, cfg.Host).WithMetrics(cfg.ClientName, ":9464", "otel-collector:4317")
+	connBuilder := NewTemporalClientConnectionBuilder(cfg.Namespace(), cfg.Host()).WithMetrics(cfg.ClientName(), cfg.MetricsAddr(), cfg.OtelEndpoint())
 
 	clOpts, shutdown, _, err := connBuilder.Build(ctx)
 	if err != nil {

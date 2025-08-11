@@ -33,6 +33,14 @@
             "mode": "auto",
             "program": "cmd/batch_worker/worker.go",
             "envFile": "${workspaceFolder}/env/batch.env",
+        },
+        {
+            "name": "Test observability",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "cmd/observability/obs.go",
+            "envFile": "${workspaceFolder}/env/obs.env",
         }
     ]
 }

@@ -19,6 +19,7 @@ import (
 
 	"github.com/hankgalt/workflow-scheduler/internal/infra/temporal"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
+	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )
 
 const DEFAULT_WORKER_HOST = "batch-worker"
@@ -35,14 +36,13 @@ func main() {
 		host = fmt.Sprintf("%s-%s", host, DEFAULT_WORKER_HOST)
 	}
 
-	namespace := os.Getenv("WORKFLOW_DOMAIN")
-	temporalHost := os.Getenv("TEMPORAL_HOST")
+	tCfg := envutils.BuildTemporalConfig(host)
 
 	startupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	startupCtx = logger.WithLogger(startupCtx, l)
 
-	connBuilder := temporal.NewTemporalClientConnectionBuilder(namespace, temporalHost).WithMetrics(host, ":9464", "otel-collector:4317")
+	connBuilder := temporal.NewTemporalClientConnectionBuilder(tCfg.Namespace(), tCfg.Host()).WithMetrics(tCfg.ClientName(), tCfg.MetricsAddr(), tCfg.OtelEndpoint())
 	clientOpts, shutdown, tracingInt, err := connBuilder.Build(startupCtx)
 	if err != nil {
 		l.Error("error building temporal client options", "error", err.Error())
