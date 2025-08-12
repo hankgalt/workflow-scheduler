@@ -34,13 +34,15 @@
         - setup `mysql.env` in `deploy/scheduler` with following env vars:
             MYSQL_ROOT_PASSWORD, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD
         - `make start-db`
+- observability
+    - `make start-obs`
 - temporal
     - `make start-temporal`
     - `make register-domain`
 - services
     - add env configs in `env/` folder
-        - local.env - `SERVER_PORT, DB_HOST, DB_NAME, DB_USER, DB_PASSWORD, TEMPORAL_HOST, WORKFLOW_DOMAIN`
-        - test.env - `DB_NAME, DB_USER, DB_PASSWORD, CERTS_PATH, POLICY_PATH, TEMPORAL_HOST, WORKFLOW_DOMAIN, CREDS_PATH, BUCKET`
+        - local.env - `SERVER_PORT, TEMPORAL_HOST, WORKFLOW_DOMAIN, MONGO_PROTOCOL, MONGO_DBNAME,       MONGO_HOSTNAME, MONGO_CONN_PARAMS, MONGO_USERNAME, MONGO_PASSWORD, METRICS_PORT, OTEL_ENDPOINT`
+        - test.env - `CERTS_PATH, POLICY_PATH, TEMPORAL_HOST, WORKFLOW_DOMAIN, CREDS_PATH, BUCKET,MONGO_HOSTNAME, MONGO_CONN_PARAMS, MONGO_USERNAME, MONGO_PASSWORD, METRICS_PORT, OTEL_ENDPOINT, MONGO_PROTOCOL, MONGO_DBNAME`
         - worker (batch.env) - `TEMPORAL_HOST, WORKFLOW_DOMAIN`
     - `make start-worker TARGET=batch`
     - `make start-server`

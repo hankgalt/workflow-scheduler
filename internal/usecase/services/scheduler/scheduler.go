@@ -22,6 +22,7 @@ import (
 
 type SchedulerService interface {
 	ProcessLocalCSVToMongoWorkflow(ctx context.Context, req batch.LocalCSVMongoBatchRequest) (*stores.WorkflowRun, error)
+	ProcessCloudCSVToMongoWorkflow(ctx context.Context, req batch.CloudCSVMongoBatchRequest) (*stores.WorkflowRun, error)
 	CreateRun(ctx context.Context, params *stores.WorkflowRun) (*stores.WorkflowRun, error)
 	GetRun(ctx context.Context, runId string) (*stores.WorkflowRun, error)
 	DeleteRun(ctx context.Context, runId string) error
@@ -154,6 +155,42 @@ func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*sche
 }
 
 // Workflows
+
+func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, req batch.CloudCSVMongoBatchRequest) (*stores.WorkflowRun, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("SchedulerService:ProcessCloudCSVToMongoWorkflow - error getting logger from context: %w", err)
+	}
+
+	runId, err := btchutils.GenerateRunID(req.Config)
+	if err != nil {
+		l.Error("error generating run ID", "error", err.Error())
+		return nil, err
+	}
+
+	workflowOptions := client.StartWorkflowOptions{
+		ID:                       fmt.Sprintf("cloud-csv-mongo-%s", runId),
+		TaskQueue:                btchwkfl.ApplicationName,
+		WorkflowExecutionTimeout: time.Duration(24 * time.Hour),
+		WorkflowTaskTimeout:      time.Minute * 5, // set to max, as there are decision tasks that'll take as long as max
+		WorkflowIDReusePolicy:    1,
+	}
+	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessCloudCSVMongo, &req)
+	if err != nil {
+		l.Error("error starting workflow", "error", err.Error())
+		return nil, err
+	}
+
+	// TODO - add logic to create workflow run db record
+	// if workflow starts successfully, there should be a record created in the database
+	// handle failure, retries, etc.
+
+	return &stores.WorkflowRun{
+		RunId:      we.GetRunID(),
+		WorkflowId: we.GetID(),
+	}, nil
+
+}
 
 func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, req batch.LocalCSVMongoBatchRequest) (*stores.WorkflowRun, error) {
 	l, err := logger.LoggerFromContext(ctx)
@@ -345,6 +382,11 @@ func (bs *schedulerService) Close(ctx context.Context) error {
 
 	if err := bs.daud.Close(ctx); err != nil {
 		l.Error("error closing Daud repository connection", "error", err.Error())
+		return err
+	}
+
+	if err := bs.vypar.Close(ctx); err != nil {
+		l.Error("error closing Vypar repository connection", "error", err.Error())
 		return err
 	}
 	return nil

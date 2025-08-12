@@ -15,72 +15,98 @@ const (
 )
 
 type Agent struct {
-	EntityName string            `bson:"entityName"`
-	EntityID   uint64            `bson:"entityId"`
-	OrgName    string            `bson:"orgName"`
-	FirstName  string            `bson:"firstName"`
-	MiddleName string            `bson:"middleName,omitempty"`
-	LastName   string            `bson:"lastName"`
+	EntityName string            `bson:"entity_name"`
+	EntityID   uint64            `bson:"entity_id"`
+	OrgName    string            `bson:"org_name"`
+	FirstName  string            `bson:"first_name"`
+	MiddleName string            `bson:"middle_name,omitempty"`
+	LastName   string            `bson:"last_name"`
 	Address    string            `bson:"address"`
-	AgentType  string            `bson:"agentType"`
-	CreatedAt  time.Time         `bson:"createdAt"`
-	UpdatedAt  time.Time         `bson:"updatedAt"`
+	AgentType  string            `bson:"agent_type"`
+	CreatedAt  time.Time         `bson:"created_at"`
+	UpdatedAt  time.Time         `bson:"updated_at"`
 	Metadata   map[string]string `bson:"metadata,omitempty"` // additional metadata for the agent
 }
 
 type Filing struct {
-	EntityName             string            `bson:"entityName"`
-	EntityID               uint64            `bson:"entityId"`
-	InitialFilingDate      uint64            `bson:"initialFilingDate"`
+	EntityName             string            `bson:"entity_name"`
+	EntityID               uint64            `bson:"entity_id"`
+	InitialFilingDate      uint64            `bson:"initial_filing_date"`
 	Jurisdiction           string            `bson:"jurisdiction"`
-	EntityStatus           string            `bson:"entityStatus"`
-	StandingSOS            string            `bson:"standingSos"`
-	EntityType             string            `bson:"entityType"`
-	FilingType             string            `bson:"filingType"`
-	ForeignName            string            `bson:"foreignName"`
-	StandingFTB            string            `bson:"standingFtb"`
-	StandingVCFCF          string            `bson:"standingVcfcf"`
-	SuspensionDate         uint64            `bson:"suspensionDate"`
-	LastSIFileNumber       string            `bson:"lastSiFileNumber"`
-	LastSIFileDate         uint64            `bson:"lastSiFileDate"`
-	PrincipalAddress       string            `bson:"principalAddress"`
-	MailingAddress         string            `bson:"mailingAddress"`
-	PrincipalAddressInCA   string            `bson:"principalAddressInCa"`
-	LLCManagementStructure string            `bson:"llcManagementStructure"`
-	TypeOfBusiness         string            `bson:"typeOfBusiness"`
-	CreatedAt              time.Time         `bson:"createdAt"`
-	UpdatedAt              time.Time         `bson:"updatedAt"`
+	EntityStatus           string            `bson:"entity_status"`
+	StandingSOS            string            `bson:"standing_sos"`
+	EntityType             string            `bson:"entity_type"`
+	FilingType             string            `bson:"filing_type"`
+	ForeignName            string            `bson:"foreign_name"`
+	StandingFTB            string            `bson:"standing_ftb"`
+	StandingVCFCF          string            `bson:"standing_vcfcf"`
+	SuspensionDate         uint64            `bson:"suspension_date"`
+	LastSIFileNumber       string            `bson:"last_si_file_number"`
+	LastSIFileDate         uint64            `bson:"last_si_file_date"`
+	PrincipalAddress       string            `bson:"principal_address"`
+	MailingAddress         string            `bson:"mailing_address"`
+	PrincipalAddressInCA   string            `bson:"principal_address_in_ca"`
+	LLCManagementStructure string            `bson:"llc_management_structure"`
+	TypeOfBusiness         string            `bson:"type_of_business"`
+	CreatedAt              time.Time         `bson:"created_at"`
+	UpdatedAt              time.Time         `bson:"updated_at"`
 	Metadata               map[string]string `bson:"metadata,omitempty"` // additional metadata for the agent
 }
 
 func MapAgentFieldsToMongoModel(fields map[string]string) Agent {
-	agent := Agent{}
-	for k, v := range fields {
-		switch k {
-		case "entity_name":
-			agent.EntityName = v
-		case "entity_num":
-			num, err := strconv.Atoi(v)
-			if err == nil {
-				agent.EntityID = uint64(num)
-			} else {
-				agent.EntityID = 0 // Default to 0 if conversion fails
-			}
-		case "org_name":
-			agent.OrgName = v
-		case "first_name":
-			agent.FirstName = v
-		case "middle_name":
-			agent.MiddleName = v
-		case "last_name":
-			agent.LastName = v
-		case "agent_type":
-			agent.AgentType = v
+	var entityId uint64
+	if id, ok := fields["entity_num"]; ok {
+		num, err := strconv.Atoi(id)
+		if err == nil {
+			entityId = uint64(num)
+		} else {
+			entityId = 0 // Default to 0 if conversion fails
 		}
 	}
+	var entityName string
+	if name, ok := fields["entity_name"]; ok {
+		entityName = name
+	} else {
+		entityName = "Unknown Entity"
+	}
+	var orgName string
+	if name, ok := fields["org_name"]; ok {
+		orgName = name
+	} else {
+		orgName = "Unknown Organization"
+	}
+	var firstName, middleName, lastName string
+	if name, ok := fields["first_name"]; ok {
+		firstName = name
+	}
+	if name, ok := fields["middle_name"]; ok {
+		middleName = name
+	}
+	if name, ok := fields["last_name"]; ok {
+		lastName = name
+	}
+	var agentType string
+	if at, ok := fields["agent_type"]; ok {
+		agentType = at
+	} else {
+		agentType = "Unknown Type"
+	}
+	address := fields["physical_address1"] + " " + fields["physical_city"] + " " + fields["physical_state"] + " " + fields["physical_postal_code"] + " " + fields["physical_country"]
 
-	agent.Address = fields["physical_address1"] + " " + fields["physical_city"] + " " + fields["physical_state"] + " " + fields["physical_postal_code"] + " " + fields["physical_country"]
-	return agent
+	if entityId == 0 || entityName == "" || firstName == "" {
+
+	}
+
+	return Agent{
+		EntityID:   entityId,
+		EntityName: entityName,
+		OrgName:    orgName,
+		FirstName:  firstName,
+		MiddleName: middleName,
+		LastName:   lastName,
+		Address:    address,
+		AgentType:  agentType,
+	}
 }
 
 func MapEntityTypeToModel(ty api.EntityType) BusinessEntityType {

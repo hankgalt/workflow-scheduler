@@ -16,7 +16,21 @@ func GenerateBatchID(cfg any, start, end uint64) (string, error) {
 	case batch.CloudCSVBatchConfig:
 		return fmt.Sprintf("%s-%s/%s-%d-%d", v.Bucket, v.Path, v.Name, start, end), nil
 	case batch.LocalCSVMongoBatchConfig:
-		return fmt.Sprintf("%s/%s-%d-%d", v.LocalCSVBatchConfig.Path, v.LocalCSVBatchConfig.Name, start, end), nil
+		return fmt.Sprintf(
+			"%s/%s-%d-%d",
+			v.LocalCSVBatchConfig.Path,
+			v.LocalCSVBatchConfig.Name,
+			start,
+			end), nil
+	case batch.CloudCSVMongoBatchConfig:
+		return fmt.Sprintf(
+			"%s-%s/%s-%s-%d-%d",
+			v.CloudCSVBatchConfig.Bucket,
+			v.CloudCSVBatchConfig.Path,
+			v.CloudCSVBatchConfig.Name,
+			v.Collection,
+			start,
+			end), nil
 	default:
 		return "", fmt.Errorf("unknown batch config type: %T", cfg)
 	}
@@ -30,6 +44,13 @@ func GenerateRunID(cfg any) (string, error) {
 		return fmt.Sprintf("%s-%s/%s", v.Bucket, v.Path, v.Name), nil
 	case batch.LocalCSVMongoBatchConfig:
 		return fmt.Sprintf("%s/%s", v.LocalCSVBatchConfig.Path, v.LocalCSVBatchConfig.Name), nil
+	case batch.CloudCSVMongoBatchConfig:
+		return fmt.Sprintf(
+			"%s-%s/%s-%s",
+			v.CloudCSVBatchConfig.Bucket,
+			v.CloudCSVBatchConfig.Path,
+			v.CloudCSVBatchConfig.Name,
+			v.Collection), nil
 	default:
 		return "", fmt.Errorf("unknown batch config type: %T", cfg)
 	}

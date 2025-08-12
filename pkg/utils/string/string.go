@@ -8,6 +8,22 @@ import (
 	"unicode"
 )
 
+// MapTokens maps each token in the input slice to its corresponding value in the mapping.
+// If a token does not exist in the mapping, it retains its original value.
+func MapTokens(tokens []string, mapping map[string]string) []string {
+	mappedTokens := make([]string, len(tokens))
+	for i, token := range tokens {
+		if mappedToken, exists := mapping[token]; exists {
+			mappedTokens[i] = mappedToken
+		} else {
+			mappedTokens[i] = token // Keep original if no mapping found
+		}
+	}
+	return mappedTokens
+}
+
+// LowerFirst converts the first character of the string to lowercase.
+// If the string is empty, it returns an empty string.
 func LowerFirst(s string) string {
 	if len(s) < 1 {
 		return ""
@@ -20,8 +36,7 @@ func LowerFirst(s string) string {
 }
 
 // CleanAlphaNumerics removes non-alphanumeric characters from the string.
-// If spaceSeparator is true, it replaces non-alphanumeric characters with a space;
-// otherwise, it replaces them with an underscore.
+// If spaceSeparator is true, it replaces non-alphanumeric characters with a space; otherwise, it replaces them with an underscore.
 // It also trims leading and trailing non-alphanumeric characters.
 // The function returns an empty string if no alphanumeric characters are found.
 func CleanAlphaNumerics(s string, spaceSeparator bool, exclude []rune) string {
@@ -55,6 +70,9 @@ func CleanAlphaNumerics(s string, spaceSeparator bool, exclude []rune) string {
 	return string(result)
 }
 
+// CleanAlphaNumericsArr applies CleanAlphaNumerics to each string in the slice.
+// It returns a new slice with cleaned strings.
+// The exclude parameter allows specifying characters that should not be removed.
 func CleanAlphaNumericsArr(s []string, exclude []rune) []string {
 	for i, str := range s {
 		s[i] = CleanAlphaNumerics(str, true, exclude)
@@ -105,6 +123,7 @@ func AlNumEnd(s string, exclude []rune) int {
 	return end
 }
 
+// CleanCSVLineQuotes removes quotes from the beginning and end of each field in a CSV line.
 func CleanCSVLineQuotes(line, separator string) string {
 	if separator == "" {
 		separator = ","
@@ -119,20 +138,26 @@ func CleanCSVLineQuotes(line, separator string) string {
 	return strings.Join(split, separator)
 }
 
+// CleanHeaders cleans the headers by removing leading/trailing spaces
 func CleanHeaders(headers []string) []string {
-	// Clean headers by removing leading/trailing spaces and converting to lowercase
 	for i, header := range headers {
 		headers[i] = CleanAlphaNumerics(header, false, []rune{'-', '_'})
 	}
 	return headers
 }
 
+// CleanRecord removes unwanted characters from a record string.
+// It replaces asterisks with an empty string and cleans quotes from the record.
+// It returns the cleaned record string.
 func CleanRecord(recStr string) string {
 	cleanedStr := strings.ReplaceAll(recStr, "*", "")
 	cleanedStr = CleanCSVLineQuotes(cleanedStr, "|")
 	return cleanedStr
 }
 
+// ReadSingleRecord reads a single record from a string and returns it as a slice of strings.
+// It uses a CSV reader with '|' as the delimiter and allows variable number of fields per record.
+// If an error occurs during reading, it returns an error.
 func ReadSingleRecord(recStr string) ([]string, error) {
 	bReader := bytes.NewReader([]byte(recStr))
 	csvReader := csv.NewReader(bReader)

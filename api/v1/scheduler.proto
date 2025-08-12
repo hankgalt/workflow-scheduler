@@ -16,6 +16,7 @@ message WorkflowRun {
 message BatchCSVRequest {
     uint32 max_batches = 1;
     uint64 batch_size = 2;
+    map<string, string> mappings = 3;
 }
 
 message RunResponse {
@@ -105,12 +106,16 @@ message StreamEntityResponse {
 }
 
 service Scheduler {
+    // Workflow management
+    rpc ProcessLocalCSVMongoWorkflow(BatchCSVRequest) returns (RunResponse) {}
+    rpc ProcessCloudCSVMongoWorkflow(BatchCSVRequest) returns (RunResponse) {}
+
+    // Workflow run management
     rpc CreateRun(RunRequest) returns (RunResponse) {}
     rpc GetRun(RunRequest) returns (RunResponse) {}
     rpc DeleteRun(DeleteRunRequest) returns (DeleteResponse) {}
 
-    rpc ProcessLocalCSVMongoWorkflow(BatchCSVRequest) returns (RunResponse) {}
-
+    // Business entity management
     rpc AddEntity(AddEntityRequest) returns (EntityResponse) {}
     rpc DeleteEntity(EntityRequest) returns (DeleteResponse) {}
     rpc GetEntity(EntityRequest) returns (EntityResponse) {}

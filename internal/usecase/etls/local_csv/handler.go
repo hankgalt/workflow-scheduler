@@ -13,17 +13,8 @@ import (
 	"github.com/comfforts/logger"
 
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
+	"github.com/hankgalt/workflow-scheduler/internal/usecase/etls"
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
-)
-
-const (
-	ERR_MISSING_FILE_NAME = "missing file name"
-	ERR_INVALID_DATA_TYPE = "invalid data type, expected []byte"
-)
-
-var (
-	ErrMissingFileName = errors.New(ERR_MISSING_FILE_NAME)
-	ErrInvalidDataType = errors.New(ERR_INVALID_DATA_TYPE)
 )
 
 type LocalCSVFileHandlerConfig struct {
@@ -38,17 +29,17 @@ func (c LocalCSVFileHandlerConfig) Name() string { return c.name }
 func (c LocalCSVFileHandlerConfig) Path() string { return c.path }
 
 type LocalCSVFileHandler struct {
-	dataPoint batch.DataPoint
+	dataPoint batch.CSVDataPoint
 	headers   []string
 }
 
 func NewLocalCSVFileHandler(cfg LocalCSVFileHandlerConfig) (*LocalCSVFileHandler, error) {
 	if cfg.Name() == "" {
-		return nil, ErrMissingFileName
+		return nil, etls.ErrMissingFileName
 	}
 
 	return &LocalCSVFileHandler{
-		dataPoint: batch.DataPoint{Name: cfg.Name(), Path: cfg.Path()},
+		dataPoint: batch.CSVDataPoint{Name: cfg.Name(), Path: cfg.Path()},
 	}, nil
 }
 
@@ -125,7 +116,12 @@ func (h *LocalCSVFileHandler) ReadData(ctx context.Context, offset, limit uint64
 
 // HandleData processes the data read from the CSV file.
 // It reads the CSV records from the byte slice and returns a channel for results and errors.
-func (h *LocalCSVFileHandler) HandleData(ctx context.Context, start uint64, data any, headers []string) (<-chan batch.Result, error) {
+func (h *LocalCSVFileHandler) HandleData(
+	ctx context.Context,
+	start uint64,
+	data any,
+	headers []string,
+) (<-chan batch.Result, error) {
 	chnk, ok := data.([]byte)
 	if !ok {
 		return nil, errors.New("invalid data type, expected []byte")

@@ -35,6 +35,7 @@ const (
 	ERR_UNAUTHORIZED_GET_RUN         = "unauthorized to get run"
 	ERR_UNAUTHORIZED_DELETE_RUN      = "unauthorized to delete run"
 	ERR_UNAUTHORIZED_LOCAL_CSV_MONGO = "unauthorized to process local csv to mongo workflow"
+	ERR_UNAUTHORIZED_CLOUD_CSV_MONGO = "unauthorized to process cloud csv to mongo workflow"
 	ERR_UNAUTHORIZED_ADD_ENTITY      = "unauthorized to add entity"
 	ERR_UNAUTHORIZED_GET_ENTITY      = "unauthorized to get entity"
 	ERR_UNAUTHORIZED_DELETE_ENTITY   = "unauthorized to delete entity"
@@ -46,6 +47,7 @@ const (
 	getRunAction        = "get-run"
 	deleteRunAction     = "delete-run"
 	localCSVMongoAction = "local-csv-mongo"
+	cloudCSVMongoAction = "cloud-csv-mongo"
 	addEntityAction     = "add-entity"
 	getEntityAction     = "get-entity"
 	deleteEntityAction  = "delete-entity"
@@ -158,6 +160,54 @@ func (s *grpcServer) ProcessLocalCSVMongoWorkflow(ctx context.Context, req *api.
 	resp, err := s.SchedulerService.ProcessLocalCSVToMongoWorkflow(ctx, batReq)
 	if err != nil {
 		l.Error("error processing local csv to mongo workflow", "error", err.Error(), "req", req)
+		st := status.New(codes.Internal, err.Error())
+		return &api.RunResponse{
+			Ok: false,
+		}, st.Err()
+	}
+	l.Debug("created local csv to mongo workflow run", "resp", resp)
+	return &api.RunResponse{
+		Ok:  true,
+		Run: stores.MapWorkflowRunToProto(resp),
+	}, nil
+}
+
+func (s *grpcServer) ProcessCloudCSVMongoWorkflow(ctx context.Context, req *api.BatchCSVRequest) (*api.RunResponse, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("SchedulerServer:ProcessCloudCSVMongoWorkflow - %w", err)
+	}
+
+	if err := s.Authorizer.Authorize(
+		subject(ctx),
+		objectWildcard,
+		cloudCSVMongoAction,
+	); err != nil {
+		st := status.New(codes.Unauthenticated, ERR_UNAUTHORIZED_CLOUD_CSV_MONGO)
+		return nil, st.Err()
+	}
+
+	reqCfg, err := envutils.BuildCloudCSVMongoBatchConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	batReq := batch.CloudCSVMongoBatchRequest{
+		CSVBatchRequest: batch.CSVBatchRequest{
+			RequestConfig: &batch.RequestConfig{
+				MaxBatches: uint(req.MaxBatches),
+				BatchSize:  uint(req.BatchSize),
+				Offsets:    []uint64{},
+				Headers:    []string{},
+				Mappings:   req.Mappings,
+			},
+		},
+		Config: reqCfg,
+	}
+
+	resp, err := s.SchedulerService.ProcessCloudCSVToMongoWorkflow(ctx, batReq)
+	if err != nil {
+		l.Error("error processing cloud csv to mongo workflow", "error", err.Error(), "req", req)
 		st := status.New(codes.Internal, err.Error())
 		return &api.RunResponse{
 			Ok: false,

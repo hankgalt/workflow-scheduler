@@ -13,24 +13,32 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 	cloudcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/cloud_csv"
+	cloudcsvtomongo "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/cloud_csv_to_mongo"
 	localcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv"
 	localcsvtomongo "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv_to_mongo"
+	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
 
 const (
 	SetupLocalCSVBatchActivity           = "SetupLocalCSVBatch"
 	SetupCloudCSVBatchActivity           = "SetupCloudCSVBatch"
 	SetupLocalCSVMongoBatchActivity      = "SetupLocalCSVMongoBatch"
+	SetupCloudCSVMongoBatchActivity      = "SetupCloudCSVMongoBatch"
 	HandleLocalCSVBatchDataActivity      = "HandleLocalCSVBatchData"
 	HandleCloudCSVBatchDataActivity      = "HandleCloudCSVBatchData"
 	HandleLocalCSVMongoBatchDataActivity = "HandleLocalCSVMongoBatchData"
+	HandleCloudCSVMongoBatchDataActivity = "HandleCloudCSVMongoBatchData"
 )
 
 const (
 	ERROR_INVALID_CONFIG_TYPE = "invalid configuration type for batch setup"
 )
 
-func SetupLocalCSVBatch(ctx context.Context, handlerCfg batch.LocalCSVBatchConfig, rqstCfg *batch.RequestConfig) (*batch.RequestConfig, error) {
+func SetupLocalCSVBatch(
+	ctx context.Context,
+	handlerCfg batch.LocalCSVBatchConfig,
+	rqstCfg *batch.RequestConfig,
+) (*batch.RequestConfig, error) {
 	l := activity.GetLogger(ctx)
 
 	l.Debug("SetupLocalCSVBatch - config", "name", handlerCfg.Name, "path", handlerCfg.Path)
@@ -43,12 +51,25 @@ func SetupLocalCSVBatch(ctx context.Context, handlerCfg batch.LocalCSVBatchConfi
 	return setupCSVBatch(ctx, hndlr, rqstCfg)
 }
 
-func SetupCloudCSVBatch(ctx context.Context, hndlrCfg batch.CloudCSVBatchConfig, rqstCfg *batch.RequestConfig) (*batch.RequestConfig, error) {
+func SetupCloudCSVBatch(
+	ctx context.Context,
+	hndlrCfg batch.CloudCSVBatchConfig,
+	rqstCfg *batch.RequestConfig,
+) (*batch.RequestConfig, error) {
 	l := activity.GetLogger(ctx)
 
-	l.Debug("SetupCloudCSVBatch - config", "name", hndlrCfg.Name, "path", hndlrCfg.Path, "bucket", hndlrCfg.Bucket)
+	l.Debug(
+		"SetupCloudCSVBatch - config",
+		"name", hndlrCfg.Name,
+		"path", hndlrCfg.Path,
+		"bucket", hndlrCfg.Bucket,
+	)
 
-	handlerCfg := cloudcsv.NewCloudCSVFileHandlerConfig(hndlrCfg.Name, hndlrCfg.Path, hndlrCfg.Bucket)
+	handlerCfg := cloudcsv.NewCloudCSVFileHandlerConfig(
+		hndlrCfg.Name,
+		hndlrCfg.Path,
+		hndlrCfg.Bucket,
+	)
 	hndlr, err := cloudcsv.NewCloudCSVFileHandler(handlerCfg)
 	if err != nil {
 		l.Error(
@@ -61,13 +82,32 @@ func SetupCloudCSVBatch(ctx context.Context, hndlrCfg batch.CloudCSVBatchConfig,
 	return setupCSVBatch(ctx, hndlr, rqstCfg)
 }
 
-func SetupLocalCSVMongoBatch(ctx context.Context, hndlrCfg batch.LocalCSVMongoBatchConfig, rqstCfg *batch.RequestConfig) (*batch.RequestConfig, error) {
+func SetupLocalCSVMongoBatch(
+	ctx context.Context,
+	hndlrCfg batch.LocalCSVMongoBatchConfig,
+	rqstCfg *batch.RequestConfig,
+) (*batch.RequestConfig, error) {
 	l := activity.GetLogger(ctx)
 
-	l.Debug("SetupLocalCSVMongoBatch - config", "name", hndlrCfg.LocalCSVBatchConfig.Name, "path", hndlrCfg.LocalCSVBatchConfig.Path, "mongoHost", hndlrCfg.MongoBatchConfig.Host)
+	l.Debug(
+		"SetupLocalCSVMongoBatch - config",
+		"name", hndlrCfg.LocalCSVBatchConfig.Name,
+		"path", hndlrCfg.LocalCSVBatchConfig.Path,
+		"mongoHost", hndlrCfg.MongoBatchConfig.Host,
+	)
 
-	csvCfg := localcsv.NewLocalCSVFileHandlerConfig(hndlrCfg.LocalCSVBatchConfig.Name, hndlrCfg.LocalCSVBatchConfig.Path)
-	mdbCfg := mongostore.NewMongoDBConfig(hndlrCfg.MongoBatchConfig.Protocol, hndlrCfg.MongoBatchConfig.Host, hndlrCfg.MongoBatchConfig.User, hndlrCfg.MongoBatchConfig.Pwd, hndlrCfg.MongoBatchConfig.Params, hndlrCfg.MongoBatchConfig.Name)
+	csvCfg := localcsv.NewLocalCSVFileHandlerConfig(
+		hndlrCfg.LocalCSVBatchConfig.Name,
+		hndlrCfg.LocalCSVBatchConfig.Path,
+	)
+	mdbCfg := mongostore.NewMongoDBConfig(
+		hndlrCfg.MongoBatchConfig.Protocol,
+		hndlrCfg.MongoBatchConfig.Host,
+		hndlrCfg.MongoBatchConfig.User,
+		hndlrCfg.MongoBatchConfig.Pwd,
+		hndlrCfg.MongoBatchConfig.Params,
+		hndlrCfg.MongoBatchConfig.Name,
+	)
 
 	mCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -83,7 +123,54 @@ func SetupLocalCSVMongoBatch(ctx context.Context, hndlrCfg batch.LocalCSVMongoBa
 	return setupCSVBatch(ctx, hndlr, rqstCfg)
 }
 
-func setupCSVBatch(ctx context.Context, hndlr batch.CSVDataProcessor, rqstCfg *batch.RequestConfig) (*batch.RequestConfig, error) {
+func SetupCloudCSVMongoBatch(
+	ctx context.Context,
+	hndlrCfg batch.CloudCSVMongoBatchConfig,
+	rqstCfg *batch.RequestConfig,
+) (*batch.RequestConfig, error) {
+	l := activity.GetLogger(ctx)
+
+	l.Debug(
+		"SetupCloudCSVMongoBatch - config",
+		"name", hndlrCfg.CloudCSVBatchConfig.Name,
+		"path", hndlrCfg.CloudCSVBatchConfig.Path,
+		"bucket", hndlrCfg.CloudCSVBatchConfig.Bucket,
+		"mongoHost", hndlrCfg.MongoBatchConfig.Host,
+	)
+
+	csvCfg := cloudcsv.NewCloudCSVFileHandlerConfig(
+		hndlrCfg.CloudCSVBatchConfig.Name,
+		hndlrCfg.CloudCSVBatchConfig.Path,
+		hndlrCfg.CloudCSVBatchConfig.Bucket,
+	)
+	mdbCfg := mongostore.NewMongoDBConfig(
+		hndlrCfg.MongoBatchConfig.Protocol,
+		hndlrCfg.MongoBatchConfig.Host,
+		hndlrCfg.MongoBatchConfig.User,
+		hndlrCfg.MongoBatchConfig.Pwd,
+		hndlrCfg.MongoBatchConfig.Params,
+		hndlrCfg.MongoBatchConfig.Name,
+	)
+
+	mCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	mCtx = logger.WithLogger(mCtx, l)
+
+	// Create a new CloudCSVToMongoHandler with the provided configurations
+	hndlr, err := cloudcsvtomongo.NewCloudCSVToMongoHandler(mCtx, csvCfg, mdbCfg, hndlrCfg.Collection)
+	if err != nil {
+		l.Error("SetupCloudCSVMongoBatch - error creating handler", "error", err.Error())
+		return rqstCfg, temporal.NewApplicationErrorWithCause(err.Error(), err.Error(), err)
+	}
+
+	return setupCSVBatch(ctx, hndlr, rqstCfg)
+}
+
+func setupCSVBatch(
+	ctx context.Context,
+	hndlr batch.CSVDataProcessor,
+	rqstCfg *batch.RequestConfig,
+) (*batch.RequestConfig, error) {
 	l := activity.GetLogger(ctx)
 	// Check if first batch
 	// If first batch, initialize offsets & set the first offset to 0
@@ -103,14 +190,20 @@ func setupCSVBatch(ctx context.Context, hndlr batch.CSVDataProcessor, rqstCfg *b
 		l.Error("setupCSVBatch - error reading data", "error", err.Error())
 		return rqstCfg, temporal.NewApplicationErrorWithCause(err.Error(), err.Error(), err)
 	}
-	l.Debug("setupCSVBatch - data read", "batchStart", batchStart, "nextOffset", nextOffset, "endOfFile", last)
+	l.Debug(
+		"setupCSVBatch - data read",
+		"batchStart", batchStart,
+		"nextOffset", nextOffset,
+		"endOfFile", last,
+	)
 
 	// If first batch, set the start offset & headers
 	if isFirstBatch {
 		if len(hndlr.Headers()) > 0 {
 			//TODO - Headers validation for CSV files
 			l.Debug("setupCSVBatch - checking for headers", "headers", hndlr.Headers())
-			rqstCfg.Headers = hndlr.Headers() // br.CSVBatchRequest.Headers = hndlr.Headers()
+			rqstCfg.Headers = strutils.MapTokens(hndlr.Headers(), rqstCfg.Mappings)
+			// rqstCfg.Headers = hndlr.Headers()
 			activity.RecordHeartbeat(ctx, rqstCfg)
 		}
 		// TODO - Update first offset from 0 to start of first record
@@ -137,9 +230,20 @@ func setupCSVBatch(ctx context.Context, hndlr batch.CSVDataProcessor, rqstCfg *b
 	return rqstCfg, nil
 }
 
-func HandleLocalCSVBatchData(ctx context.Context, cfg batch.LocalCSVBatchConfig, rqstCfg *batch.RequestConfig, b *batch.Batch) (*batch.Batch, error) {
+func HandleLocalCSVBatchData(
+	ctx context.Context,
+	cfg batch.LocalCSVBatchConfig,
+	rqstCfg *batch.RequestConfig,
+	b *batch.Batch,
+) (*batch.Batch, error) {
 	l := activity.GetLogger(ctx)
-	l.Debug("HandleLocalCSVBatchData - config", "name", cfg.Name, "path", cfg.Path, "start", b.Start, "end", b.End)
+	l.Debug(
+		"HandleLocalCSVBatchData - config",
+		"name", cfg.Name,
+		"path", cfg.Path,
+		"start", b.Start,
+		"end", b.End,
+	)
 
 	// Create a handler for the local CSV file
 	hndlr, err := getLocalCSVFileHandler(cfg.Name, cfg.Path)
@@ -151,7 +255,12 @@ func HandleLocalCSVBatchData(ctx context.Context, cfg batch.LocalCSVBatchConfig,
 	return handleCSVBatchData(ctx, hndlr, rqstCfg, b)
 }
 
-func HandleCloudCSVBatchData(ctx context.Context, cfg batch.CloudCSVBatchConfig, rqstCfg *batch.RequestConfig, b *batch.Batch) (*batch.Batch, error) {
+func HandleCloudCSVBatchData(
+	ctx context.Context,
+	cfg batch.CloudCSVBatchConfig,
+	rqstCfg *batch.RequestConfig,
+	b *batch.Batch,
+) (*batch.Batch, error) {
 	l := activity.GetLogger(ctx)
 	l.Debug(
 		"HandleCloudCSVBatchData - config",
@@ -170,7 +279,12 @@ func HandleCloudCSVBatchData(ctx context.Context, cfg batch.CloudCSVBatchConfig,
 	return handleCSVBatchData(ctx, hndlr, rqstCfg, b)
 }
 
-func HandleLocalCSVMongoBatchData(ctx context.Context, cfg batch.LocalCSVMongoBatchConfig, rqstCfg *batch.RequestConfig, b *batch.Batch) (*batch.Batch, error) {
+func HandleLocalCSVMongoBatchData(
+	ctx context.Context,
+	cfg batch.LocalCSVMongoBatchConfig,
+	rqstCfg *batch.RequestConfig,
+	b *batch.Batch,
+) (*batch.Batch, error) {
 	l := activity.GetLogger(ctx)
 	l.Debug(
 		"HandleLocalCSVMongoBatchData - config",
@@ -188,7 +302,36 @@ func HandleLocalCSVMongoBatchData(ctx context.Context, cfg batch.LocalCSVMongoBa
 	return handleCSVBatchData(ctx, hndlr, rqstCfg, b)
 }
 
-func handleCSVBatchData(ctx context.Context, hndlr batch.CSVDataProcessor, rqstCfg *batch.RequestConfig, btch *batch.Batch) (*batch.Batch, error) {
+func HandleCloudCSVMongoBatchData(
+	ctx context.Context,
+	cfg batch.CloudCSVMongoBatchConfig,
+	rqstCfg *batch.RequestConfig,
+	b *batch.Batch,
+) (*batch.Batch, error) {
+	l := activity.GetLogger(ctx)
+	l.Debug(
+		"HandleCloudCSVMongoBatchData - config",
+		"name", cfg.CloudCSVBatchConfig.Name,
+		"path", cfg.CloudCSVBatchConfig.Path,
+		"bucket", cfg.CloudCSVBatchConfig.Bucket,
+		"mongoHost", cfg.MongoBatchConfig.Host,
+		"start", b.Start,
+		"end", b.End)
+	hndlr, err := getCloudCSVToMongoHandler(ctx, cfg)
+	if err != nil {
+		l.Error("HandleCloudCSVMongoBatchData - error creating handler", "error", err.Error())
+		return b, temporal.NewApplicationErrorWithCause(err.Error(), err.Error(), err)
+	}
+
+	return handleCSVBatchData(ctx, hndlr, rqstCfg, b)
+}
+
+func handleCSVBatchData(
+	ctx context.Context,
+	hndlr batch.CSVDataProcessor,
+	rqstCfg *batch.RequestConfig,
+	btch *batch.Batch,
+) (*batch.Batch, error) {
 	l := activity.GetLogger(ctx)
 	// create context with logger for internal services
 	hCtx := logger.WithLogger(ctx, l)
@@ -277,11 +420,24 @@ func getCloudCSVFileHandler(name, path, bucket string) (*cloudcsv.CloudCSVFileHa
 	return hndlr, nil
 }
 
-func getLocalCSVToMongoHandler(ctx context.Context, cfg batch.LocalCSVMongoBatchConfig) (*localcsvtomongo.LocalCSVToMongoHandler, error) {
+func getLocalCSVToMongoHandler(
+	ctx context.Context,
+	cfg batch.LocalCSVMongoBatchConfig,
+) (*localcsvtomongo.LocalCSVToMongoHandler, error) {
 	l := activity.GetLogger(ctx)
 
-	csvCfg := localcsv.NewLocalCSVFileHandlerConfig(cfg.LocalCSVBatchConfig.Name, cfg.LocalCSVBatchConfig.Path)
-	mdbCfg := mongostore.NewMongoDBConfig(cfg.MongoBatchConfig.Protocol, cfg.MongoBatchConfig.Host, cfg.MongoBatchConfig.User, cfg.MongoBatchConfig.Pwd, cfg.MongoBatchConfig.Params, cfg.MongoBatchConfig.Name)
+	csvCfg := localcsv.NewLocalCSVFileHandlerConfig(
+		cfg.LocalCSVBatchConfig.Name,
+		cfg.LocalCSVBatchConfig.Path,
+	)
+	mdbCfg := mongostore.NewMongoDBConfig(
+		cfg.MongoBatchConfig.Protocol,
+		cfg.MongoBatchConfig.Host,
+		cfg.MongoBatchConfig.User,
+		cfg.MongoBatchConfig.Pwd,
+		cfg.MongoBatchConfig.Params,
+		cfg.MongoBatchConfig.Name,
+	)
 
 	mCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
@@ -291,6 +447,38 @@ func getLocalCSVToMongoHandler(ctx context.Context, cfg batch.LocalCSVMongoBatch
 	hndlr, err := localcsvtomongo.NewLocalCSVToMongoHandler(mCtx, csvCfg, mdbCfg)
 	if err != nil {
 		return nil, err
+	}
+	return hndlr, nil
+}
+
+func getCloudCSVToMongoHandler(
+	ctx context.Context,
+	cfg batch.CloudCSVMongoBatchConfig,
+) (*cloudcsvtomongo.CloudCSVToMongoHandler, error) {
+	l := activity.GetLogger(ctx)
+
+	csvCfg := cloudcsv.NewCloudCSVFileHandlerConfig(
+		cfg.CloudCSVBatchConfig.Name,
+		cfg.CloudCSVBatchConfig.Path,
+		cfg.CloudCSVBatchConfig.Bucket,
+	)
+	mdbCfg := mongostore.NewMongoDBConfig(
+		cfg.MongoBatchConfig.Protocol,
+		cfg.MongoBatchConfig.Host,
+		cfg.MongoBatchConfig.User,
+		cfg.MongoBatchConfig.Pwd,
+		cfg.MongoBatchConfig.Params,
+		cfg.MongoBatchConfig.Name,
+	)
+
+	mCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	mCtx = logger.WithLogger(mCtx, l)
+
+	hndlr, err := cloudcsvtomongo.NewCloudCSVToMongoHandler(mCtx, csvCfg, mdbCfg, cfg.Collection)
+	if err != nil {
+		l.Error("getCloudCSVToMongoHandler - error creating handler", "error", err.Error())
+		return nil, temporal.NewApplicationErrorWithCause(err.Error(), err.Error(), err)
 	}
 	return hndlr, nil
 }

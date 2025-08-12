@@ -97,7 +97,11 @@ func main() {
 		l.Error("error starting temporal batch worker", "error", err.Error())
 		panic(err)
 	}
-	l.Info("Batch worker started, will wait for interrupt signal to gracefully shutdown the worker", "host", host, "worker", btchwkfl.ApplicationName)
+	l.Info(
+		"Batch worker started, will wait for interrupt signal to gracefully shutdown the worker",
+		"host", host,
+		"worker", btchwkfl.ApplicationName,
+	)
 
 	// wait for interrupt signal to gracefully shutdown the worker
 	quit := make(chan os.Signal, 1)
@@ -122,14 +126,50 @@ func main() {
 
 func registerBatchWorkflow(worker worker.Worker) {
 	// register batch task processing workflows
-	worker.RegisterWorkflowWithOptions(btchwkfl.ProcessLocalCSV, workflow.RegisterOptions{Name: btchwkfl.ProcessLocalCSVWorkflow})
-	worker.RegisterWorkflowWithOptions(btchwkfl.ProcessLocalCSVMongo, workflow.RegisterOptions{Name: btchwkfl.ProcessLocalCSVMongoWorkflow})
+	worker.RegisterWorkflowWithOptions(
+		btchwkfl.ProcessLocalCSV,
+		workflow.RegisterOptions{Name: btchwkfl.ProcessLocalCSVWorkflow},
+	)
+	worker.RegisterWorkflowWithOptions(
+		btchwkfl.ProcessLocalCSVMongo,
+		workflow.RegisterOptions{Name: btchwkfl.ProcessLocalCSVMongoWorkflow},
+	)
+	worker.RegisterWorkflowWithOptions(
+		btchwkfl.ProcessCloudCSVMongo,
+		workflow.RegisterOptions{Name: btchwkfl.ProcessCloudCSVMongoWorkflow},
+	)
 
 	// register batch task processing activities
-	worker.RegisterActivityWithOptions(btchwkfl.SetupLocalCSVBatch, activity.RegisterOptions{Name: btchwkfl.SetupLocalCSVBatchActivity})
-	worker.RegisterActivityWithOptions(btchwkfl.SetupCloudCSVBatch, activity.RegisterOptions{Name: btchwkfl.SetupCloudCSVBatchActivity})
-	worker.RegisterActivityWithOptions(btchwkfl.SetupLocalCSVMongoBatch, activity.RegisterOptions{Name: btchwkfl.SetupLocalCSVMongoBatchActivity})
-	worker.RegisterActivityWithOptions(btchwkfl.HandleLocalCSVBatchData, activity.RegisterOptions{Name: btchwkfl.HandleLocalCSVBatchDataActivity})
-	worker.RegisterActivityWithOptions(btchwkfl.HandleCloudCSVBatchData, activity.RegisterOptions{Name: btchwkfl.HandleCloudCSVBatchDataActivity})
-	worker.RegisterActivityWithOptions(btchwkfl.HandleLocalCSVMongoBatchData, activity.RegisterOptions{Name: btchwkfl.HandleLocalCSVMongoBatchDataActivity})
+	worker.RegisterActivityWithOptions(
+		btchwkfl.SetupLocalCSVBatch,
+		activity.RegisterOptions{Name: btchwkfl.SetupLocalCSVBatchActivity},
+	)
+	worker.RegisterActivityWithOptions(
+		btchwkfl.SetupCloudCSVBatch,
+		activity.RegisterOptions{Name: btchwkfl.SetupCloudCSVBatchActivity},
+	)
+	worker.RegisterActivityWithOptions(
+		btchwkfl.SetupLocalCSVMongoBatch,
+		activity.RegisterOptions{Name: btchwkfl.SetupLocalCSVMongoBatchActivity},
+	)
+	worker.RegisterActivityWithOptions(
+		btchwkfl.SetupCloudCSVMongoBatch,
+		activity.RegisterOptions{Name: btchwkfl.SetupCloudCSVMongoBatchActivity},
+	)
+	worker.RegisterActivityWithOptions(
+		btchwkfl.HandleLocalCSVBatchData,
+		activity.RegisterOptions{Name: btchwkfl.HandleLocalCSVBatchDataActivity},
+	)
+	worker.RegisterActivityWithOptions(
+		btchwkfl.HandleCloudCSVBatchData,
+		activity.RegisterOptions{Name: btchwkfl.HandleCloudCSVBatchDataActivity},
+	)
+	worker.RegisterActivityWithOptions(
+		btchwkfl.HandleLocalCSVMongoBatchData,
+		activity.RegisterOptions{Name: btchwkfl.HandleLocalCSVMongoBatchDataActivity},
+	)
+	worker.RegisterActivityWithOptions(
+		btchwkfl.HandleCloudCSVMongoBatchData,
+		activity.RegisterOptions{Name: btchwkfl.HandleCloudCSVMongoBatchDataActivity},
+	)
 }

@@ -17,15 +17,15 @@ const (
 )
 
 type WorkflowRun struct {
-	RunId       string    `bson:"runId"`
-	WorkflowId  string    `bson:"workflowId"`
+	RunId       string    `bson:"run_id"`
+	WorkflowId  string    `bson:"workflow_id"`
 	Status      string    `bson:"status"`
 	Type        string    `bson:"type"`
-	ExternalRef string    `bson:"externalRef"`
-	CreatedBy   string    `bson:"createdBy"`
-	CreatedAt   time.Time `bson:"createdAt"`
-	UpdatedAt   time.Time `bson:"updatedAt"`
-	DeletedAt   time.Time `bson:"deletedAt"`
+	ExternalRef string    `bson:"external_ref"`
+	CreatedBy   string    `bson:"created_by"`
+	CreatedAt   time.Time `bson:"created_at"`
+	UpdatedAt   time.Time `bson:"updated_at"`
+	DeletedAt   time.Time `bson:"deleted_at"`
 }
 
 type RunParams struct {

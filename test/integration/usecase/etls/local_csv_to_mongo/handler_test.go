@@ -16,8 +16,6 @@ import (
 )
 
 func TestLocalCSVToMongoHandler(t *testing.T) {
-	t.Helper()
-
 	// Ensure the environment is set up correctly
 	// test file name
 	fileName := envutils.BuildFileName()
@@ -50,15 +48,15 @@ func TestLocalCSVToMongoHandler(t *testing.T) {
 	batchSize := uint64(400)
 
 	// read first batch data from local csv file
-	data, n, _, err := hndlr.ReadData(ctx, 0, batchSize)
+	data, n, endOfFile, err := hndlr.ReadData(ctx, 0, batchSize)
 	require.NoError(t, err)
 
 	// verify first batch has headers & only has complete records
 	headers := hndlr.Headers()
 	require.NotEmpty(t, headers, "Headers should not be empty")
 	require.Equal(t, true, n < batchSize, "Read less than batch size")
-	t.Logf("Read data from file %s, with batch size: %d, next offset: %d", fileName, batchSize, n)
-	t.Logf("File headers: %v", hndlr.Headers())
+	l.Debug("TestLocalCSVToMongoHandler - Read data from file", "fileName", fileName, "batchSize", batchSize, "nextOffset", n)
+	l.Debug("TestLocalCSVToMongoHandler - File headers", "headers", hndlr.Headers())
 
 	// handle data read from local csv file & acquire record stream
 	recStream, err := hndlr.HandleData(ctx, 0, data, headers)
@@ -67,31 +65,31 @@ func TestLocalCSVToMongoHandler(t *testing.T) {
 	// process record stream for record count & error count
 	recordCnt, errorCnt, err := btchutils.ProcessCSVRecordStream(ctx, recStream)
 	require.NoError(t, err)
-	t.Logf("Processed %d records, with %d errors", recordCnt, errorCnt)
+	l.Debug("TestLocalCSVToMongoHandler - Processed records", "recordCount", recordCnt, "errorCount", errorCnt)
 
 	// iterate through the rest of the file until end of file
-	// offset, i := n, 1
-	// for !endOfFile {
-	// 	t.Logf("Reading next batch of data, offset: %d, batch size: %d", offset, batchSize)
-	// 	data, n, endOfFile, err = hndlr.ReadData(ctx, offset, batchSize)
-	// 	require.NoError(t, err)
+	offset, i := n, 1
+	for !endOfFile {
+		l.Debug("TestLocalCSVToMongoHandler - Reading next batch of data", "offset", offset, "batchSize", batchSize)
+		data, n, endOfFile, err = hndlr.ReadData(ctx, offset, batchSize)
+		require.NoError(t, err)
 
-	// 	t.Logf("Read data from file %s, with batch size: %d, next offset: %d", fileName, batchSize, n)
+		l.Debug("TestLocalCSVToMongoHandler - Read data from file", "fileName", fileName, "batchSize", batchSize, "nextOffset", n)
 
-	// 	recStream, err = hndlr.HandleData(ctx, 0, data, headers)
-	// 	require.NoError(t, err)
+		recStream, err = hndlr.HandleData(ctx, 0, data, headers)
+		require.NoError(t, err)
 
-	// 	recCnt, errCnt, err := btchutils.ProcessCSVRecordStream(ctx, recStream)
-	// 	require.NoError(t, err)
-	// 	t.Logf("Processed %d records in batch %d, with %d errors", recCnt, i+1, errCnt)
+		recCnt, errCnt, err := btchutils.ProcessCSVRecordStream(ctx, recStream)
+		require.NoError(t, err)
+		l.Debug("TestLocalCSVToMongoHandler - Processed records", "recordCount", recCnt, "batch", i+1, "errorCount", errCnt)
 
-	// 	// update total record count & error count
-	// 	recordCnt += recCnt
-	// 	errorCnt += errCnt
+		// update total record count & error count
+		recordCnt += recCnt
+		errorCnt += errCnt
 
-	// 	offset = n
-	// 	i++
-	// }
+		offset = n
+		i++
+	}
 
-	t.Logf("Processed %d records, with %d errors", recordCnt, errorCnt)
+	l.Debug("TestLocalCSVToMongoHandler - Processed records", "recordCount", recordCnt, "errorCount", errorCnt)
 }

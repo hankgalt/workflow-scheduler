@@ -74,25 +74,6 @@ func (tc *TemporalClient) RegisteredActivities() []registryOption {
 	return tc.activityRegistries
 }
 
-// Close closes the temporal service client
-func (tc *TemporalClient) Close(ctx context.Context) error {
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return fmt.Errorf("temporalClient:NewTemporalClient - %w", err)
-	}
-
-	tc.client.Close()
-
-	if tc.oTelShutdown != nil {
-		err := tc.oTelShutdown(ctx)
-		if err != nil {
-			l.Error("error shutting down OTel", "error", err.Error())
-			return fmt.Errorf("error shutting down OTel: %w", err)
-		}
-	}
-	return nil
-}
-
 // RegisterWorkflow registers a workflow
 func (cc *TemporalClient) RegisterWorkflow(workflow any) {
 	cc.RegisterWorkflowWithAlias(workflow, "")
@@ -227,4 +208,23 @@ func (cc *TemporalClient) QueryWorkflow(
 	}
 	// l.Debug("received query result", "result", result)
 	return result, nil
+}
+
+// Close closes the temporal service client
+func (tc *TemporalClient) Close(ctx context.Context) error {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return fmt.Errorf("temporalClient:NewTemporalClient - %w", err)
+	}
+
+	tc.client.Close()
+
+	if tc.oTelShutdown != nil {
+		err := tc.oTelShutdown(ctx)
+		if err != nil {
+			l.Error("error shutting down OTel", "error", err.Error())
+			return fmt.Errorf("error shutting down OTel: %w", err)
+		}
+	}
+	return nil
 }

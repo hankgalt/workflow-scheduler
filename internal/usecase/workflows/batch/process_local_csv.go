@@ -15,7 +15,10 @@ const (
 	ERR_PROCESS_LOCAL_CSV_WKFL = "error running process local CSV workflow"
 )
 
-func ProcessLocalCSV(ctx workflow.Context, req *batch.LocalCSVBatchRequest) (*batch.LocalCSVBatchRequest, error) {
+func ProcessLocalCSV(
+	ctx workflow.Context,
+	req *batch.LocalCSVBatchRequest,
+) (*batch.LocalCSVBatchRequest, error) {
 	l := workflow.GetLogger(ctx)
 	l.Debug("ProcessLocalCSV workflow started")
 
@@ -25,19 +28,39 @@ func ProcessLocalCSV(ctx workflow.Context, req *batch.LocalCSVBatchRequest) (*ba
 		count++
 		switch wkflErr := err.(type) {
 		case *temporal.ServerError:
-			l.Error("ProcessLocalCSV - temporal server error", "error", err.Error(), "type", fmt.Sprintf("%T", err))
+			l.Error(
+				"ProcessLocalCSV - temporal server error",
+				"error", err.Error(),
+				"type", fmt.Sprintf("%T", err),
+			)
 			return req, err
 		case *temporal.TimeoutError:
-			l.Error("ProcessLocalCSV - temporal time out error", "error", err.Error(), "type", fmt.Sprintf("%T", err))
+			l.Error(
+				"ProcessLocalCSV - temporal time out error",
+				"error", err.Error(),
+				"type", fmt.Sprintf("%T", err),
+			)
 			return req, err
 		case *temporal.PanicError:
-			l.Error("ProcessLocalCSV - temporal panic error", "error", err.Error(), "type", fmt.Sprintf("%T", err))
+			l.Error(
+				"ProcessLocalCSV - temporal panic error",
+				"error", err.Error(),
+				"type", fmt.Sprintf("%T", err),
+			)
 			return resp, err
 		case *temporal.CanceledError:
-			l.Error("ProcessLocalCSV - temporal canceled error", "error", err.Error(), "type", fmt.Sprintf("%T", err))
+			l.Error(
+				"ProcessLocalCSV - temporal canceled error",
+				"error", err.Error(),
+				"type", fmt.Sprintf("%T", err),
+			)
 			return resp, err
 		case *temporal.ApplicationError:
-			l.Error("ProcessLocalCSV - temporal application error", "error", err.Error(), "type", fmt.Sprintf("%T", err))
+			l.Error(
+				"ProcessLocalCSV - temporal application error",
+				"error", err.Error(),
+				"type", fmt.Sprintf("%T", err),
+			)
 			switch wkflErr.Type() {
 			case ERROR_INVALID_CONFIG_TYPE:
 				return req, err
@@ -47,7 +70,11 @@ func ProcessLocalCSV(ctx workflow.Context, req *batch.LocalCSVBatchRequest) (*ba
 				continue
 			}
 		default:
-			l.Error("ProcessLocalCSV - other error", "error", err.Error(), "type", fmt.Sprintf("%T", err))
+			l.Error(
+				"ProcessLocalCSV - other error",
+				"error", err.Error(),
+				"type", fmt.Sprintf("%T", err),
+			)
 			resp, err = processLocalCSV(ctx, resp)
 			continue
 		}
@@ -66,9 +93,15 @@ func ProcessLocalCSV(ctx workflow.Context, req *batch.LocalCSVBatchRequest) (*ba
 
 }
 
-func processLocalCSV(ctx workflow.Context, req *batch.LocalCSVBatchRequest) (*batch.LocalCSVBatchRequest, error) {
+func processLocalCSV(
+	ctx workflow.Context,
+	req *batch.LocalCSVBatchRequest,
+) (*batch.LocalCSVBatchRequest, error) {
 	l := workflow.GetLogger(ctx)
-	l.Debug("processLocalCSV - started processing local CSV batch request", "request", req)
+	l.Debug(
+		"processLocalCSV - started processing local CSV batch request",
+		"request", req,
+	)
 
 	//
 	if req.MaxBatches < 2 {
@@ -91,7 +124,11 @@ func processLocalCSV(ctx workflow.Context, req *batch.LocalCSVBatchRequest) (*ba
 			l.Error("processLocalCSV - error setting up batch", "error", err.Error())
 			return req, err
 		}
-		l.Debug("processLocalCSV - first batch setup", "offsets", reqCfg.Offsets, "headers", reqCfg.Headers)
+		l.Debug(
+			"processLocalCSV - first batch setup",
+			"offsets", reqCfg.Offsets,
+			"headers", reqCfg.Headers,
+		)
 		req.RequestConfig = reqCfg
 
 		// build batch request
@@ -111,10 +148,20 @@ func processLocalCSV(ctx workflow.Context, req *batch.LocalCSVBatchRequest) (*ba
 			// update request batch state
 			req.Batches[batchID] = batch
 		}
-		l.Debug("processLocalCSV - first batch request", "batchID", batchID, "start", start, "end", end)
+		l.Debug(
+			"processLocalCSV - first batch request",
+			"batchID", batchID,
+			"start", start,
+			"end", end,
+		)
 
 		// start async execution of process batch activity & push future to queue
-		future := AsyncExecuteHandleLocalCSVBatchDataActivity(ctx, req.Config, req.RequestConfig, req.Batches[batchID])
+		future := AsyncExecuteHandleLocalCSVBatchDataActivity(
+			ctx,
+			req.Config,
+			req.RequestConfig,
+			req.Batches[batchID],
+		)
 		q.PushBack(future)
 
 		// while there are items in queue
@@ -148,10 +195,20 @@ func processLocalCSV(ctx workflow.Context, req *batch.LocalCSVBatchRequest) (*ba
 					// update request batch state
 					req.Batches[batchID] = batch
 				}
-				l.Debug("processLocalCSV - next batch request", "batchID", batchID, "start", start, "end", end)
+				l.Debug(
+					"processLocalCSV - next batch request",
+					"batchID", batchID,
+					"start", start,
+					"end", end,
+				)
 
 				// start async execution of process batch activity & push future to queue
-				future := AsyncExecuteHandleLocalCSVBatchDataActivity(ctx, req.Config, req.RequestConfig, req.Batches[batchID])
+				future := AsyncExecuteHandleLocalCSVBatchDataActivity(
+					ctx,
+					req.Config,
+					req.RequestConfig,
+					req.Batches[batchID],
+				)
 				q.PushBack(future)
 
 				l.Debug("processLocalCSV - queue length", "items", q.Len(), "offsets", req.Offsets)
@@ -165,7 +222,11 @@ func processLocalCSV(ctx workflow.Context, req *batch.LocalCSVBatchRequest) (*ba
 					l.Error("processLocalCSV - error processing batch data", "error", err.Error())
 				} else {
 					// update the request with the batch result
-					l.Debug("processLocalCSV - pulled batch result", "items", batchResult, "offsets", req.Offsets)
+					l.Debug(
+						"processLocalCSV - pulled batch result",
+						"items", batchResult,
+						"offsets", req.Offsets,
+					)
 					req.Batches[batchResult.BatchID] = batchResult
 				}
 			}
@@ -191,7 +252,12 @@ func processLocalCSV(ctx workflow.Context, req *batch.LocalCSVBatchRequest) (*ba
 		}
 
 		// start async execution of process batch activity & push future to queue
-		future := AsyncExecuteHandleLocalCSVBatchDataActivity(ctx, req.Config, req.RequestConfig, req.Batches[batchID])
+		future := AsyncExecuteHandleLocalCSVBatchDataActivity(
+			ctx,
+			req.Config,
+			req.RequestConfig,
+			req.Batches[batchID],
+		)
 		q.PushBack(future)
 
 		// increment counter
@@ -209,7 +275,12 @@ func processLocalCSV(ctx workflow.Context, req *batch.LocalCSVBatchRequest) (*ba
 				}
 
 				// start async execution of process batch activity & push future to queue
-				future := AsyncExecuteHandleLocalCSVBatchDataActivity(ctx, req.Config, req.RequestConfig, req.Batches[batchID])
+				future := AsyncExecuteHandleLocalCSVBatchDataActivity(
+					ctx,
+					req.Config,
+					req.RequestConfig,
+					req.Batches[batchID],
+				)
 				q.PushBack(future)
 
 				// increment counter
@@ -223,7 +294,11 @@ func processLocalCSV(ctx workflow.Context, req *batch.LocalCSVBatchRequest) (*ba
 					l.Error("processLocalCSV - error processing batch data", "error", err.Error())
 				} else {
 					// update the request with the batch result
-					l.Debug("processLocalCSV - pulled batch result", "items", batchResult, "offsets", req.Offsets)
+					l.Debug(
+						"processLocalCSV - pulled batch result",
+						"items", batchResult,
+						"offsets", req.Offsets,
+					)
 					req.Batches[batchResult.BatchID] = batchResult
 				}
 			}

@@ -31,3 +31,6 @@ const ProcessCloudCSVWorkflow = "github.com/hankgalt/workflow-scheduler/internal
 
 // ProcessLocalCSVMongo is the task list / workflow for processing data from a local csv file source & MongoDB sink.
 const ProcessLocalCSVMongoWorkflow = "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch.ProcessLocalCSVMongo"
+
+// ProcessCloudCSVMongo is the task list / workflow for processing data from a cloud csv file source & MongoDB sink.
+const ProcessCloudCSVMongoWorkflow = "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch.ProcessCloudCSVMongo"

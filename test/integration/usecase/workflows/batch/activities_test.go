@@ -25,14 +25,21 @@ import (
 
 const (
 	ActivityAlias                     string = "some-random-activity-alias"
+	SetupCSVBatchAlias                string = "setup-csv-batch-alias"
 	SetupLocalCSVBatchAlias           string = "setup-local-csv-batch-alias"
 	SetupCloudCSVBatchAlias           string = "setup-cloud-csv-batch-alias"
 	SetupLocalCSVMongoBatchAlias      string = "setup-local-csv-mongo-batch-alias"
-	SetupCSVBatchAlias                string = "setup-csv-batch-alias"
+	SetupCloudCSVMongoBatchAlias      string = "setup-cloud-csv-mongo-batch-alias"
 	HandleLocalCSVBatchDataAlias      string = "handle-local-csv-batch-data-alias"
 	HandleCloudCSVBatchDataAlias      string = "handle-cloud-csv-batch-data-alias"
 	HandleLocalCSVMongoBatchDataAlias string = "handle-local-csv-mongo-batch-data-alias"
+	HandleCloudCSVMongoBatchDataAlias string = "handle-cloud-csv-mongo-batch-data-alias"
 )
+
+var agentHeaderMapping = map[string]string{
+	"ENTITY_NUM":       "ENTITY_ID",
+	"PHYSICAL_ADDRESS": "ADDRESS",
+}
 
 type BatchActivitiesTestSuite struct {
 	suite.Suite
@@ -112,7 +119,10 @@ func (s *BatchActivitiesTestSuite) Test_ActivityRegistration() {
 
 func (s *BatchActivitiesTestSuite) Test_SetupLocalCSVBatchActivity() {
 	// register SetupLocalCSVBatchActivity
-	s.env.RegisterActivityWithOptions(btchwkfl.SetupLocalCSVBatch, activity.RegisterOptions{Name: SetupLocalCSVBatchAlias})
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.SetupLocalCSVBatch,
+		activity.RegisterOptions{Name: SetupLocalCSVBatchAlias},
+	)
 
 	// set scheduler client in test environment context
 	s.env.SetWorkerOptions(worker.Options{
@@ -176,7 +186,10 @@ func (s *BatchActivitiesTestSuite) Test_LocalCSVBatchActivityQueue_DummyFuture()
 	}
 
 	// register SetupLocalCSVBatchActivity
-	s.env.RegisterActivityWithOptions(btchwkfl.SetupLocalCSVBatch, activity.RegisterOptions{Name: SetupLocalCSVBatchAlias})
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.SetupLocalCSVBatch,
+		activity.RegisterOptions{Name: SetupLocalCSVBatchAlias},
+	)
 
 	// set scheduler client in test environment context
 	s.env.SetWorkerOptions(worker.Options{
@@ -280,8 +293,12 @@ func (s *BatchActivitiesTestSuite) Test_LocalCSVBatchActivityQueue() {
 	l := s.GetLogger()
 
 	// register SetupLocalCSVBatchActivity
-	s.env.RegisterActivityWithOptions(btchwkfl.SetupLocalCSVBatch, activity.RegisterOptions{Name: SetupLocalCSVBatchAlias})
-	s.env.RegisterActivityWithOptions(btchwkfl.HandleLocalCSVBatchData, activity.RegisterOptions{Name: HandleLocalCSVBatchDataAlias})
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.SetupLocalCSVBatch, activity.RegisterOptions{Name: SetupLocalCSVBatchAlias},
+	)
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.HandleLocalCSVBatchData, activity.RegisterOptions{Name: HandleLocalCSVBatchDataAlias},
+	)
 
 	// set scheduler client in test environment context
 	s.env.SetWorkerOptions(worker.Options{
@@ -328,7 +345,12 @@ func (s *BatchActivitiesTestSuite) Test_LocalCSVBatchActivityQueue() {
 	}
 
 	// execute future & push to queue
-	batResp, err := s.env.ExecuteActivity(btchwkfl.HandleLocalCSVBatchData, req.Config, req.RequestConfig, req.Batches[batchID])
+	batResp, err := s.env.ExecuteActivity(
+		btchwkfl.HandleLocalCSVBatchData,
+		req.Config,
+		req.RequestConfig,
+		req.Batches[batchID],
+	)
 	s.NoError(err)
 	q.PushBack(batResp)
 
@@ -362,7 +384,12 @@ func (s *BatchActivitiesTestSuite) Test_LocalCSVBatchActivityQueue() {
 			}
 
 			// execute future & push to queue
-			batResp, err := s.env.ExecuteActivity(btchwkfl.HandleLocalCSVBatchData, req.Config, req.RequestConfig, req.Batches[batchID])
+			batResp, err := s.env.ExecuteActivity(
+				btchwkfl.HandleLocalCSVBatchData,
+				req.Config,
+				req.RequestConfig,
+				req.Batches[batchID],
+			)
 			s.NoError(err)
 			q.PushBack(batResp)
 		} else {
@@ -383,7 +410,10 @@ func (s *BatchActivitiesTestSuite) Test_LocalCSVBatchActivityQueue() {
 
 func (s *BatchActivitiesTestSuite) Test_SetupCloudCSVBatchActivity() {
 	// register SetupCloudCSVBatchActivity
-	s.env.RegisterActivityWithOptions(btchwkfl.SetupCloudCSVBatch, activity.RegisterOptions{Name: SetupCloudCSVBatchAlias})
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.SetupCloudCSVBatch,
+		activity.RegisterOptions{Name: SetupCloudCSVBatchAlias},
+	)
 
 	// set scheduler client in test environment context
 	s.env.SetWorkerOptions(worker.Options{
@@ -428,8 +458,14 @@ func (s *BatchActivitiesTestSuite) Test_CloudCSVBatchActivityQueue() {
 	l := s.GetLogger()
 
 	// register SetupCloudCSVBatchActivity
-	s.env.RegisterActivityWithOptions(btchwkfl.SetupCloudCSVBatch, activity.RegisterOptions{Name: SetupCloudCSVBatchAlias})
-	s.env.RegisterActivityWithOptions(btchwkfl.HandleCloudCSVBatchData, activity.RegisterOptions{Name: HandleCloudCSVBatchDataAlias})
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.SetupCloudCSVBatch,
+		activity.RegisterOptions{Name: SetupCloudCSVBatchAlias},
+	)
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.HandleCloudCSVBatchData,
+		activity.RegisterOptions{Name: HandleCloudCSVBatchDataAlias},
+	)
 
 	// set scheduler client in test environment context
 	s.env.SetWorkerOptions(worker.Options{
@@ -476,7 +512,12 @@ func (s *BatchActivitiesTestSuite) Test_CloudCSVBatchActivityQueue() {
 	}
 
 	// execute future & push to queue
-	batResp, err := s.env.ExecuteActivity(btchwkfl.HandleCloudCSVBatchData, req.Config, req.RequestConfig, req.Batches[batchID])
+	batResp, err := s.env.ExecuteActivity(
+		btchwkfl.HandleCloudCSVBatchData,
+		req.Config,
+		req.RequestConfig,
+		req.Batches[batchID],
+	)
 	s.NoError(err)
 	q.PushBack(batResp)
 
@@ -510,7 +551,12 @@ func (s *BatchActivitiesTestSuite) Test_CloudCSVBatchActivityQueue() {
 			}
 
 			// execute future & push to queue
-			batResp, err := s.env.ExecuteActivity(btchwkfl.HandleCloudCSVBatchData, req.Config, req.RequestConfig, req.Batches[batchID])
+			batResp, err := s.env.ExecuteActivity(
+				btchwkfl.HandleCloudCSVBatchData,
+				req.Config,
+				req.RequestConfig,
+				req.Batches[batchID],
+			)
 			s.NoError(err)
 			q.PushBack(batResp)
 		} else {
@@ -531,7 +577,10 @@ func (s *BatchActivitiesTestSuite) Test_CloudCSVBatchActivityQueue() {
 
 func (s *BatchActivitiesTestSuite) Test_SetupLocalCSVMongoBatchActivity() {
 	// register SetupLocalCSVMongoBatchActivity
-	s.env.RegisterActivityWithOptions(btchwkfl.SetupLocalCSVMongoBatch, activity.RegisterOptions{Name: SetupLocalCSVMongoBatchAlias})
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.SetupLocalCSVMongoBatch,
+		activity.RegisterOptions{Name: SetupLocalCSVMongoBatchAlias},
+	)
 
 	// set scheduler client in test environment context
 	s.env.SetWorkerOptions(worker.Options{
@@ -575,8 +624,14 @@ func (s *BatchActivitiesTestSuite) Test_LocalCSVMongoBatchActivityQueue() {
 	l := s.GetLogger()
 
 	// register SetupLocalCSVMongoBatchActivity
-	s.env.RegisterActivityWithOptions(btchwkfl.SetupLocalCSVMongoBatch, activity.RegisterOptions{Name: SetupLocalCSVMongoBatchAlias})
-	s.env.RegisterActivityWithOptions(btchwkfl.HandleLocalCSVMongoBatchData, activity.RegisterOptions{Name: HandleLocalCSVMongoBatchDataAlias})
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.SetupLocalCSVMongoBatch,
+		activity.RegisterOptions{Name: SetupLocalCSVMongoBatchAlias},
+	)
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.HandleLocalCSVMongoBatchData,
+		activity.RegisterOptions{Name: HandleLocalCSVMongoBatchDataAlias},
+	)
 
 	// set scheduler client in test environment context
 	s.env.SetWorkerOptions(worker.Options{
@@ -623,7 +678,12 @@ func (s *BatchActivitiesTestSuite) Test_LocalCSVMongoBatchActivityQueue() {
 	}
 
 	// execute future & push to queue
-	batResp, err := s.env.ExecuteActivity(btchwkfl.HandleLocalCSVMongoBatchData, req.Config, req.RequestConfig, req.Batches[batchID])
+	batResp, err := s.env.ExecuteActivity(
+		btchwkfl.HandleLocalCSVMongoBatchData,
+		req.Config,
+		req.RequestConfig,
+		req.Batches[batchID],
+	)
 	s.NoError(err)
 	q.PushBack(batResp)
 
@@ -631,7 +691,11 @@ func (s *BatchActivitiesTestSuite) Test_LocalCSVMongoBatchActivityQueue() {
 	for q.Len() > 0 {
 		if q.Len() < int(req.MaxBatches) && req.End <= req.Start {
 			// build next batch
-			resp, err := s.env.ExecuteActivity(btchwkfl.SetupLocalCSVMongoBatch, req.Config, req.RequestConfig)
+			resp, err := s.env.ExecuteActivity(
+				btchwkfl.SetupLocalCSVMongoBatch,
+				req.Config,
+				req.RequestConfig,
+			)
 			s.NoError(err)
 
 			var result batch.RequestConfig
@@ -657,7 +721,181 @@ func (s *BatchActivitiesTestSuite) Test_LocalCSVMongoBatchActivityQueue() {
 			}
 
 			// execute future & push to queue
-			batResp, err := s.env.ExecuteActivity(btchwkfl.HandleLocalCSVMongoBatchData, req.Config, req.RequestConfig, req.Batches[batchID])
+			batResp, err := s.env.ExecuteActivity(
+				btchwkfl.HandleLocalCSVMongoBatchData,
+				req.Config,
+				req.RequestConfig,
+				req.Batches[batchID],
+			)
+			s.NoError(err)
+			q.PushBack(batResp)
+		} else {
+			batResp := q.Remove(q.Front()).(converter.EncodedValue)
+			var batchResult *batch.Batch
+			err = batResp.Get(&batchResult)
+			s.NoError(err)
+
+			if req.End > req.Start && batchResult.End == req.End {
+				l.Debug("processed last batch", "batchID", batchResult.BatchID, "result", batchResult)
+			} else {
+				l.Debug("processed batch", "batchID", batchResult.BatchID, "result", batchResult)
+			}
+		}
+	}
+}
+
+func (s *BatchActivitiesTestSuite) Test_SetupCloudCSVMongoBatchActivity() {
+	// register SetupCloudCSVMongoBatchActivity
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.SetupCloudCSVMongoBatch,
+		activity.RegisterOptions{Name: SetupCloudCSVMongoBatchAlias},
+	)
+
+	// set scheduler client in test environment context
+	s.env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.Background(),
+	})
+
+	// test for csv file read headers
+	s.testSetupCloudCSVMongoBatch()
+}
+
+func (s *BatchActivitiesTestSuite) testSetupCloudCSVMongoBatch() {
+	l := s.GetLogger()
+	req, err := envutils.BuildCloudCSVMongoBatchRequest(2, 500, agentHeaderMapping)
+	s.NoError(err)
+
+	l.Debug("csv file read headers request", "req", req)
+	resp, err := s.env.ExecuteActivity(btchwkfl.SetupCloudCSVMongoBatch, req.Config, req.RequestConfig)
+	s.NoError(err)
+
+	var result batch.RequestConfig
+	err = resp.Get(&result)
+	s.NoError(err)
+	l.Debug("csv file read headers result", "offsets", result.Offsets, "headers", result.Headers)
+
+	// update request config
+	req.RequestConfig = &result
+
+	for req.End <= req.Start {
+		resp, err = s.env.ExecuteActivity(btchwkfl.SetupCloudCSVMongoBatch, req.Config, req.RequestConfig)
+		s.NoError(err)
+
+		err = resp.Get(&result)
+		s.NoError(err)
+		l.Debug("csv file read result", "offsets", result.Offsets)
+		req.RequestConfig = &result
+	}
+	l.Debug("csv file read headers final result", "num-offsets", len(req.Offsets), "headers", req.Headers)
+}
+
+func (s *BatchActivitiesTestSuite) Test_CloudCSVMongoBatchActivityQueue() {
+	l := s.GetLogger()
+
+	// register SetupCloudCSVMongoBatchActivity
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.SetupCloudCSVMongoBatch,
+		activity.RegisterOptions{Name: SetupCloudCSVMongoBatchAlias},
+	)
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.HandleCloudCSVMongoBatchData,
+		activity.RegisterOptions{Name: HandleCloudCSVMongoBatchDataAlias},
+	)
+
+	// set scheduler client in test environment context
+	s.env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: context.Background(),
+	})
+
+	// build inital request
+	max, size := uint(2), uint(500)
+	req, err := envutils.BuildCloudCSVMongoBatchRequest(max, size, agentHeaderMapping)
+	s.NoError(err)
+
+	// setup batch map
+	if req.Batches == nil {
+		req.Batches = make(map[string]*batch.Batch)
+	}
+
+	// initiate a new queue
+	q := list.New()
+
+	// setup first batch
+	resp, err := s.env.ExecuteActivity(btchwkfl.SetupCloudCSVMongoBatch, req.Config, req.RequestConfig)
+	s.NoError(err)
+
+	var result batch.RequestConfig
+	err = resp.Get(&result)
+	s.NoError(err)
+	l.Debug("first batch setup result", "offsets", result.Offsets, "headers", result.Headers)
+	req.RequestConfig = &result
+
+	// build first batch request
+	start, end := req.Offsets[len(req.Offsets)-2], req.Offsets[len(req.Offsets)-1]
+	batchID, err := btchutils.GenerateBatchID(req.Config, start, end)
+	s.NoError(err)
+	l.Debug("generated first batch ID", "batchID", batchID, "start", start, "end", end)
+	if _, ok := req.Batches[batchID]; !ok {
+		batch := &batch.Batch{
+			BatchID: batchID,
+			Start:   start,
+			End:     end,
+		}
+
+		// update request batch state
+		req.Batches[batchID] = batch
+	}
+
+	// execute future & push to queue
+	batResp, err := s.env.ExecuteActivity(
+		btchwkfl.HandleCloudCSVMongoBatchData,
+		req.Config,
+		req.RequestConfig,
+		req.Batches[batchID],
+	)
+	s.NoError(err)
+	q.PushBack(batResp)
+
+	// while there are items in queue
+	for q.Len() > 0 {
+		if q.Len() < int(req.MaxBatches) && req.End <= req.Start {
+			// build next batch
+			resp, err := s.env.ExecuteActivity(
+				btchwkfl.SetupCloudCSVMongoBatch,
+				req.Config,
+				req.RequestConfig,
+			)
+			s.NoError(err)
+
+			var result batch.RequestConfig
+			err = resp.Get(&result)
+			s.NoError(err)
+			l.Debug("next batch setup result", "offsets", result.Offsets)
+			req.RequestConfig = &result
+
+			// build next batch request
+			start, end := req.Offsets[len(req.Offsets)-2], req.Offsets[len(req.Offsets)-1]
+			batchID, err := btchutils.GenerateBatchID(req.Config, start, end)
+			s.NoError(err)
+			l.Debug("generated next batch ID", "batchID", batchID, "start", start, "end", end)
+			if _, ok := req.Batches[batchID]; !ok {
+				batch := &batch.Batch{
+					BatchID: batchID,
+					Start:   start,
+					End:     end,
+				}
+
+				// update request batch state
+				req.Batches[batchID] = batch
+			}
+
+			// execute future & push to queue
+			batResp, err := s.env.ExecuteActivity(
+				btchwkfl.HandleCloudCSVMongoBatchData,
+				req.Config,
+				req.RequestConfig,
+				req.Batches[batchID],
+			)
 			s.NoError(err)
 			q.PushBack(batResp)
 		} else {
@@ -677,8 +915,14 @@ func (s *BatchActivitiesTestSuite) Test_LocalCSVMongoBatchActivityQueue() {
 
 func (s *BatchActivitiesTestSuite) Test_HandleLocalCSVBatchActivity() {
 	// register activities
-	s.env.RegisterActivityWithOptions(btchwkfl.SetupLocalCSVBatch, activity.RegisterOptions{Name: SetupLocalCSVBatchAlias})
-	s.env.RegisterActivityWithOptions(btchwkfl.HandleLocalCSVBatchData, activity.RegisterOptions{Name: HandleLocalCSVBatchDataAlias})
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.SetupLocalCSVBatch,
+		activity.RegisterOptions{Name: SetupLocalCSVBatchAlias},
+	)
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.HandleLocalCSVBatchData,
+		activity.RegisterOptions{Name: HandleLocalCSVBatchDataAlias},
+	)
 
 	// set scheduler client in test environment context
 	s.env.SetWorkerOptions(worker.Options{
@@ -701,7 +945,11 @@ func (s *BatchActivitiesTestSuite) testHandleLocalCSVBatch() {
 	}
 
 	l.Debug("csv file read headers request", "req", req)
-	resp, err := s.env.ExecuteActivity(btchwkfl.SetupLocalCSVBatch, req.Config, req.RequestConfig)
+	resp, err := s.env.ExecuteActivity(
+		btchwkfl.SetupLocalCSVBatch,
+		req.Config,
+		req.RequestConfig,
+	)
 	s.NoError(err)
 
 	var result batch.RequestConfig
@@ -725,7 +973,12 @@ func (s *BatchActivitiesTestSuite) testHandleLocalCSVBatch() {
 		req.Batches[batchID] = batch
 	}
 
-	batResp, err := s.env.ExecuteActivity(btchwkfl.HandleLocalCSVBatchData, req.Config, req.RequestConfig, req.Batches[batchID])
+	batResp, err := s.env.ExecuteActivity(
+		btchwkfl.HandleLocalCSVBatchData,
+		req.Config,
+		req.RequestConfig,
+		req.Batches[batchID],
+	)
 	s.NoError(err)
 
 	var batchResult *batch.Batch
@@ -736,8 +989,14 @@ func (s *BatchActivitiesTestSuite) testHandleLocalCSVBatch() {
 
 func (s *BatchActivitiesTestSuite) Test_HandleCloudCSVBatchActivity() {
 	// register activities
-	s.env.RegisterActivityWithOptions(btchwkfl.SetupCloudCSVBatch, activity.RegisterOptions{Name: SetupCloudCSVBatchAlias})
-	s.env.RegisterActivityWithOptions(btchwkfl.HandleCloudCSVBatchData, activity.RegisterOptions{Name: HandleCloudCSVBatchDataAlias})
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.SetupCloudCSVBatch,
+		activity.RegisterOptions{Name: SetupCloudCSVBatchAlias},
+	)
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.HandleCloudCSVBatchData,
+		activity.RegisterOptions{Name: HandleCloudCSVBatchDataAlias},
+	)
 
 	// set scheduler client in test environment context
 	s.env.SetWorkerOptions(worker.Options{
@@ -760,7 +1019,11 @@ func (s *BatchActivitiesTestSuite) testHandleCloudCSVBatch() {
 	}
 
 	l.Debug("csv file read headers request", "req", req)
-	resp, err := s.env.ExecuteActivity(btchwkfl.SetupCloudCSVBatch, req.Config, req.RequestConfig)
+	resp, err := s.env.ExecuteActivity(
+		btchwkfl.SetupCloudCSVBatch,
+		req.Config,
+		req.RequestConfig,
+	)
 	s.NoError(err)
 
 	var result batch.RequestConfig
@@ -784,7 +1047,12 @@ func (s *BatchActivitiesTestSuite) testHandleCloudCSVBatch() {
 		req.Batches[batchID] = batch
 	}
 
-	batResp, err := s.env.ExecuteActivity(btchwkfl.HandleCloudCSVBatchData, req.Config, req.RequestConfig, req.Batches[batchID])
+	batResp, err := s.env.ExecuteActivity(
+		btchwkfl.HandleCloudCSVBatchData,
+		req.Config,
+		req.RequestConfig,
+		req.Batches[batchID],
+	)
 	s.NoError(err)
 
 	var batchResult *batch.Batch
@@ -795,8 +1063,14 @@ func (s *BatchActivitiesTestSuite) testHandleCloudCSVBatch() {
 
 func (s *BatchActivitiesTestSuite) Test_HandleLocalCSVMongoBatchDataActivity() {
 	// register SetupLocalCSVMongoBatchActivity & HandleLocalCSVMongoBatchDataActivity
-	s.env.RegisterActivityWithOptions(btchwkfl.SetupLocalCSVMongoBatch, activity.RegisterOptions{Name: SetupLocalCSVMongoBatchAlias})
-	s.env.RegisterActivityWithOptions(btchwkfl.HandleLocalCSVMongoBatchData, activity.RegisterOptions{Name: HandleLocalCSVMongoBatchDataAlias})
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.SetupLocalCSVMongoBatch,
+		activity.RegisterOptions{Name: SetupLocalCSVMongoBatchAlias},
+	)
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.HandleLocalCSVMongoBatchData,
+		activity.RegisterOptions{Name: HandleLocalCSVMongoBatchDataAlias},
+	)
 
 	// set scheduler client in test environment context
 	s.env.SetWorkerOptions(worker.Options{
@@ -819,7 +1093,11 @@ func (s *BatchActivitiesTestSuite) testHandleLocalCSVMongoBatchData() {
 	}
 
 	l.Debug("csv file read headers request", "req", req)
-	resp, err := s.env.ExecuteActivity(btchwkfl.SetupLocalCSVMongoBatch, req.Config, req.RequestConfig)
+	resp, err := s.env.ExecuteActivity(
+		btchwkfl.SetupLocalCSVMongoBatch,
+		req.Config,
+		req.RequestConfig,
+	)
 	s.NoError(err)
 
 	var result batch.RequestConfig
@@ -844,7 +1122,12 @@ func (s *BatchActivitiesTestSuite) testHandleLocalCSVMongoBatchData() {
 		req.Batches[batchID] = batch
 	}
 
-	batResp, err := s.env.ExecuteActivity(btchwkfl.HandleLocalCSVMongoBatchData, req.Config, req.RequestConfig, req.Batches[batchID])
+	batResp, err := s.env.ExecuteActivity(
+		btchwkfl.HandleLocalCSVMongoBatchData,
+		req.Config,
+		req.RequestConfig,
+		req.Batches[batchID],
+	)
 	s.NoError(err)
 
 	var batchResult *batch.Batch

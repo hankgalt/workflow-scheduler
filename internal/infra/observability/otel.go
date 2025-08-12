@@ -17,6 +17,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
+const DEFAULT_METRICS_ADDR = ":9464"
+
 type InitOptions struct {
 	ServiceName  string
 	MetricsAddr  string // e.g. ":9464" (Prom’s Prometheus exporter defaults to 9464)
@@ -45,7 +47,7 @@ func Init(ctx context.Context, opt InitOptions) (shutdown func(context.Context) 
 
 	// serve /metrics
 	if opt.MetricsAddr == "" {
-		opt.MetricsAddr = ":9464"
+		opt.MetricsAddr = DEFAULT_METRICS_ADDR
 	}
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())

@@ -67,7 +67,7 @@ func (c CloudCSVFileHandlerConfig) Bucket() string { return c.bucket }
 
 type CloudCSVFileHandler struct {
 	client    *storage.Client
-	dataPoint batch.DataPoint
+	dataPoint batch.CSVDataPoint
 	headers   []string
 }
 
@@ -98,7 +98,7 @@ func NewCloudCSVFileHandler(cfg CloudCSVFileHandlerConfig) (*CloudCSVFileHandler
 
 	return &CloudCSVFileHandler{
 		client:    client,
-		dataPoint: batch.DataPoint{Name: cfg.Name(), Path: cfg.Path(), Bucket: cfg.Bucket()},
+		dataPoint: batch.CSVDataPoint{Name: cfg.Name(), Path: cfg.Path(), Bucket: cfg.Bucket()},
 	}, nil
 }
 
@@ -176,7 +176,12 @@ func (h *CloudCSVFileHandler) ReadData(ctx context.Context, offset, limit uint64
 	return data[startOffset:nextOffset], offset + nextOffset, n < int(limit), nil
 }
 
-func (h *CloudCSVFileHandler) HandleData(ctx context.Context, start uint64, data any, headers []string) (<-chan batch.Result, error) {
+func (h *CloudCSVFileHandler) HandleData(
+	ctx context.Context,
+	start uint64,
+	data any,
+	headers []string,
+) (<-chan batch.Result, error) {
 	chnk, ok := data.([]byte)
 	if !ok {
 		return nil, errors.New("invalid data type, expected []byte")

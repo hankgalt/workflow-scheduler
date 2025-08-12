@@ -14,14 +14,18 @@ const (
 	ERR_MISSING_DB_NAME      = "missing database name"
 	ERR_MONGO_CLIENT_CONN    = "error connecting with mongo client"
 	ERR_MONGO_CLIENT_DISCONN = "error disconnecting with mongo client"
+	ERR_MISSING_COLL_DOC     = "missing collection or document"
+	ERR_DECODING_OBJECT_ID   = "error decoding object ID from MongoDB"
 )
 
 var (
-	ErrRequiredParams     = errors.New(ERR_REQUIRED_PARAMS)
-	ErrRequiredConnParams = errors.New(ERR_REQUIRED_CONN_PARAMS)
-	ErrMissingDBName      = errors.New(ERR_MISSING_DB_NAME)
-	ErrMongoClientConn    = errors.New(ERR_MONGO_CLIENT_CONN)
-	ErrMongoClientDisconn = errors.New(ERR_MONGO_CLIENT_DISCONN)
+	ErrRequiredParams         = errors.New(ERR_REQUIRED_PARAMS)
+	ErrRequiredConnParams     = errors.New(ERR_REQUIRED_CONN_PARAMS)
+	ErrMissingDBName          = errors.New(ERR_MISSING_DB_NAME)
+	ErrMongoClientConn        = errors.New(ERR_MONGO_CLIENT_CONN)
+	ErrMongoClientDisconn     = errors.New(ERR_MONGO_CLIENT_DISCONN)
+	ErrMissingCollectionOrDoc = errors.New(ERR_MISSING_COLL_DOC)
+	ErrDecodeObjectId         = errors.New(ERR_DECODING_OBJECT_ID)
 )
 
 type MongoDBConfig struct {

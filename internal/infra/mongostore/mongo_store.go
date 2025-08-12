@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -15,6 +17,14 @@ import (
 
 	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 )
+
+type MongoStore interface {
+	EnsureIndexes(ctx context.Context, collectionName string, indexes []mongo.IndexModel) error
+	Store() *mongo.Database
+	Close(ctx context.Context) error
+	Stats(ctx context.Context, db string)
+	AddCollectionDoc(ctx context.Context, collectionName string, doc map[string]any) (string, error)
+}
 
 type mongoStore struct {
 	client *mongo.Client
@@ -98,4 +108,33 @@ func (ms *mongoStore) Stats(ctx context.Context, db string) {
 	}
 
 	l.Debug("mongo client stats", slog.Any("stats", stats))
+}
+
+func (ms *mongoStore) AddCollectionDoc(ctx context.Context, collectionName string, doc map[string]any) (string, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return "", fmt.Errorf("AddCollectionDoc - %w", err)
+	}
+
+	if collectionName == "" || doc == nil {
+		return "", ErrMissingCollectionOrDoc
+	}
+
+	now := time.Now().UTC()
+	doc["created_at"] = now
+	doc["updated_at"] = now
+
+	coll := ms.store.Collection(collectionName)
+	res, err := coll.InsertOne(ctx, doc)
+	if err != nil {
+		l.Error("error inserting document", "error", err.Error(), "collection", collectionName)
+		return "", fmt.Errorf("error inserting document into collection %s: %w", collectionName, err)
+	}
+
+	id, ok := res.InsertedID.(primitive.ObjectID)
+	if !ok {
+		l.Error("error decoding inserted ID", "res", res)
+		return "", ErrDecodeObjectId
+	}
+	return id.Hex(), nil
 }

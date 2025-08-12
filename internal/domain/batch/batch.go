@@ -28,6 +28,10 @@ type CSVSource interface {
 	Headers() []string // Get headers for the CSV source
 }
 
+type Closer interface {
+	Close() error // Close the data source
+}
+
 type DataProcessor interface {
 	DataReader
 	DataHandler
@@ -38,11 +42,16 @@ type CSVDataProcessor interface {
 	DataReader
 	CSVDataHandler
 }
+type CSVDataProcessorWithClose interface {
+	CSVDataProcessor
+	Closer
+}
 
-type DataPoint struct {
-	Name   string `json:"name"`   // Name of the data point
-	Path   string `json:"path"`   // Path to the data point
-	Bucket string `json:"bucket"` // Bucket where the data point is stored
+type CSVDataPoint struct {
+	Name       string `json:"name"`       // Name of the data point
+	Path       string `json:"path"`       // Path to the data point
+	Bucket     string `json:"bucket"`     // Bucket where the data point is stored
+	Collection string `json:"collection"` // Collection name for MongoDB
 }
 
 type LocalCSVBatchConfig struct {
@@ -70,6 +79,12 @@ type LocalCSVMongoBatchConfig struct {
 	MongoBatchConfig    `json:"mongoConfig"`    // Configuration for MongoDB batch processing
 }
 
+type CloudCSVMongoBatchConfig struct {
+	CloudCSVBatchConfig `json:"cloudCsvConfig"` // Configuration for cloud CSV batch processing
+	MongoBatchConfig    `json:"mongoConfig"`    // Configuration for MongoDB batch processing
+	Collection          string                  `json:"collection"` // Collection name for MongoDB
+}
+
 type Result struct {
 	RecordID string `json:"recordId"` // Unique identifier for the record
 	Start    uint64 `json:"start"`    // Start and end positions of the record in the file
@@ -86,12 +101,13 @@ type Batch struct {
 }
 
 type RequestConfig struct {
-	MaxBatches uint     `json:"maxBatches"` // Maximum number of batches to process
-	BatchSize  uint     `json:"batchSize"`  // Size of each batch
-	Start      uint64   `json:"start"`      // Start position for processing
-	End        uint64   `json:"end"`        // End position for processing
-	Offsets    []uint64 `json:"offsets"`    // List of offsets for batch processing
-	Headers    []string `json:"headers"`    // Headers for the CSV file
+	MaxBatches uint              `json:"maxBatches"` // Maximum number of batches to process
+	BatchSize  uint              `json:"batchSize"`  // Size of each batch
+	Start      uint64            `json:"start"`      // Start position for processing
+	End        uint64            `json:"end"`        // End position for processing
+	Offsets    []uint64          `json:"offsets"`    // List of offsets for batch processing
+	Headers    []string          `json:"headers"`    // Headers for the CSV file
+	Mappings   map[string]string `json:"mappings"`   // Optional mappings for CSV headers to MongoDB fields
 }
 
 type CSVBatchRequest struct {
@@ -112,4 +128,9 @@ type CloudCSVBatchRequest struct {
 type LocalCSVMongoBatchRequest struct {
 	CSVBatchRequest `json:"csvBatchRequest"` // CSV batch request with additional fields
 	Config          LocalCSVMongoBatchConfig `json:"config"` // Configuration for the local CSV and MongoDB source
+}
+
+type CloudCSVMongoBatchRequest struct {
+	CSVBatchRequest `json:"csvBatchRequest"` // CSV batch request with additional fields
+	Config          CloudCSVMongoBatchConfig `json:"config"` // Configuration for the cloud CSV and MongoDB source
 }

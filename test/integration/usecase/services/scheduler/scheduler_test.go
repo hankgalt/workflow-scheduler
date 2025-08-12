@@ -14,6 +14,11 @@ import (
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )
 
+var agentHeaderMapping = map[string]string{
+	"ENTITY_NUM":       "ENTITY_ID",
+	"PHYSICAL_ADDRESS": "ADDRESS",
+}
+
 func TestProcessLocalCSVToMongoWorkflow(t *testing.T) {
 	// Initialize logger
 	l := logger.GetSlogLogger()
@@ -57,4 +62,50 @@ func TestProcessLocalCSVToMongoWorkflow(t *testing.T) {
 	require.NoError(t, err)
 
 	l.Info("SchedulerService - TestProcessLocalCSVToMongoWorkflow started workflow successfully", "workflow-run", we)
+}
+
+func TestProcessCloudCSVToMongoWorkflow(t *testing.T) {
+	// Initialize logger
+	l := logger.GetSlogLogger()
+	l.Info("SchedulerService - TestProcessCloudCSVToMongoWorkflow initialized logger")
+
+	mCfg := envutils.BuildMongoStoreConfig()
+	require.NotEmpty(t, mCfg.Host, "MongoDB host should not be empty")
+
+	tCfg := envutils.BuildTemporalConfig("TestProcessCloudCSVToMongoWorkflow")
+	require.NotEmpty(t, tCfg.Host, "Temporal host should not be empty")
+
+	svcCfg := scheduler.NewSchedulerServiceConfig(tCfg, mCfg)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	ctx = logger.WithLogger(ctx, l)
+
+	ss, err := scheduler.NewSchedulerService(ctx, svcCfg)
+	require.NoError(t, err)
+	defer func() {
+		err := ss.Close(ctx)
+		require.NoError(t, err)
+	}()
+
+	reqCfg, err := envutils.BuildCloudCSVMongoBatchConfig()
+	require.NoError(t, err)
+
+	req := batch.CloudCSVMongoBatchRequest{
+		CSVBatchRequest: batch.CSVBatchRequest{
+			RequestConfig: &batch.RequestConfig{
+				MaxBatches: 2,
+				BatchSize:  400,
+				Offsets:    []uint64{},
+				Headers:    []string{},
+				Mappings:   agentHeaderMapping,
+			},
+		},
+		Config: reqCfg,
+	}
+
+	we, err := ss.ProcessCloudCSVToMongoWorkflow(ctx, req)
+	require.NoError(t, err)
+
+	l.Info("SchedulerService - TestProcessCloudCSVToMongoWorkflow started workflow successfully", "workflow-run", we)
 }

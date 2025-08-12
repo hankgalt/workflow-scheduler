@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	Scheduler_ProcessLocalCSVMongoWorkflow_FullMethodName = "/scheduler.v1.Scheduler/ProcessLocalCSVMongoWorkflow"
+	Scheduler_ProcessCloudCSVMongoWorkflow_FullMethodName = "/scheduler.v1.Scheduler/ProcessCloudCSVMongoWorkflow"
 	Scheduler_CreateRun_FullMethodName                    = "/scheduler.v1.Scheduler/CreateRun"
 	Scheduler_GetRun_FullMethodName                       = "/scheduler.v1.Scheduler/GetRun"
 	Scheduler_DeleteRun_FullMethodName                    = "/scheduler.v1.Scheduler/DeleteRun"
-	Scheduler_ProcessLocalCSVMongoWorkflow_FullMethodName = "/scheduler.v1.Scheduler/ProcessLocalCSVMongoWorkflow"
 	Scheduler_AddEntity_FullMethodName                    = "/scheduler.v1.Scheduler/AddEntity"
 	Scheduler_DeleteEntity_FullMethodName                 = "/scheduler.v1.Scheduler/DeleteEntity"
 	Scheduler_GetEntity_FullMethodName                    = "/scheduler.v1.Scheduler/GetEntity"
@@ -33,10 +34,14 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SchedulerClient interface {
+	// Workflow management
+	ProcessLocalCSVMongoWorkflow(ctx context.Context, in *BatchCSVRequest, opts ...grpc.CallOption) (*RunResponse, error)
+	ProcessCloudCSVMongoWorkflow(ctx context.Context, in *BatchCSVRequest, opts ...grpc.CallOption) (*RunResponse, error)
+	// Workflow run management
 	CreateRun(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunResponse, error)
 	GetRun(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunResponse, error)
 	DeleteRun(ctx context.Context, in *DeleteRunRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
-	ProcessLocalCSVMongoWorkflow(ctx context.Context, in *BatchCSVRequest, opts ...grpc.CallOption) (*RunResponse, error)
+	// Business entity management
 	AddEntity(ctx context.Context, in *AddEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
 	DeleteEntity(ctx context.Context, in *EntityRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	GetEntity(ctx context.Context, in *EntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
@@ -49,6 +54,26 @@ type schedulerClient struct {
 
 func NewSchedulerClient(cc grpc.ClientConnInterface) SchedulerClient {
 	return &schedulerClient{cc}
+}
+
+func (c *schedulerClient) ProcessLocalCSVMongoWorkflow(ctx context.Context, in *BatchCSVRequest, opts ...grpc.CallOption) (*RunResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RunResponse)
+	err := c.cc.Invoke(ctx, Scheduler_ProcessLocalCSVMongoWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *schedulerClient) ProcessCloudCSVMongoWorkflow(ctx context.Context, in *BatchCSVRequest, opts ...grpc.CallOption) (*RunResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RunResponse)
+	err := c.cc.Invoke(ctx, Scheduler_ProcessCloudCSVMongoWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *schedulerClient) CreateRun(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunResponse, error) {
@@ -75,16 +100,6 @@ func (c *schedulerClient) DeleteRun(ctx context.Context, in *DeleteRunRequest, o
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteResponse)
 	err := c.cc.Invoke(ctx, Scheduler_DeleteRun_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *schedulerClient) ProcessLocalCSVMongoWorkflow(ctx context.Context, in *BatchCSVRequest, opts ...grpc.CallOption) (*RunResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RunResponse)
-	err := c.cc.Invoke(ctx, Scheduler_ProcessLocalCSVMongoWorkflow_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -138,10 +153,14 @@ type Scheduler_AddBusinessEntitiesClient = grpc.BidiStreamingClient[AddEntityReq
 // All implementations must embed UnimplementedSchedulerServer
 // for forward compatibility.
 type SchedulerServer interface {
+	// Workflow management
+	ProcessLocalCSVMongoWorkflow(context.Context, *BatchCSVRequest) (*RunResponse, error)
+	ProcessCloudCSVMongoWorkflow(context.Context, *BatchCSVRequest) (*RunResponse, error)
+	// Workflow run management
 	CreateRun(context.Context, *RunRequest) (*RunResponse, error)
 	GetRun(context.Context, *RunRequest) (*RunResponse, error)
 	DeleteRun(context.Context, *DeleteRunRequest) (*DeleteResponse, error)
-	ProcessLocalCSVMongoWorkflow(context.Context, *BatchCSVRequest) (*RunResponse, error)
+	// Business entity management
 	AddEntity(context.Context, *AddEntityRequest) (*EntityResponse, error)
 	DeleteEntity(context.Context, *EntityRequest) (*DeleteResponse, error)
 	GetEntity(context.Context, *EntityRequest) (*EntityResponse, error)
@@ -156,6 +175,12 @@ type SchedulerServer interface {
 // pointer dereference when methods are called.
 type UnimplementedSchedulerServer struct{}
 
+func (UnimplementedSchedulerServer) ProcessLocalCSVMongoWorkflow(context.Context, *BatchCSVRequest) (*RunResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessLocalCSVMongoWorkflow not implemented")
+}
+func (UnimplementedSchedulerServer) ProcessCloudCSVMongoWorkflow(context.Context, *BatchCSVRequest) (*RunResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessCloudCSVMongoWorkflow not implemented")
+}
 func (UnimplementedSchedulerServer) CreateRun(context.Context, *RunRequest) (*RunResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateRun not implemented")
 }
@@ -164,9 +189,6 @@ func (UnimplementedSchedulerServer) GetRun(context.Context, *RunRequest) (*RunRe
 }
 func (UnimplementedSchedulerServer) DeleteRun(context.Context, *DeleteRunRequest) (*DeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteRun not implemented")
-}
-func (UnimplementedSchedulerServer) ProcessLocalCSVMongoWorkflow(context.Context, *BatchCSVRequest) (*RunResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ProcessLocalCSVMongoWorkflow not implemented")
 }
 func (UnimplementedSchedulerServer) AddEntity(context.Context, *AddEntityRequest) (*EntityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddEntity not implemented")
@@ -199,6 +221,42 @@ func RegisterSchedulerServer(s grpc.ServiceRegistrar, srv SchedulerServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Scheduler_ServiceDesc, srv)
+}
+
+func _Scheduler_ProcessLocalCSVMongoWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchCSVRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SchedulerServer).ProcessLocalCSVMongoWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Scheduler_ProcessLocalCSVMongoWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SchedulerServer).ProcessLocalCSVMongoWorkflow(ctx, req.(*BatchCSVRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Scheduler_ProcessCloudCSVMongoWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchCSVRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SchedulerServer).ProcessCloudCSVMongoWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Scheduler_ProcessCloudCSVMongoWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SchedulerServer).ProcessCloudCSVMongoWorkflow(ctx, req.(*BatchCSVRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Scheduler_CreateRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -251,24 +309,6 @@ func _Scheduler_DeleteRun_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SchedulerServer).DeleteRun(ctx, req.(*DeleteRunRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Scheduler_ProcessLocalCSVMongoWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BatchCSVRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SchedulerServer).ProcessLocalCSVMongoWorkflow(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Scheduler_ProcessLocalCSVMongoWorkflow_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SchedulerServer).ProcessLocalCSVMongoWorkflow(ctx, req.(*BatchCSVRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -342,6 +382,14 @@ var Scheduler_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*SchedulerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "ProcessLocalCSVMongoWorkflow",
+			Handler:    _Scheduler_ProcessLocalCSVMongoWorkflow_Handler,
+		},
+		{
+			MethodName: "ProcessCloudCSVMongoWorkflow",
+			Handler:    _Scheduler_ProcessCloudCSVMongoWorkflow_Handler,
+		},
+		{
 			MethodName: "CreateRun",
 			Handler:    _Scheduler_CreateRun_Handler,
 		},
@@ -352,10 +400,6 @@ var Scheduler_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteRun",
 			Handler:    _Scheduler_DeleteRun_Handler,
-		},
-		{
-			MethodName: "ProcessLocalCSVMongoWorkflow",
-			Handler:    _Scheduler_ProcessLocalCSVMongoWorkflow_Handler,
 		},
 		{
 			MethodName: "AddEntity",

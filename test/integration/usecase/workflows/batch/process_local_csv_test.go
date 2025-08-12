@@ -55,8 +55,14 @@ func (s *ProcessLocalCSVWorkflowTestSuite) Test_ProcessLocalCSVWorkflow() {
 	s.env.RegisterWorkflow(btchwkfl.ProcessLocalCSV)
 
 	// register activities
-	s.env.RegisterActivityWithOptions(btchwkfl.SetupLocalCSVBatch, activity.RegisterOptions{Name: btchwkfl.SetupLocalCSVBatchActivity})
-	s.env.RegisterActivityWithOptions(btchwkfl.HandleLocalCSVBatchData, activity.RegisterOptions{Name: btchwkfl.HandleLocalCSVBatchDataActivity})
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.SetupLocalCSVBatch,
+		activity.RegisterOptions{Name: btchwkfl.SetupLocalCSVBatchActivity},
+	)
+	s.env.RegisterActivityWithOptions(
+		btchwkfl.HandleLocalCSVBatchData,
+		activity.RegisterOptions{Name: btchwkfl.HandleLocalCSVBatchDataActivity},
+	)
 
 	s.env.SetWorkerOptions(worker.Options{
 		BackgroundActivityContext: context.Background(),
@@ -77,33 +83,55 @@ func (s *ProcessLocalCSVWorkflowTestSuite) Test_ProcessLocalCSVWorkflow() {
 		}
 
 		var activityCalled []string
-		s.env.SetOnActivityStartedListener(func(activityInfo *activity.Info, ctx context.Context, args converter.EncodedValues) {
-			activityType := activityInfo.ActivityType.Name
-			if strings.HasPrefix(activityType, "internalSession") {
-				return
-			}
-			activityCalled = append(activityCalled, activityType)
-			switch activityType {
-			case expectedCall[0]:
-				l.Debug("Test_ProcessLocalCSVWorkflow - expected activity call", "activity-type", activityType)
-				var input batch.RequestConfig
-				s.NoError(args.Get(&input))
-				l.Debug("Test_ProcessLocalCSVWorkflow - received activity input", "activity-type", activityType, "offsets", input.Offsets)
-			case expectedCall[1]:
-				l.Debug("Test_ProcessLocalCSVWorkflow - expected activity call", "activity-type", activityType)
-				var input batch.Batch
-				s.NoError(args.Get(&input))
-				l.Debug("Test_ProcessLocalCSVWorkflow - received activity input", "activity-type", activityType, "batch-id", input.BatchID, "start", input.Start, "end", input.End)
-			default:
-				l.Debug("Test_ProcessLocalCSVWorkflow - unexpected activity call", "activity-type", activityType)
-				panic("Test_ProcessLocalCSVWorkflow - unexpected activity call")
+		s.env.SetOnActivityStartedListener(
+			func(
+				activityInfo *activity.Info,
+				ctx context.Context,
+				args converter.EncodedValues,
+			) {
+				activityType := activityInfo.ActivityType.Name
+				if strings.HasPrefix(activityType, "internalSession") {
+					return
+				}
+				activityCalled = append(activityCalled, activityType)
+				switch activityType {
+				case expectedCall[0]:
+					l.Debug(
+						"Test_ProcessLocalCSVWorkflow - expected activity call",
+						"activity-type", activityType)
+					var input batch.RequestConfig
+					s.NoError(args.Get(&input))
+					l.Debug(
+						"Test_ProcessLocalCSVWorkflow - received activity input",
+						"activity-type", activityType,
+						"offsets", input.Offsets)
+				case expectedCall[1]:
+					l.Debug(
+						"Test_ProcessLocalCSVWorkflow - expected activity call",
+						"activity-type", activityType)
+					var input batch.Batch
+					s.NoError(args.Get(&input))
+					l.Debug(
+						"Test_ProcessLocalCSVWorkflow - received activity input",
+						"activity-type", activityType,
+						"batch-id", input.BatchID,
+						"start", input.Start,
+						"end", input.End)
+				default:
+					l.Debug(
+						"Test_ProcessLocalCSVWorkflow - unexpected activity call",
+						"activity-type", activityType)
+					panic("Test_ProcessLocalCSVWorkflow - unexpected activity call")
 
-			}
-		})
+				}
+			})
 
 		defer func() {
 			if err := recover(); err != nil {
-				l.Error("Test_ProcessLocalCSVWorkflow - panicked", "error", err, "wkfl", btchwkfl.ProcessLocalCSVWorkflow)
+				l.Error(
+					"Test_ProcessLocalCSVWorkflow - panicked",
+					"error", err,
+					"wkfl", btchwkfl.ProcessLocalCSVWorkflow)
 			}
 
 			err := s.env.GetWorkflowError()
@@ -122,11 +150,17 @@ func (s *ProcessLocalCSVWorkflowTestSuite) Test_ProcessLocalCSVWorkflow() {
 					recordCount += len(v.Records)
 
 					for _, rec := range v.Records {
-						l.Debug("Test_ProcessLocalCSVWorkflow", "recordId", rec.RecordID, "result", rec.Record)
+						l.Debug(
+							"Test_ProcessLocalCSVWorkflow",
+							"recordId", rec.RecordID,
+							"result", rec.Record)
 					}
 				}
 
-				l.Info("Test_ProcessLocalCSVWorkflow result", "time-taken", fmt.Sprintf("%dms", timeTaken.Milliseconds()), "record-count", recordCount)
+				l.Info(
+					"Test_ProcessLocalCSVWorkflow result",
+					"time-taken", fmt.Sprintf("%dms", timeTaken.Milliseconds()),
+					"record-count", recordCount)
 			}
 		}()
 

@@ -1,4 +1,4 @@
-package localcsvtomongo
+package cloudcsvtomongo
 
 import (
 	"bytes"
@@ -9,33 +9,35 @@ import (
 	"strings"
 
 	"github.com/comfforts/logger"
-
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
-	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
-	"github.com/hankgalt/workflow-scheduler/internal/repo/vypar"
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/etls"
-	localcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv"
+	cloudcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/cloud_csv"
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
 
-type LocalCSVToMongoHandler struct {
+type CloudCSVToMongoHandler struct {
 	dataPoint    batch.CSVDataPoint
-	csvHandler   batch.CSVDataProcessor
-	mongoHandler vypar.VyparRepo
+	csvHandler   batch.CSVDataProcessorWithClose
+	mongoHandler mongostore.MongoStore
 }
 
-func NewLocalCSVToMongoHandler(
+func NewCloudCSVToMongoHandler(
 	ctx context.Context,
-	cfg localcsv.LocalCSVFileHandlerConfig,
+	cfg cloudcsv.CloudCSVFileHandlerConfig,
 	sCfg infra.StoreConfig,
-) (*LocalCSVToMongoHandler, error) {
+	coll string,
+) (*CloudCSVToMongoHandler, error) {
 	if cfg.Name() == "" {
-		return nil, etls.ErrMissingFileName
+		return nil, cloudcsv.ErrMissingFileName
 	}
 
-	csvHandler, err := localcsv.NewLocalCSVFileHandler(cfg)
+	if cfg.Bucket() == "" {
+		return nil, cloudcsv.ErrMissingBucketName
+	}
+
+	csvHandler, err := cloudcsv.NewCloudCSVFileHandler(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -44,31 +46,30 @@ func NewLocalCSVToMongoHandler(
 	if err != nil {
 		return nil, err
 	}
-
-	vr, err := vypar.NewVyparRepo(ctx, mongoStore)
-	if err != nil {
-		return nil, err
-	}
-
-	return &LocalCSVToMongoHandler{
-		dataPoint:    batch.CSVDataPoint{Name: cfg.Name(), Path: cfg.Path()},
+	return &CloudCSVToMongoHandler{
+		dataPoint: batch.CSVDataPoint{
+			Name:       cfg.Name(),
+			Path:       cfg.Path(),
+			Bucket:     cfg.Bucket(),
+			Collection: coll,
+		},
 		csvHandler:   csvHandler,
-		mongoHandler: vr,
+		mongoHandler: mongoStore,
 	}, nil
 }
 
-func (h *LocalCSVToMongoHandler) Headers() []string {
+func (h *CloudCSVToMongoHandler) Headers() []string {
 	return h.csvHandler.Headers()
 }
 
-func (h *LocalCSVToMongoHandler) ReadData(
+func (h *CloudCSVToMongoHandler) ReadData(
 	ctx context.Context,
 	offset, limit uint64,
 ) (any, uint64, bool, error) {
 	return h.csvHandler.ReadData(ctx, offset, limit)
 }
 
-func (h *LocalCSVToMongoHandler) HandleData(
+func (h *CloudCSVToMongoHandler) HandleData(
 	ctx context.Context,
 	start uint64,
 	data any,
@@ -76,7 +77,7 @@ func (h *LocalCSVToMongoHandler) HandleData(
 ) (<-chan batch.Result, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("LocalCSVToMongoHandler:HandleData - error getting logger from context: %w", err)
+		return nil, fmt.Errorf("CloudCSVToMongoHandler:HandleData - error getting logger from context: %w", err)
 	}
 
 	chnk, ok := data.([]byte)
@@ -85,6 +86,7 @@ func (h *LocalCSVToMongoHandler) HandleData(
 	}
 
 	resStream := make(chan batch.Result)
+
 	go func() {
 		defer close(resStream)
 
@@ -99,7 +101,7 @@ func (h *LocalCSVToMongoHandler) HandleData(
 			record, err := csvReader.Read()
 			if err != nil {
 				if err == io.EOF {
-					l.Debug("LocalCSVToMongoHandler:HandleData - reached EOF, ending go routine",
+					l.Debug("CloudCSVToMongoHandler:HandleData - reached EOF, ending go routine",
 						"lastRecordStart", lastOffset,
 						"lastRecordEnd", currOffset,
 					)
@@ -117,17 +119,15 @@ func (h *LocalCSVToMongoHandler) HandleData(
 					}
 				}
 			}
-
 			lastOffset, currOffset = currOffset, csvReader.InputOffset()
 			cleanedRec := strutils.CleanAlphaNumericsArr(record, []rune{'.', '-', '_', '#', '&', '@'})
 
-			fields := map[string]string{}
+			fields := map[string]any{}
 			for i, field := range headers {
 				fields[strings.ToLower(field)] = cleanedRec[i]
 			}
 
-			mongoModel := stores.MapAgentFieldsToMongoModel(fields)
-			agID, err := h.mongoHandler.AddAgent(ctx, mongoModel)
+			resID, err := h.mongoHandler.AddCollectionDoc(ctx, h.dataPoint.Collection, fields)
 			if err != nil {
 				resStream <- batch.Result{
 					Start: start + uint64(lastOffset),
@@ -140,9 +140,11 @@ func (h *LocalCSVToMongoHandler) HandleData(
 			resStream <- batch.Result{
 				Start:  start + uint64(lastOffset),
 				End:    start + uint64(currOffset),
-				Record: map[string]string{"mongoId": agID},
+				Record: map[string]string{"mongoId": resID},
 			}
 		}
+
 	}()
+
 	return resStream, nil
 }

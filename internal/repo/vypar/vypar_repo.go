@@ -16,6 +16,7 @@ import (
 
 	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
+	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 )
 
 const AGENT_COLLECTION = "vypar.agents"
@@ -29,7 +30,6 @@ var (
 	ErrMissingCollectionName = errors.New(ERR_MISSING_COLLECTION_NAME)
 	ErrDuplicateAgent        = errors.New("agent already exits")
 	ErrDuplicateFiling       = errors.New("filing already exists")
-	ErrDecodeObjectId        = errors.New("error decoding object ID from MongoDB")
 	ErrMissingEntityId       = errors.New("missing entity ID")
 	ErrMissingID             = errors.New("missing ID")
 	ErrInvalidHex            = errors.New("invalid hex string for ObjectID")
@@ -59,10 +59,10 @@ func NewVyparRepo(ctx context.Context, rc infra.DBStore) (*vyparRepo, error) {
 	agIndxs := []mongo.IndexModel{
 		{
 			Keys: bson.D{
-				{Key: "entityId", Value: 1},
-				{Key: "firstName", Value: 1},
-				{Key: "lastName", Value: 1},
-				{Key: "agentType", Value: 1},
+				{Key: "entity_id", Value: 1},
+				{Key: "first_name", Value: 1},
+				{Key: "last_name", Value: 1},
+				{Key: "agent_type", Value: 1},
 			},
 			Options: options.Index().SetUnique(true), // Composite unique index
 		},
@@ -106,9 +106,9 @@ func (vr *vyparRepo) AddAgent(ctx context.Context, ag stores.Agent) (string, err
 
 	id, ok := res.InsertedID.(primitive.ObjectID)
 	if !ok {
-		return "", ErrDecodeObjectId
+		return "", mongostore.ErrDecodeObjectId
 	}
-	return id.Hex(), err
+	return id.Hex(), nil
 }
 
 func (vr *vyparRepo) GetAgent(ctx context.Context, entityId uint64) (*stores.Agent, error) {
@@ -238,7 +238,7 @@ func (vr *vyparRepo) AddFiling(ctx context.Context, bf stores.Filing) (string, e
 
 	id, ok := res.InsertedID.(primitive.ObjectID)
 	if !ok {
-		return "", ErrDecodeObjectId
+		return "", mongostore.ErrDecodeObjectId
 	}
 	return id.Hex(), nil
 }
