@@ -40,7 +40,11 @@ func main() {
 	// Set up server port from environment variable or use default
 	serverPort, err := strconv.Atoi(os.Getenv("SERVER_PORT"))
 	if err != nil || serverPort == 0 {
-		l.Error("no server port provided, using default server port", "error", err.Error())
+		if err != nil {
+			l.Debug("error parsing server port, using default", "error", err.Error())
+		} else {
+			l.Debug("no server port provided, using default server port")
+		}
 		serverPort = SERVICE_PORT
 	}
 	servicePort := fmt.Sprintf(":%d", serverPort)
@@ -53,24 +57,28 @@ func main() {
 		panic(err)
 	}
 
-	// Build MongoDB and Temporal configurations for the scheduler service
+	// Build MongoDB and Temporal configurations for the scheduler service, using env vars
 	l.Info("setting up scheduler server config")
 	mCfg := envutils.BuildMongoStoreConfig()
 	tCfg := envutils.BuildTemporalConfig(host)
 	svcCfg := scheduler.NewSchedulerServiceConfig(tCfg, mCfg)
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	ctx = logger.WithLogger(ctx, l)
-
-	// Initialize the SchedulerService instance
-	ss, err := scheduler.NewSchedulerService(ctx, svcCfg)
 
 	// Initialize the authorizer for the scheduler service
 	l.Info("setting up scheduler authorizer")
 	authorizer, err := config.SetupAuthorizer()
 	if err != nil {
 		l.Error("error initializing scheduler authorizer instance", "error", err.Error())
+		panic(err)
+	}
+
+	startCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	startCtx = logger.WithLogger(startCtx, l)
+
+	// Initialize the SchedulerService instance
+	ss, err := scheduler.NewSchedulerService(startCtx, svcCfg)
+	if err != nil {
+		l.Error("error initializing scheduler service instance", "error", err.Error())
 		panic(err)
 	}
 
@@ -118,7 +126,7 @@ func main() {
 
 	// On stop signal, gracefully stop the server
 	l.Info("received stop signal, gracefully stopping scheduler server")
-	ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer func() {
 		if err := listener.Close(); err != nil {
 			l.Error("error closing scheduler server network listener", "error", err.Error())
@@ -126,6 +134,11 @@ func main() {
 		server.GracefulStop()
 		cancel()
 	}()
-	<-ctx.Done()
+
+	if err := ss.Close(shutdownCtx); err != nil {
+		l.Error("error shutting down scheduler service", "error", err.Error())
+	}
+
+	<-shutdownCtx.Done()
 	l.Info("scheduler server stopped")
 }

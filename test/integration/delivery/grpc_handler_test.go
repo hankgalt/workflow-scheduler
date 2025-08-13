@@ -461,7 +461,6 @@ func setupTest(t *testing.T, fn func(*grpchandler.Config)) (
 	client = api.NewSchedulerClient(cc)
 
 	return client, nbClient, func() {
-		server.Stop()
 		err := cc.Close()
 		require.NoError(t, err)
 
@@ -474,6 +473,8 @@ func setupTest(t *testing.T, fn func(*grpchandler.Config)) (
 
 		err = ss.Close(ctx)
 		require.NoError(t, err)
+
+		server.GracefulStop()
 
 		// err = os.RemoveAll(TEST_DIR)
 		// require.NoError(t, err)

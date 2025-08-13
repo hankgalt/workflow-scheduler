@@ -19,10 +19,10 @@ import (
 )
 
 type MongoStore interface {
-	EnsureIndexes(ctx context.Context, collectionName string, indexes []mongo.IndexModel) error
 	Store() *mongo.Database
 	Close(ctx context.Context) error
 	Stats(ctx context.Context, db string)
+	EnsureIndexes(ctx context.Context, collectionName string, indexes []mongo.IndexModel) error
 	AddCollectionDoc(ctx context.Context, collectionName string, doc map[string]any) (string, error)
 }
 
@@ -37,7 +37,16 @@ func NewMongoStore(ctx context.Context, cfg infra.StoreConfig) (*mongoStore, err
 		return nil, fmt.Errorf("NewMongoStore - %w", err)
 	}
 
-	builder := NewMongoConnectionBuilder(cfg.Protocol(), cfg.Host()).WithUser(cfg.User()).WithPassword(cfg.Pwd()).WithConnectionParams(cfg.Params())
+	builder := NewMongoConnectionBuilder(
+		cfg.Protocol(),
+		cfg.Host(),
+	).WithUser(
+		cfg.User(),
+	).WithPassword(
+		cfg.Pwd(),
+	).WithConnectionParams(
+		cfg.Params(),
+	)
 	opts := &MongoStoreOption{
 		ClientOption: infra.DefaultClientOption(),
 		DBName:       cfg.Name(), // Database name is required for MongoDB operations
@@ -53,7 +62,15 @@ func NewMongoStore(ctx context.Context, cfg infra.StoreConfig) (*mongoStore, err
 		return nil, err
 	}
 
-	mOpts := options.Client().ApplyURI(dbConnStr).SetReadPreference(readpref.Primary()).SetAppName(opts.Caller).SetMaxPoolSize(opts.PoolSize)
+	mOpts := options.Client().ApplyURI(
+		dbConnStr,
+	).SetReadPreference(
+		readpref.Primary(),
+	).SetAppName(
+		opts.Caller,
+	).SetMaxPoolSize(
+		opts.PoolSize,
+	)
 
 	cl, err := mongo.Connect(ctx, mOpts)
 	if err != nil {
@@ -73,15 +90,6 @@ func NewMongoStore(ctx context.Context, cfg infra.StoreConfig) (*mongoStore, err
 		client: cl,
 		store:  cl.Database(opts.DBName),
 	}, nil
-}
-
-func (ms *mongoStore) EnsureIndexes(ctx context.Context, collectionName string, indexes []mongo.IndexModel) error {
-	collection := ms.store.Collection(collectionName)
-	_, err := collection.Indexes().CreateMany(ctx, indexes)
-	if err != nil {
-		return fmt.Errorf("failed to create indexes on collection %q: %w", collectionName, err)
-	}
-	return nil
 }
 
 func (ms *mongoStore) Store() *mongo.Database {
@@ -110,7 +118,24 @@ func (ms *mongoStore) Stats(ctx context.Context, db string) {
 	l.Debug("mongo client stats", slog.Any("stats", stats))
 }
 
-func (ms *mongoStore) AddCollectionDoc(ctx context.Context, collectionName string, doc map[string]any) (string, error) {
+func (ms *mongoStore) EnsureIndexes(
+	ctx context.Context,
+	collectionName string,
+	indexes []mongo.IndexModel,
+) error {
+	collection := ms.store.Collection(collectionName)
+	_, err := collection.Indexes().CreateMany(ctx, indexes)
+	if err != nil {
+		return fmt.Errorf("failed to create indexes on collection %q: %w", collectionName, err)
+	}
+	return nil
+}
+
+func (ms *mongoStore) AddCollectionDoc(
+	ctx context.Context,
+	collectionName string,
+	doc map[string]any,
+) (string, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return "", fmt.Errorf("AddCollectionDoc - %w", err)

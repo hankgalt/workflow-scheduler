@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -40,11 +39,6 @@ func main() {
 	// build temporal client config from environment variables
 	tCfg := envutils.BuildTemporalConfig(host)
 
-	// setup startup context with timeout
-	startupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	startupCtx = logger.WithLogger(startupCtx, l)
-
 	// build temporal client connection options
 	connBuilder := temporal.NewTemporalClientConnectionBuilder(
 		tCfg.Namespace(),
@@ -54,17 +48,28 @@ func main() {
 		tCfg.MetricsAddr(),
 		tCfg.OtelEndpoint(),
 	)
+
+	// setup startup context with timeout
+	startupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	startupCtx = logger.WithLogger(startupCtx, l)
+
 	clientOpts, shutdown, tracingInt, err := connBuilder.Build(startupCtx)
-	if err != nil {
-		l.Error("error building temporal client options", "error", err.Error())
+	defer func() {
 		if shutdown != nil {
-			// shutdown OTel if it was initialized, using startup context
-			sErr := shutdown(startupCtx)
-			if sErr != nil {
-				l.Error("error shutting down OTel", "error", sErr.Error())
-				err = errors.Join(sErr, err)
+			// shutdown OTel if it was initialized
+			l.Info("closing otel client", "host", host)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := shutdown(ctx); err != nil {
+				l.Error("error shutting down OTel", "error", err.Error())
+			} else {
+				l.Info("OTel shutdown successfully")
 			}
 		}
+	}()
+	if err != nil {
+		l.Error("error building temporal client options", "error", err.Error())
 		panic(fmt.Errorf("error building temporal client options: %w", err))
 	}
 
@@ -88,6 +93,10 @@ func main() {
 		EnableSessionWorker:       true,
 	}
 	worker := worker.New(tClient, btchwkfl.ApplicationName, workerOptions)
+	defer func() {
+		l.Info("closing temporal worker", "host", host)
+		worker.Stop()
+	}()
 
 	// register workflows and activities
 	registerBatchWorkflow(worker)
@@ -109,16 +118,8 @@ func main() {
 	<-quit
 
 	// setup shutdown context with timeout
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	// close temporal client and shutdown OTel if initialized
-	tClient.Close()
-	if shutdown != nil {
-		if err := shutdown(shutdownCtx); err != nil {
-			l.Error("error shutting down OTel", "error", err.Error())
-		}
-	}
 
 	<-shutdownCtx.Done()
 	l.Info("batch worker exiting", "host", host)

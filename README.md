@@ -10,7 +10,7 @@
 - db
     - mongo:
         - setup `mongo.env` in `deploy/scheduler` with following env vars:
-            MONGO_HOST, MONGO_REPLICA_SET_NAME,
+            ```MONGO_HOST, MONGO_REPLICA_SET_NAME,
             MONGO_INITDB_ROOT_USERNAME, MONGO_INITDB_ROOT_PASSWORD,
             MONGO_ADMIN_USER, MONGO_ADMIN_PASS,
             MONGO_APP_DB, MONGO_APP_USER, MONGO_APP_PASS
@@ -32,7 +32,7 @@
                     GRANT ALL PRIVILEGES on <db_name_test>.* to '<db_user_name>'@'%';
                     FLUSH PRIVILEGES;```
         - setup `mysql.env` in `deploy/scheduler` with following env vars:
-            MYSQL_ROOT_PASSWORD, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD
+            ```MYSQL_ROOT_PASSWORD, MYSQL_DATABASE, MYSQL_USER, MYSQL_PASSWORD```
         - `make start-db`
 - observability
     - `make start-obs`
@@ -41,9 +41,9 @@
     - `make register-domain`
 - services
     - add env configs in `env/` folder
-        - local.env - `SERVER_PORT, TEMPORAL_HOST, WORKFLOW_DOMAIN, MONGO_PROTOCOL, MONGO_DBNAME,       MONGO_HOSTNAME, MONGO_CONN_PARAMS, MONGO_USERNAME, MONGO_PASSWORD, METRICS_PORT, OTEL_ENDPOINT`
-        - test.env - `CERTS_PATH, POLICY_PATH, TEMPORAL_HOST, WORKFLOW_DOMAIN, CREDS_PATH, BUCKET,MONGO_HOSTNAME, MONGO_CONN_PARAMS, MONGO_USERNAME, MONGO_PASSWORD, METRICS_PORT, OTEL_ENDPOINT, MONGO_PROTOCOL, MONGO_DBNAME`
-        - worker (batch.env) - `TEMPORAL_HOST, WORKFLOW_DOMAIN`
+        - local.env - ```SERVER_PORT, TEMPORAL_HOST, WORKFLOW_DOMAIN, MONGO_PROTOCOL, MONGO_DBNAME,MONGO_HOSTNAME, MONGO_CONN_PARAMS, MONGO_USERNAME, MONGO_PASSWORD, METRICS_PORT, OTEL_ENDPOINT```
+        - test.env - ```CERTS_PATH, POLICY_PATH, TEMPORAL_HOST, WORKFLOW_DOMAIN, CREDS_PATH, BUCKET,MONGO_HOSTNAME, MONGO_CONN_PARAMS, MONGO_USERNAME, MONGO_PASSWORD, METRICS_PORT, OTEL_ENDPOINT, MONGO_PROTOCOL, MONGO_DBNAME```
+        - worker (batch.env) - ```TEMPORAL_HOST, WORKFLOW_DOMAIN```
     - `make start-worker TARGET=batch`
     - `make start-server`
 

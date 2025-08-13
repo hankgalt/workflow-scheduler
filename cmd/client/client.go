@@ -16,6 +16,11 @@ import (
 const SERVICE_PORT = 65051
 const SERVICE_DOMAIN = "127.0.0.1"
 
+var agentHeaderMapping = map[string]string{
+	"ENTITY_NUM":       "ENTITY_ID",
+	"PHYSICAL_ADDRESS": "ADDRESS",
+}
+
 func main() {
 
 	// initialize app logger instance
@@ -41,6 +46,12 @@ func main() {
 	err = testWorkflowCRUD(client, l)
 	if err != nil {
 		l.Error("error: workflow CRUD", "error", err.Error())
+		return
+	}
+
+	err = testProcessCloudCSVMongoWorkflow(client, l)
+	if err != nil {
+		l.Error("error: process cloud CSV Mongo workflow", "error", err.Error())
 		return
 	}
 }
@@ -71,6 +82,24 @@ func testWorkflowCRUD(client api.SchedulerClient, l logger.Logger) error {
 		l.Error("error deleting run", "error", err.Error())
 		return err
 	}
+
+	return nil
+}
+
+func testProcessCloudCSVMongoWorkflow(client api.SchedulerClient, l logger.Logger) error {
+	ctx := context.Background()
+
+	resp, err := client.ProcessCloudCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
+		MaxBatches: 2,
+		BatchSize:  400,
+		Mappings:   agentHeaderMapping,
+	})
+	if err != nil {
+		l.Error("error processing cloud CSV to mongo workflow", "error", err.Error())
+		return err
+	}
+
+	l.Info("ProcessCloudCSVMongoWorkflow response", "response", resp)
 
 	return nil
 }

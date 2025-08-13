@@ -105,7 +105,7 @@ func (dr *daudRepo) GetRun(ctx context.Context, runId string) (*stores.WorkflowR
 	}
 
 	coll := dr.Store().Collection(RUN_COLLECTION)
-	filter := bson.M{"runId": runId}
+	filter := bson.M{"run_id": runId}
 
 	res := coll.FindOne(ctx, filter)
 
@@ -164,7 +164,7 @@ func (dr *daudRepo) DeleteRun(ctx context.Context, runId string) error {
 	}
 
 	coll := dr.Store().Collection(RUN_COLLECTION)
-	filter := bson.M{"runId": runId}
+	filter := bson.M{"run_id": runId}
 
 	res, err := coll.DeleteOne(ctx, filter)
 	if err != nil {

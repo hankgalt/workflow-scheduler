@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -75,9 +76,9 @@ func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*sche
 		l.Error("error getting MongoDB store", "error", err.Error())
 
 		// Close the temporal client before returning
-		err := tc.Close(ctx)
-		if err != nil {
-			l.Error("error closing temporal client", "error", err.Error())
+		if tErr := tc.Close(ctx); tErr != nil {
+			l.Error("error closing temporal client", "error", tErr.Error())
+			err = errors.Join(err, tErr)
 		}
 		return nil, err
 	}
@@ -88,14 +89,15 @@ func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*sche
 		l.Error("error getting MongoDB store for Vypar", "error", err.Error())
 
 		// Close the temporal client before returning
-		err := tc.Close(ctx)
-		if err != nil {
-			l.Error("error closing temporal client", "error", err.Error())
+		if tErr := tc.Close(ctx); tErr != nil {
+			l.Error("error closing temporal client", "error", tErr.Error())
+			err = errors.Join(err, tErr)
 		}
 
 		// Close the MongoDB store before returning
-		if err := dms.Close(ctx); err != nil {
-			l.Error("error closing MongoDB store", "error", err.Error())
+		if dErr := dms.Close(ctx); dErr != nil {
+			l.Error("error closing MongoDB store", "error", dErr.Error())
+			err = errors.Join(err, dErr)
 		}
 
 		return nil, err
@@ -107,19 +109,21 @@ func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*sche
 		l.Error("error creating Daud repository", "error", err.Error())
 
 		// Close the temporal client before returning
-		err := tc.Close(ctx)
-		if err != nil {
-			l.Error("error closing temporal client", "error", err.Error())
+		if tErr := tc.Close(ctx); tErr != nil {
+			l.Error("error closing temporal client", "error", tErr.Error())
+			err = errors.Join(err, tErr)
 		}
 
 		// Close the daud MongoDB store before returning
-		if err := dms.Close(ctx); err != nil {
-			l.Error("error closing daud `MongoDB store", "error", err.Error())
+		if dErr := dms.Close(ctx); dErr != nil {
+			l.Error("error closing daud MongoDB store", "error", dErr.Error())
+			err = errors.Join(err, dErr)
 		}
 
 		// Close the vypar MongoDB store before returning
-		if err := vms.Close(ctx); err != nil {
-			l.Error("error closing vypar MongoDB store", "error", err.Error())
+		if vErr := vms.Close(ctx); vErr != nil {
+			l.Error("error closing vypar MongoDB store", "error", vErr.Error())
+			err = errors.Join(err, vErr)
 		}
 
 		return nil, err
@@ -132,19 +136,21 @@ func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*sche
 		l.Error("error creating Vypar repository", "error", err.Error())
 
 		// Close the temporal client before returning
-		err := tc.Close(ctx)
-		if err != nil {
-			l.Error("error closing temporal client", "error", err.Error())
+		if tErr := tc.Close(ctx); tErr != nil {
+			l.Error("error closing temporal client", "error", tErr.Error())
+			err = errors.Join(err, tErr)
 		}
 
 		// Close the daud MongoDB store before returning
-		if err := dms.Close(ctx); err != nil {
-			l.Error("error closing daud MongoDB store", "error", err.Error())
+		if dErr := dms.Close(ctx); dErr != nil {
+			l.Error("error closing daud MongoDB store", "error", dErr.Error())
+			err = errors.Join(err, dErr)
 		}
 
 		// Close the vypar MongoDB store before returning
-		if err := vms.Close(ctx); err != nil {
-			l.Error("error closing vypar MongoDB store", "error", err.Error())
+		if vErr := vms.Close(ctx); vErr != nil {
+			l.Error("error closing vypar MongoDB store", "error", vErr.Error())
+			err = errors.Join(err, vErr)
 		}
 
 		return nil, err

@@ -122,7 +122,7 @@ func (vr *vyparRepo) GetAgent(ctx context.Context, entityId uint64) (*stores.Age
 	}
 
 	coll := vr.Store().Collection(AGENT_COLLECTION)
-	filter := bson.M{"entityId": entityId}
+	filter := bson.M{"entity_id": entityId}
 
 	var agent stores.Agent
 	err = coll.FindOne(ctx, filter).Decode(&agent)
@@ -177,7 +177,7 @@ func (vr *vyparRepo) DeleteAgent(ctx context.Context, entityId uint64) (bool, er
 	}
 
 	coll := vr.Store().Collection(AGENT_COLLECTION)
-	filter := bson.M{"entityId": entityId}
+	filter := bson.M{"entity_id": entityId}
 	result, err := coll.DeleteOne(ctx, filter)
 	if err != nil {
 		l.Error("DeleteAgent error", slog.String("error", err.Error()))
@@ -254,7 +254,7 @@ func (vr *vyparRepo) GetFiling(ctx context.Context, entityId uint64) (*stores.Fi
 	}
 
 	coll := vr.Store().Collection(FILING_COLLECTION)
-	filter := bson.M{"entityId": entityId}
+	filter := bson.M{"entity_id": entityId}
 
 	var filing stores.Filing
 	err = coll.FindOne(ctx, filter).Decode(&filing)
@@ -309,7 +309,7 @@ func (vr *vyparRepo) DeleteFiling(ctx context.Context, entityId uint64) (bool, e
 	}
 
 	coll := vr.Store().Collection(FILING_COLLECTION)
-	filter := bson.M{"entityId": entityId}
+	filter := bson.M{"entity_id": entityId}
 	result, err := coll.DeleteOne(ctx, filter)
 	if err != nil {
 		l.Error("DeleteFiling error", slog.String("error", err.Error()))
