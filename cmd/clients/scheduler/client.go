@@ -10,7 +10,7 @@ import (
 	config "github.com/comfforts/comff-config"
 	"github.com/comfforts/logger"
 
-	api "github.com/hankgalt/workflow-scheduler/api/v1"
+	api "github.com/hankgalt/workflow-scheduler/api/scheduler/v1"
 )
 
 const SERVICE_PORT = 65051

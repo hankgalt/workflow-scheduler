@@ -3,7 +3,7 @@ package stores
 import (
 	"time"
 
-	api "github.com/hankgalt/workflow-scheduler/api/v1"
+	api "github.com/hankgalt/workflow-scheduler/api/scheduler/v1"
 )
 
 type RunStatus string

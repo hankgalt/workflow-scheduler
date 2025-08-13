@@ -38,7 +38,7 @@ func TestVyparRepoAgentCRUD(t *testing.T) {
 	vr, err := vypar.NewVyparRepo(ctx, ms)
 	require.NoError(t, err)
 
-	entityId := uint64(1234567)
+	entityId := "1234567"
 	agM := getDummyBusinessAgentMongo(entityId)
 
 	t.Log("Vypar repository initialized successfully")
@@ -105,7 +105,7 @@ func TestYvparRepoFilingCRUD(t *testing.T) {
 	vr, err := vypar.NewVyparRepo(ctx, ms)
 	require.NoError(t, err)
 
-	entityId := uint64(1234567)
+	entityId := "1234567"
 	bfM := getDummyBusinessFilingMongo(entityId)
 
 	t.Log("Vypar repository initialized successfully")
@@ -145,7 +145,7 @@ func TestYvparRepoFilingCRUD(t *testing.T) {
 	t.Log("All filings cleaned up successfully")
 }
 
-func getDummyBusinessAgentMongo(entityId uint64) stores.Agent {
+func getDummyBusinessAgentMongo(entityId string) stores.Agent {
 	return stores.Agent{
 		EntityID:   entityId,
 		EntityName: "TestEntity",
@@ -158,7 +158,7 @@ func getDummyBusinessAgentMongo(entityId uint64) stores.Agent {
 	}
 }
 
-func getDummyBusinessFilingMongo(entityId uint64) stores.Filing {
+func getDummyBusinessFilingMongo(entityId string) stores.Filing {
 	return stores.Filing{
 		EntityID:               entityId,
 		EntityName:             "TestEntity",

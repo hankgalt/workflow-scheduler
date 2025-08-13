@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	api "github.com/hankgalt/workflow-scheduler/api/v1"
+	api "github.com/hankgalt/workflow-scheduler/api/business/v1"
 )
 
 type BusinessEntityType string
@@ -16,7 +16,7 @@ const (
 
 type Agent struct {
 	EntityName string            `bson:"entity_name"`
-	EntityID   uint64            `bson:"entity_id"`
+	EntityID   string            `bson:"entity_id"`
 	OrgName    string            `bson:"org_name"`
 	FirstName  string            `bson:"first_name"`
 	MiddleName string            `bson:"middle_name,omitempty"`
@@ -30,7 +30,7 @@ type Agent struct {
 
 type Filing struct {
 	EntityName             string            `bson:"entity_name"`
-	EntityID               uint64            `bson:"entity_id"`
+	EntityID               string            `bson:"entity_id"`
 	InitialFilingDate      uint64            `bson:"initial_filing_date"`
 	Jurisdiction           string            `bson:"jurisdiction"`
 	EntityStatus           string            `bson:"entity_status"`
@@ -54,14 +54,9 @@ type Filing struct {
 }
 
 func MapAgentFieldsToMongoModel(fields map[string]string) Agent {
-	var entityId uint64
+	var entityId string
 	if id, ok := fields["entity_num"]; ok {
-		num, err := strconv.Atoi(id)
-		if err == nil {
-			entityId = uint64(num)
-		} else {
-			entityId = 0 // Default to 0 if conversion fails
-		}
+		entityId = id
 	}
 	var entityName string
 	if name, ok := fields["entity_name"]; ok {
@@ -93,7 +88,7 @@ func MapAgentFieldsToMongoModel(fields map[string]string) Agent {
 	}
 	address := fields["physical_address1"] + " " + fields["physical_city"] + " " + fields["physical_state"] + " " + fields["physical_postal_code"] + " " + fields["physical_country"]
 
-	if entityId == 0 || entityName == "" || firstName == "" {
+	if entityId == "" || entityName == "" || firstName == "" {
 
 	}
 
@@ -145,12 +140,7 @@ func MapFilingFieldsToMongoModel(fields map[string]string) Filing {
 		case "entity_name":
 			filing.EntityName = v
 		case "entity_num":
-			num, err := strconv.Atoi(v)
-			if err == nil {
-				filing.EntityID = uint64(num)
-			} else {
-				filing.EntityID = 0 // Default to 0 if conversion fails
-			}
+			filing.EntityID = v
 		case "initial_filing_date":
 			if date, err := strconv.ParseUint(v, 10, 64); err == nil {
 				filing.InitialFilingDate = date

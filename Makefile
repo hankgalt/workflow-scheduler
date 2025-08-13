@@ -53,16 +53,16 @@ stop-mongo:
 
 # start scheduler service from local repo
 start-server:
-	@echo "starting local business service with latest ${HEAD}"
+	@echo "starting local scheduler service"
 	scripts/start-server.sh
 
 test-server:
-	@echo " - testing rev ${HEAD} business server"
+	@echo " - testing scheduler server"
 	cd cmd/client && grpcurl -key certs/client-key.pem -cert certs/client.pem -cacert certs/ca.pem localhost:65051 list scheduler.v1.Scheduler
 
 # start scheduler service client from local repo
 run-client:
-	@echo "starting local test client with latest ${HEAD}"
+	@echo "starting local scheduler client"
 	scripts/start-client.sh
 
 # start temporal server

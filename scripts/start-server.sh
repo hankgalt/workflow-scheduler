@@ -1,11 +1,11 @@
 #!/bin/bash
 
-ENV_FILE="./env/local.env"
+ENV_FILE="./env/scheduler.env"
 
 if [ -f "${ENV_FILE}" ]; then
     export $(grep -v '^#' $ENV_FILE | xargs)
-    echo " - starting scheduler server - DB_HOST: $DB_HOST, DB_NAME: $DB_NAME"
-    cd cmd/scheduler && go run scheduler.go
+    echo " - starting scheduler server with environment from ${ENV_FILE}"
+    cd cmd/servers/scheduler && go run scheduler.go
 else 
     echo " - ${ENV_FILE} does not exist."
     exit 2

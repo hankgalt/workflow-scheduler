@@ -1,44 +1,8 @@
 syntax = "proto3";
 
-package scheduler.v1;
+package business.v1;
 
-option go_package = "github.com/hankgalt/workflow-scheduler/api/scheduler_v1";
-
-message WorkflowRun {
-    string run_id = 1;
-    string workflow_id = 2;
-    string status = 3;
-    string requested_by = 4;
-    string type = 5;
-    string external_ref = 6;
-}
-
-message BatchCSVRequest {
-    uint32 max_batches = 1;
-    uint64 batch_size = 2;
-    map<string, string> mappings = 3;
-}
-
-message RunResponse {
-    bool ok = 1;
-    WorkflowRun run = 2;
-}
-
-message RunRequest {
-    string run_id = 1;
-    string workflow_id = 2;
-    string requested_by = 3;
-    string type = 4;
-    string external_ref = 5;
-}
-
-message DeleteRunRequest {
-    string id = 1;
-}
-
-message DeleteResponse {
-    bool ok = 1;
-}
+option go_package = "github.com/hankgalt/workflow-scheduler/api/business_v1";
 
 enum EntityType {
     AGENT = 0;
@@ -47,7 +11,7 @@ enum EntityType {
 
 message Agent {
     string id = 1;
-    uint64 entity_id = 2;
+    string entity_id = 2;
     string entity_name = 3;
     string entity_org = 4;
     string first_name = 5;
@@ -59,7 +23,7 @@ message Agent {
 
 message Filing {
     string id = 1;
-    uint64 entity_id = 2;
+    string entity_id = 2;
     string entity_name = 3;
     uint64 initial_filing_date = 4;
     string jurisdiction = 5;
@@ -90,6 +54,10 @@ message EntityRequest {
     EntityType type = 2;
 }
 
+message DeleteResponse {
+    bool ok = 1;
+}
+
 message EntityResponse {
     bool ok = 1;
     oneof test_oneof {
@@ -105,16 +73,7 @@ message StreamEntityResponse {
     }
 }
 
-service Scheduler {
-    // Workflow management
-    rpc ProcessLocalCSVMongoWorkflow(BatchCSVRequest) returns (RunResponse) {}
-    rpc ProcessCloudCSVMongoWorkflow(BatchCSVRequest) returns (RunResponse) {}
-
-    // Workflow run management
-    rpc CreateRun(RunRequest) returns (RunResponse) {}
-    rpc GetRun(RunRequest) returns (RunResponse) {}
-    rpc DeleteRun(DeleteRunRequest) returns (DeleteResponse) {}
-
+service Business {
     // Business entity management
     rpc AddEntity(AddEntityRequest) returns (EntityResponse) {}
     rpc DeleteEntity(EntityRequest) returns (DeleteResponse) {}

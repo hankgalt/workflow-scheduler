@@ -4,9 +4,17 @@ global:
 
 scrape_configs:
   # scrape your Go process (client/worker) exposing /metrics from observability.Init
-  # - job_name: "workflow-scheduler"
-  #   static_configs:
-  #     - targets: ["host.docker.internal:9464"] # adjust for your container network
+  - job_name: "workflow-scheduler"
+    static_configs:
+      - targets: [":9464"] # adjust for your container network
+
+  - job_name: "batch-worker"
+    static_configs:
+      - targets: [":9465"] # adjust for your container network
+
+  - job_name: "test-requests"
+    static_configs:
+      - targets: [":9467"] # adjust for your container network
 
   # Optional: scrape Temporal Server metrics if you expose them (default port often 8000)
   - job_name: "temporal-server"

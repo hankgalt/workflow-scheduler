@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package scheduler.v1;
+
+option go_package = "github.com/hankgalt/workflow-scheduler/api/scheduler_v1";
+
+message WorkflowRun {
+    string run_id = 1;
+    string workflow_id = 2;
+    string status = 3;
+    string requested_by = 4;
+    string type = 5;
+    string external_ref = 6;
+}
+
+message BatchCSVRequest {
+    uint32 max_batches = 1;
+    uint64 batch_size = 2;
+    map<string, string> mappings = 3;
+}
+
+message RunResponse {
+    bool ok = 1;
+    WorkflowRun run = 2;
+}
+
+message RunRequest {
+    string run_id = 1;
+    string workflow_id = 2;
+    string requested_by = 3;
+    string type = 4;
+    string external_ref = 5;
+}
+
+message DeleteRunRequest {
+    string id = 1;
+}
+
+message DeleteResponse {
+    bool ok = 1;
+}
+
+service Scheduler {
+    // Workflow management
+    rpc ProcessLocalCSVMongoWorkflow(BatchCSVRequest) returns (RunResponse) {}
+    rpc ProcessCloudCSVMongoWorkflow(BatchCSVRequest) returns (RunResponse) {}
+
+    // Workflow run management
+    rpc CreateRun(RunRequest) returns (RunResponse) {}
+    rpc GetRun(RunRequest) returns (RunResponse) {}
+    rpc DeleteRun(DeleteRunRequest) returns (DeleteResponse) {}
+}

@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.28.3
-// source: api/v1/scheduler.proto
+// source: api/scheduler/v1/scheduler.proto
 
 package scheduler_v1
 
@@ -24,10 +24,6 @@ const (
 	Scheduler_CreateRun_FullMethodName                    = "/scheduler.v1.Scheduler/CreateRun"
 	Scheduler_GetRun_FullMethodName                       = "/scheduler.v1.Scheduler/GetRun"
 	Scheduler_DeleteRun_FullMethodName                    = "/scheduler.v1.Scheduler/DeleteRun"
-	Scheduler_AddEntity_FullMethodName                    = "/scheduler.v1.Scheduler/AddEntity"
-	Scheduler_DeleteEntity_FullMethodName                 = "/scheduler.v1.Scheduler/DeleteEntity"
-	Scheduler_GetEntity_FullMethodName                    = "/scheduler.v1.Scheduler/GetEntity"
-	Scheduler_AddBusinessEntities_FullMethodName          = "/scheduler.v1.Scheduler/AddBusinessEntities"
 )
 
 // SchedulerClient is the client API for Scheduler service.
@@ -41,11 +37,6 @@ type SchedulerClient interface {
 	CreateRun(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunResponse, error)
 	GetRun(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*RunResponse, error)
 	DeleteRun(ctx context.Context, in *DeleteRunRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
-	// Business entity management
-	AddEntity(ctx context.Context, in *AddEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
-	DeleteEntity(ctx context.Context, in *EntityRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
-	GetEntity(ctx context.Context, in *EntityRequest, opts ...grpc.CallOption) (*EntityResponse, error)
-	AddBusinessEntities(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[AddEntityRequest, StreamEntityResponse], error)
 }
 
 type schedulerClient struct {
@@ -106,49 +97,6 @@ func (c *schedulerClient) DeleteRun(ctx context.Context, in *DeleteRunRequest, o
 	return out, nil
 }
 
-func (c *schedulerClient) AddEntity(ctx context.Context, in *AddEntityRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EntityResponse)
-	err := c.cc.Invoke(ctx, Scheduler_AddEntity_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *schedulerClient) DeleteEntity(ctx context.Context, in *EntityRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DeleteResponse)
-	err := c.cc.Invoke(ctx, Scheduler_DeleteEntity_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *schedulerClient) GetEntity(ctx context.Context, in *EntityRequest, opts ...grpc.CallOption) (*EntityResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EntityResponse)
-	err := c.cc.Invoke(ctx, Scheduler_GetEntity_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *schedulerClient) AddBusinessEntities(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[AddEntityRequest, StreamEntityResponse], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &Scheduler_ServiceDesc.Streams[0], Scheduler_AddBusinessEntities_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[AddEntityRequest, StreamEntityResponse]{ClientStream: stream}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Scheduler_AddBusinessEntitiesClient = grpc.BidiStreamingClient[AddEntityRequest, StreamEntityResponse]
-
 // SchedulerServer is the server API for Scheduler service.
 // All implementations must embed UnimplementedSchedulerServer
 // for forward compatibility.
@@ -160,11 +108,6 @@ type SchedulerServer interface {
 	CreateRun(context.Context, *RunRequest) (*RunResponse, error)
 	GetRun(context.Context, *RunRequest) (*RunResponse, error)
 	DeleteRun(context.Context, *DeleteRunRequest) (*DeleteResponse, error)
-	// Business entity management
-	AddEntity(context.Context, *AddEntityRequest) (*EntityResponse, error)
-	DeleteEntity(context.Context, *EntityRequest) (*DeleteResponse, error)
-	GetEntity(context.Context, *EntityRequest) (*EntityResponse, error)
-	AddBusinessEntities(grpc.BidiStreamingServer[AddEntityRequest, StreamEntityResponse]) error
 	mustEmbedUnimplementedSchedulerServer()
 }
 
@@ -189,18 +132,6 @@ func (UnimplementedSchedulerServer) GetRun(context.Context, *RunRequest) (*RunRe
 }
 func (UnimplementedSchedulerServer) DeleteRun(context.Context, *DeleteRunRequest) (*DeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteRun not implemented")
-}
-func (UnimplementedSchedulerServer) AddEntity(context.Context, *AddEntityRequest) (*EntityResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddEntity not implemented")
-}
-func (UnimplementedSchedulerServer) DeleteEntity(context.Context, *EntityRequest) (*DeleteResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteEntity not implemented")
-}
-func (UnimplementedSchedulerServer) GetEntity(context.Context, *EntityRequest) (*EntityResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetEntity not implemented")
-}
-func (UnimplementedSchedulerServer) AddBusinessEntities(grpc.BidiStreamingServer[AddEntityRequest, StreamEntityResponse]) error {
-	return status.Errorf(codes.Unimplemented, "method AddBusinessEntities not implemented")
 }
 func (UnimplementedSchedulerServer) mustEmbedUnimplementedSchedulerServer() {}
 func (UnimplementedSchedulerServer) testEmbeddedByValue()                   {}
@@ -313,67 +244,6 @@ func _Scheduler_DeleteRun_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Scheduler_AddEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddEntityRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SchedulerServer).AddEntity(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Scheduler_AddEntity_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SchedulerServer).AddEntity(ctx, req.(*AddEntityRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Scheduler_DeleteEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EntityRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SchedulerServer).DeleteEntity(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Scheduler_DeleteEntity_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SchedulerServer).DeleteEntity(ctx, req.(*EntityRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Scheduler_GetEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EntityRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SchedulerServer).GetEntity(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Scheduler_GetEntity_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SchedulerServer).GetEntity(ctx, req.(*EntityRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Scheduler_AddBusinessEntities_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(SchedulerServer).AddBusinessEntities(&grpc.GenericServerStream[AddEntityRequest, StreamEntityResponse]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Scheduler_AddBusinessEntitiesServer = grpc.BidiStreamingServer[AddEntityRequest, StreamEntityResponse]
-
 // Scheduler_ServiceDesc is the grpc.ServiceDesc for Scheduler service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -401,26 +271,7 @@ var Scheduler_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "DeleteRun",
 			Handler:    _Scheduler_DeleteRun_Handler,
 		},
-		{
-			MethodName: "AddEntity",
-			Handler:    _Scheduler_AddEntity_Handler,
-		},
-		{
-			MethodName: "DeleteEntity",
-			Handler:    _Scheduler_DeleteEntity_Handler,
-		},
-		{
-			MethodName: "GetEntity",
-			Handler:    _Scheduler_GetEntity_Handler,
-		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "AddBusinessEntities",
-			Handler:       _Scheduler_AddBusinessEntities_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-	},
-	Metadata: "api/v1/scheduler.proto",
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "api/scheduler/v1/scheduler.proto",
 }

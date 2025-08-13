@@ -16,7 +16,6 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/temporal"
 	"github.com/hankgalt/workflow-scheduler/internal/repo/daud"
-	"github.com/hankgalt/workflow-scheduler/internal/repo/vypar"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
 	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
 )
@@ -27,11 +26,6 @@ type SchedulerService interface {
 	CreateRun(ctx context.Context, params *stores.WorkflowRun) (*stores.WorkflowRun, error)
 	GetRun(ctx context.Context, runId string) (*stores.WorkflowRun, error)
 	DeleteRun(ctx context.Context, runId string) error
-	AddAgent(ctx context.Context, agent stores.Agent) (string, *stores.Agent, error)
-	GetAgent(ctx context.Context, id string) (*stores.Agent, error)
-	AddFiling(ctx context.Context, filing stores.Filing) (string, *stores.Filing, error)
-	GetFiling(ctx context.Context, id string) (*stores.Filing, error)
-	DeleteEntity(ctx context.Context, entityType stores.BusinessEntityType, id string) (bool, error)
 	Close(ctx context.Context) error
 }
 
@@ -50,7 +44,6 @@ func NewSchedulerServiceConfig(temporalCfg temporal.TemporalConfig, mongoCfg inf
 type schedulerService struct {
 	temporal *temporal.TemporalClient
 	daud     daud.DaudRepo
-	vypar    vypar.VyparRepo
 }
 
 // NewSchedulerService initializes a new SchedulerService instance
@@ -83,26 +76,6 @@ func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*sche
 		return nil, err
 	}
 
-	// Initialize MongoDB store for vypar repository
-	vms, err := mongostore.NewMongoStore(ctx, cfg.MongoConfig)
-	if err != nil {
-		l.Error("error getting MongoDB store for Vypar", "error", err.Error())
-
-		// Close the temporal client before returning
-		if tErr := tc.Close(ctx); tErr != nil {
-			l.Error("error closing temporal client", "error", tErr.Error())
-			err = errors.Join(err, tErr)
-		}
-
-		// Close the MongoDB store before returning
-		if dErr := dms.Close(ctx); dErr != nil {
-			l.Error("error closing MongoDB store", "error", dErr.Error())
-			err = errors.Join(err, dErr)
-		}
-
-		return nil, err
-	}
-
 	// Initialize Daud repository
 	dr, err := daud.NewDaudRepo(ctx, dms)
 	if err != nil {
@@ -120,42 +93,9 @@ func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*sche
 			err = errors.Join(err, dErr)
 		}
 
-		// Close the vypar MongoDB store before returning
-		if vErr := vms.Close(ctx); vErr != nil {
-			l.Error("error closing vypar MongoDB store", "error", vErr.Error())
-			err = errors.Join(err, vErr)
-		}
-
 		return nil, err
 	}
 	bs.daud = dr
-
-	// Initialize Vypar repository
-	vr, err := vypar.NewVyparRepo(ctx, vms)
-	if err != nil {
-		l.Error("error creating Vypar repository", "error", err.Error())
-
-		// Close the temporal client before returning
-		if tErr := tc.Close(ctx); tErr != nil {
-			l.Error("error closing temporal client", "error", tErr.Error())
-			err = errors.Join(err, tErr)
-		}
-
-		// Close the daud MongoDB store before returning
-		if dErr := dms.Close(ctx); dErr != nil {
-			l.Error("error closing daud MongoDB store", "error", dErr.Error())
-			err = errors.Join(err, dErr)
-		}
-
-		// Close the vypar MongoDB store before returning
-		if vErr := vms.Close(ctx); vErr != nil {
-			l.Error("error closing vypar MongoDB store", "error", vErr.Error())
-			err = errors.Join(err, vErr)
-		}
-
-		return nil, err
-	}
-	bs.vypar = vr
 
 	return bs, nil
 }
@@ -285,94 +225,6 @@ func (bs *schedulerService) DeleteRun(ctx context.Context, runId string) error {
 	return nil
 }
 
-// Business Entities
-
-func (bs *schedulerService) AddAgent(ctx context.Context, agent stores.Agent) (string, *stores.Agent, error) {
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return "", nil, fmt.Errorf("SchedulerService:AddAgent - error getting logger from context: %w", err)
-	}
-
-	agId, err := bs.vypar.AddAgent(ctx, agent)
-	if err != nil {
-		l.Error("error adding agent", "error", err.Error(), "agent", agent)
-		return "", nil, err
-	}
-
-	ag, err := bs.vypar.GetAgentById(ctx, agId)
-	if err != nil {
-		l.Error("error getting added agent for ID", "error", err.Error(), "id", agId)
-		return "", nil, err
-	}
-
-	return agId, ag, nil
-}
-
-func (bs *schedulerService) GetAgent(ctx context.Context, id string) (*stores.Agent, error) {
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("SchedulerService:GetAgent - error getting logger from context: %w", err)
-	}
-
-	agent, err := bs.vypar.GetAgentById(ctx, id)
-	if err != nil {
-		l.Error("error getting agent by ID", "error", err.Error(), "id", id)
-		return nil, err
-	}
-
-	return agent, nil
-}
-
-func (bs *schedulerService) AddFiling(ctx context.Context, filing stores.Filing) (string, *stores.Filing, error) {
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return "", nil, fmt.Errorf("SchedulerService:AddFiling - error getting logger from context: %w", err)
-	}
-	fId, err := bs.vypar.AddFiling(ctx, filing)
-	if err != nil {
-		l.Error("error adding filing", "error", err.Error(), "filing", filing)
-		return "", nil, err
-	}
-	fil, err := bs.vypar.GetFilingById(ctx, fId)
-	if err != nil {
-		l.Error("error getting added filing for ID", "error", err.Error(), "id", fId)
-		return "", nil, err
-	}
-	return fId, fil, nil
-}
-
-func (bs *schedulerService) GetFiling(ctx context.Context, id string) (*stores.Filing, error) {
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("SchedulerService:GetFiling - error getting logger from context: %w", err)
-	}
-
-	filing, err := bs.vypar.GetFilingById(ctx, id)
-	if err != nil {
-		l.Error("error getting filing by ID", "error", err.Error(), "id", id)
-		return nil, err
-	}
-
-	return filing, nil
-}
-
-func (bs *schedulerService) DeleteEntity(ctx context.Context, entityType stores.BusinessEntityType, id string) (bool, error) {
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return false, fmt.Errorf("SchedulerService:DeleteEntity - error getting logger from context: %w", err)
-	}
-
-	switch entityType {
-	case stores.EntityTypeAgent:
-		return bs.vypar.DeleteAgentById(ctx, id)
-	case stores.EntityTypeFiling:
-		return bs.vypar.DeleteFilingById(ctx, id)
-	default:
-		l.Error("unsupported entity type for deletion", "entityType", entityType)
-		return false, fmt.Errorf("unsupported entity type for deletion: %s", entityType)
-	}
-}
-
 // Close closes scheduler upstream client connections
 func (bs *schedulerService) Close(ctx context.Context) error {
 	l, err := logger.LoggerFromContext(ctx)
@@ -391,9 +243,5 @@ func (bs *schedulerService) Close(ctx context.Context) error {
 		return err
 	}
 
-	if err := bs.vypar.Close(ctx); err != nil {
-		l.Error("error closing Vypar repository connection", "error", err.Error())
-		return err
-	}
 	return nil
 }

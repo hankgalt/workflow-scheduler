@@ -17,7 +17,7 @@ import (
 	config "github.com/comfforts/comff-config"
 	"github.com/comfforts/logger"
 
-	grpchandler "github.com/hankgalt/workflow-scheduler/internal/delivery/grpc_handler"
+	grpchandler "github.com/hankgalt/workflow-scheduler/internal/delivery/scheduler/grpc_handler"
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/services/scheduler"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )

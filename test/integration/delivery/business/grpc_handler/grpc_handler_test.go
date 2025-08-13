@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -22,9 +21,9 @@ import (
 	config "github.com/comfforts/comff-config"
 	"github.com/comfforts/logger"
 
-	api "github.com/hankgalt/workflow-scheduler/api/v1"
-	grpchandler "github.com/hankgalt/workflow-scheduler/internal/delivery/grpc_handler"
-	"github.com/hankgalt/workflow-scheduler/internal/usecase/services/scheduler"
+	api "github.com/hankgalt/workflow-scheduler/api/business/v1"
+	grpchandler "github.com/hankgalt/workflow-scheduler/internal/delivery/business/grpc_handler"
+	"github.com/hankgalt/workflow-scheduler/internal/usecase/services/business"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )
 
@@ -33,29 +32,10 @@ const TEST_DIR = "data"
 func TestServer(t *testing.T) {
 	for scenario, fn := range map[string]func(
 		t *testing.T,
-		client api.SchedulerClient,
-		nbClient api.SchedulerClient,
+		client api.BusinessClient,
+		nbClient api.BusinessClient,
 	){
 		"test unauthorized client checks succeed": testUnauthorizedClient,
-	} {
-		t.Run(scenario, func(t *testing.T) {
-			client, nbClient, teardown := setupTest(t, nil)
-			defer teardown()
-			fn(t, client, nbClient)
-		})
-
-		err := os.RemoveAll(TEST_DIR)
-		require.NoError(t, err)
-	}
-}
-
-func TestWorkflowRuns(t *testing.T) {
-	for scenario, fn := range map[string]func(
-		t *testing.T,
-		client api.SchedulerClient,
-		nbClient api.SchedulerClient,
-	){
-		"test workflow run CRUD, succeeds": testWorkflowCRUD,
 	} {
 		t.Run(scenario, func(t *testing.T) {
 			client, nbClient, teardown := setupTest(t, nil)
@@ -71,8 +51,8 @@ func TestWorkflowRuns(t *testing.T) {
 func TestBusinessEntities(t *testing.T) {
 	for scenario, fn := range map[string]func(
 		t *testing.T,
-		client api.SchedulerClient,
-		nbClient api.SchedulerClient,
+		client api.BusinessClient,
+		nbClient api.BusinessClient,
 	){
 		"test Agent CRUD, succeeds":           testAgentCRUD,
 		"test Agent Streaming CRUD, succeeds": testAddBusinessEntities,
@@ -88,7 +68,7 @@ func TestBusinessEntities(t *testing.T) {
 	}
 }
 
-func testUnauthorizedClient(t *testing.T, client, nbClient api.SchedulerClient) {
+func testUnauthorizedClient(t *testing.T, client, nbClient api.BusinessClient) {
 	t.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -97,56 +77,38 @@ func testUnauthorizedClient(t *testing.T, client, nbClient api.SchedulerClient) 
 	l := logger.GetSlogLogger()
 	ctx = logger.WithLogger(ctx, l)
 
-	_, err := nbClient.CreateRun(ctx, &api.RunRequest{
-		WorkflowId: "S3r43r-T3s73k7l0w",
-		RunId:      "S3r43r-T3s7Ru41d",
+	// build id & entityId
+	entity_id, entity_name := "535342788", "Zurn Concierge Nursing, Inc."
+
+	// build Agent headers
+	headers := []string{"ENTITY_NAME", "ENTITY_NUM", "ORG_NAME", "FIRST_NAME", "MIDDLE_NAME", "LAST_NAME", "AGENT_TYPE", "ADDRESS"}
+
+	// build first record
+	values := []string{entity_name, entity_id, "", "TTeri", "", "Zurn", "Chief Executive Officer", "23811 WASHINGTON AVE C-100 #184 MURRIETA CA  92562"}
+	fields := map[string]string{}
+	for i, k := range headers {
+		fields[strings.ToLower(k)] = values[i]
+	}
+
+	_, err := nbClient.AddEntity(ctx, &api.AddEntityRequest{
+		Fields: fields,
+		Type:   api.EntityType_AGENT,
 	})
 	require.Error(t, err)
 
 	stErr, ok := status.FromError(err)
 	require.True(t, ok)
 	assert.Equal(t, codes.Unauthenticated, stErr.Code())
-	assert.Equal(t, grpchandler.ERR_UNAUTHORIZED_CREATE_RUN, stErr.Message())
+	assert.Equal(t, grpchandler.ERR_UNAUTHORIZED_ADD_ENTITY, stErr.Message())
 }
 
-func testWorkflowCRUD(t *testing.T, client, nbClient api.SchedulerClient) {
-	t.Helper()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
-
-	l := logger.GetSlogLogger()
-	ctx = logger.WithLogger(ctx, l)
-
-	wkflId, runId := "C3r43r-T3s73k7l0w", "C3r43r-T3s7Ru41d"
-	_, err := client.CreateRun(ctx, &api.RunRequest{
-		WorkflowId: wkflId,
-		RunId:      runId,
-	})
-	require.NoError(t, err)
-
-	wfRun, err := client.GetRun(ctx, &api.RunRequest{
-		RunId: runId,
-	})
-	require.NoError(t, err)
-	require.Equal(t, wfRun.Run.WorkflowId, wkflId)
-
-	resp, err := client.DeleteRun(ctx, &api.DeleteRunRequest{
-		Id: wfRun.Run.RunId,
-	})
-	require.NoError(t, err)
-	require.Equal(t, resp.Ok, true)
-}
-
-func testAgentCRUD(t *testing.T, client, nbClient api.SchedulerClient) {
+func testAgentCRUD(t *testing.T, client, nbClient api.BusinessClient) {
 	t.Helper()
 
 	l := logger.GetSlogLogger()
 
 	// build id & entityId
 	entity_id, entity_name := "535342788", "Zurn Concierge Nursing, Inc."
-	num, err := strconv.Atoi(entity_id)
-	require.NoError(t, err)
 
 	// build Agent headers
 	headers := []string{"ENTITY_NAME", "ENTITY_NUM", "ORG_NAME", "FIRST_NAME", "MIDDLE_NAME", "LAST_NAME", "AGENT_TYPE", "ADDRESS"}
@@ -171,7 +133,7 @@ func testAgentCRUD(t *testing.T, client, nbClient api.SchedulerClient) {
 
 	// validate agent
 	bp := resp.GetAgent()
-	require.Equal(t, int(bp.EntityId), num)
+	require.Equal(t, bp.EntityId, entity_id)
 	require.Equal(t, bp.EntityName, entity_name)
 
 	// get agent
@@ -192,15 +154,13 @@ func testAgentCRUD(t *testing.T, client, nbClient api.SchedulerClient) {
 	require.Equal(t, dResp.Ok, true)
 }
 
-func testAddBusinessEntities(t *testing.T, client, nbClient api.SchedulerClient) {
+func testAddBusinessEntities(t *testing.T, client, nbClient api.BusinessClient) {
 	t.Helper()
 
 	l := logger.GetSlogLogger()
 
 	// build id & entityId
 	entity_num := "5353427"
-	num, err := strconv.Atoi(entity_num)
-	require.NoError(t, err)
 
 	// build Agent headers
 	headers := []string{"ENTITY_NAME", "ENTITY_NUM", "ORG_NAME", "FIRST_NAME", "MIDDLE_NAME", "LAST_NAME", "AGENT_TYPE", "ADDRESS"}
@@ -256,7 +216,7 @@ func testAddBusinessEntities(t *testing.T, client, nbClient api.SchedulerClient)
 					if r.GetEntityResponse() != nil {
 						// result aggregation
 						bp := r.GetEntityResponse().GetAgent()
-						require.Equal(t, int(bp.EntityId), num)
+						require.Equal(t, bp.EntityId, entity_num)
 						resIds = append(resIds, bp.Id)
 					} else if r.GetError() != "" {
 						// error aggregation
@@ -345,7 +305,7 @@ func testAddBusinessEntities(t *testing.T, client, nbClient api.SchedulerClient)
 // example entity response processor
 func asynClientBiDirectBusinessEntitiesProcessing(
 	t *testing.T,
-	entityStream api.Scheduler_AddBusinessEntitiesClient,
+	entityStream api.Business_AddBusinessEntitiesClient,
 	resCh chan *api.StreamEntityResponse,
 	errCh chan error,
 	doneCh chan struct{},
@@ -371,7 +331,7 @@ func asynClientBiDirectBusinessEntitiesProcessing(
 	<-doneCh
 }
 
-func deleteEntity(t *testing.T, bCl api.SchedulerClient, req *api.EntityRequest) error {
+func deleteEntity(t *testing.T, bCl api.BusinessClient, req *api.EntityRequest) error {
 	t.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -386,8 +346,8 @@ func deleteEntity(t *testing.T, bCl api.SchedulerClient, req *api.EntityRequest)
 }
 
 func setupTest(t *testing.T, fn func(*grpchandler.Config)) (
-	client api.SchedulerClient,
-	nbClient api.SchedulerClient,
+	client api.BusinessClient,
+	nbClient api.BusinessClient,
 	teardown func(),
 ) {
 	t.Helper()
@@ -398,7 +358,7 @@ func setupTest(t *testing.T, fn func(*grpchandler.Config)) (
 	require.NoError(t, err)
 
 	// grpc client
-	newClient := func(target config.ConfigurationTarget) (*grpc.ClientConn, api.SchedulerClient, []grpc.DialOption) {
+	newClient := func(target config.ConfigurationTarget) (*grpc.ClientConn, api.BusinessClient, []grpc.DialOption) {
 		// Client TLS config
 		tlsConfig, err := config.SetupTLSConfig(&config.ConfigOpts{Target: target})
 		require.NoError(t, err)
@@ -408,7 +368,7 @@ func setupTest(t *testing.T, fn func(*grpchandler.Config)) (
 		addr := lis.Addr().String()
 		conn, err := grpc.Dial(addr, opts...)
 		require.NoError(t, err)
-		client = api.NewSchedulerClient(conn)
+		client = api.NewBusinessClient(conn)
 		return conn, client, opts
 	}
 
@@ -418,24 +378,21 @@ func setupTest(t *testing.T, fn func(*grpchandler.Config)) (
 	mCfg := envutils.BuildMongoStoreConfig()
 	require.NotEmpty(t, mCfg.Host, "MongoDB host should not be empty")
 
-	tCfg := envutils.BuildTemporalConfig("GRPCHandlerTest")
-	require.NotEmpty(t, tCfg.Host, "Temporal host should not be empty")
-
-	svcCfg := scheduler.NewSchedulerServiceConfig(tCfg, mCfg)
+	svcCfg := business.NewBusinessServiceConfig(mCfg)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 	ctx = logger.WithLogger(ctx, l)
 
-	ss, err := scheduler.NewSchedulerService(ctx, svcCfg)
+	bs, err := business.NewBusinessService(ctx, svcCfg)
 	require.NoError(t, err)
 
 	authorizer, err := config.SetupAuthorizer()
 	require.NoError(t, err)
 
 	cfg := &grpchandler.Config{
-		SchedulerService: ss,
-		Authorizer:       authorizer,
+		BusinessService: bs,
+		Authorizer:      authorizer,
 	}
 	if fn != nil {
 		fn(cfg)
@@ -458,7 +415,7 @@ func setupTest(t *testing.T, fn func(*grpchandler.Config)) (
 		require.NoError(t, err)
 	}()
 
-	client = api.NewSchedulerClient(cc)
+	client = api.NewBusinessClient(cc)
 
 	return client, nbClient, func() {
 		err := cc.Close()
@@ -471,7 +428,7 @@ func setupTest(t *testing.T, fn func(*grpchandler.Config)) (
 		defer cancel()
 		ctx = logger.WithLogger(ctx, l)
 
-		err = ss.Close(ctx)
+		err = bs.Close(ctx)
 		require.NoError(t, err)
 
 		server.GracefulStop()

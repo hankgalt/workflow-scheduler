@@ -1,3 +1,3 @@
 #!/bin/bash
 
-cd cmd/client && go run client.go
+cd cmd/clients/scheduler && go run client.go

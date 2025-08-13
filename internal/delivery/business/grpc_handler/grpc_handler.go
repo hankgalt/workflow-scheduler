@@ -21,36 +21,24 @@ import (
 
 	"github.com/comfforts/logger"
 
-	api "github.com/hankgalt/workflow-scheduler/api/v1"
-	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
+	api "github.com/hankgalt/workflow-scheduler/api/business/v1"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
-	"github.com/hankgalt/workflow-scheduler/internal/usecase/services/scheduler"
-	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
+	"github.com/hankgalt/workflow-scheduler/internal/usecase/services/business"
 )
 
-var _ api.SchedulerServer = (*grpcServer)(nil)
+var _ api.BusinessServer = (*grpcServer)(nil)
 
 const (
-	ERR_UNAUTHORIZED_CREATE_RUN      = "unauthorized to create run"
-	ERR_UNAUTHORIZED_GET_RUN         = "unauthorized to get run"
-	ERR_UNAUTHORIZED_DELETE_RUN      = "unauthorized to delete run"
-	ERR_UNAUTHORIZED_LOCAL_CSV_MONGO = "unauthorized to process local csv to mongo workflow"
-	ERR_UNAUTHORIZED_CLOUD_CSV_MONGO = "unauthorized to process cloud csv to mongo workflow"
-	ERR_UNAUTHORIZED_ADD_ENTITY      = "unauthorized to add entity"
-	ERR_UNAUTHORIZED_GET_ENTITY      = "unauthorized to get entity"
-	ERR_UNAUTHORIZED_DELETE_ENTITY   = "unauthorized to delete entity"
+	ERR_UNAUTHORIZED_ADD_ENTITY    = "unauthorized to add entity"
+	ERR_UNAUTHORIZED_GET_ENTITY    = "unauthorized to get entity"
+	ERR_UNAUTHORIZED_DELETE_ENTITY = "unauthorized to delete entity"
 )
 
 const (
-	objectWildcard      = "*"
-	createRunAction     = "create-run"
-	getRunAction        = "get-run"
-	deleteRunAction     = "delete-run"
-	localCSVMongoAction = "local-csv-mongo"
-	cloudCSVMongoAction = "cloud-csv-mongo"
-	addEntityAction     = "add-entity"
-	getEntityAction     = "get-entity"
-	deleteEntityAction  = "delete-entity"
+	objectWildcard     = "*"
+	addEntityAction    = "add-entity"
+	getEntityAction    = "get-entity"
+	deleteEntityAction = "delete-entity"
 )
 
 type subjectContextKey struct{}
@@ -65,13 +53,13 @@ type Authorizer interface {
 
 type Config struct {
 	Authorizer Authorizer
-	scheduler.SchedulerService
+	business.BusinessService
 }
 
 type grpcServer struct {
 	*Config
 	NodeName string
-	api.SchedulerServer
+	api.BusinessServer
 }
 
 func newGrpcServer(config *Config) (srv *grpcServer, err error) {
@@ -111,7 +99,7 @@ func NewGRPCServer(config *Config, opts ...grpc.ServerOption) (*grpc.Server, err
 		return nil, err
 	}
 
-	api.RegisterSchedulerServer(gsrv, srv)
+	api.RegisterBusinessServer(gsrv, srv)
 
 	reflection.Register(gsrv)
 
@@ -123,201 +111,9 @@ func NewGRPCServer(config *Config, opts ...grpc.ServerOption) (*grpc.Server, err
 	return gsrv, nil
 }
 
-// Workflows
-
-func (s *grpcServer) ProcessLocalCSVMongoWorkflow(ctx context.Context, req *api.BatchCSVRequest) (*api.RunResponse, error) {
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("SchedulerServer:ProcessLocalCSVMongoWorkflow - %w", err)
-	}
-
-	if err := s.Authorizer.Authorize(
-		subject(ctx),
-		objectWildcard,
-		localCSVMongoAction,
-	); err != nil {
-		st := status.New(codes.Unauthenticated, ERR_UNAUTHORIZED_LOCAL_CSV_MONGO)
-		return nil, st.Err()
-	}
-
-	reqCfg, err := envutils.BuildLocalCSVMongoBatchConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	batReq := batch.LocalCSVMongoBatchRequest{
-		CSVBatchRequest: batch.CSVBatchRequest{
-			RequestConfig: &batch.RequestConfig{
-				MaxBatches: uint(req.MaxBatches),
-				BatchSize:  uint(req.BatchSize),
-				Offsets:    []uint64{},
-				Headers:    []string{},
-			},
-		},
-		Config: reqCfg,
-	}
-
-	resp, err := s.SchedulerService.ProcessLocalCSVToMongoWorkflow(ctx, batReq)
-	if err != nil {
-		l.Error("error processing local csv to mongo workflow", "error", err.Error(), "req", req)
-		st := status.New(codes.Internal, err.Error())
-		return &api.RunResponse{
-			Ok: false,
-		}, st.Err()
-	}
-	l.Debug("created local csv to mongo workflow run", "resp", resp)
-	return &api.RunResponse{
-		Ok:  true,
-		Run: stores.MapWorkflowRunToProto(resp),
-	}, nil
-}
-
-func (s *grpcServer) ProcessCloudCSVMongoWorkflow(ctx context.Context, req *api.BatchCSVRequest) (*api.RunResponse, error) {
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("SchedulerServer:ProcessCloudCSVMongoWorkflow - %w", err)
-	}
-
-	if err := s.Authorizer.Authorize(
-		subject(ctx),
-		objectWildcard,
-		cloudCSVMongoAction,
-	); err != nil {
-		st := status.New(codes.Unauthenticated, ERR_UNAUTHORIZED_CLOUD_CSV_MONGO)
-		return nil, st.Err()
-	}
-
-	reqCfg, err := envutils.BuildCloudCSVMongoBatchConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	batReq := batch.CloudCSVMongoBatchRequest{
-		CSVBatchRequest: batch.CSVBatchRequest{
-			RequestConfig: &batch.RequestConfig{
-				MaxBatches: uint(req.MaxBatches),
-				BatchSize:  uint(req.BatchSize),
-				Offsets:    []uint64{},
-				Headers:    []string{},
-				Mappings:   req.Mappings,
-			},
-		},
-		Config: reqCfg,
-	}
-
-	resp, err := s.SchedulerService.ProcessCloudCSVToMongoWorkflow(ctx, batReq)
-	if err != nil {
-		l.Error("error processing cloud csv to mongo workflow", "error", err.Error(), "req", req)
-		st := status.New(codes.Internal, err.Error())
-		return &api.RunResponse{
-			Ok: false,
-		}, st.Err()
-	}
-	l.Debug("created local csv to mongo workflow run", "resp", resp)
-	return &api.RunResponse{
-		Ok:  true,
-		Run: stores.MapWorkflowRunToProto(resp),
-	}, nil
-}
-
-// Workflow Runs
-
-func (s *grpcServer) CreateRun(ctx context.Context, req *api.RunRequest) (*api.RunResponse, error) {
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("SchedulerServer:CreateRun - %w", err)
-	}
-
-	if err := s.Authorizer.Authorize(
-		subject(ctx),
-		objectWildcard,
-		createRunAction,
-	); err != nil {
-		st := status.New(codes.Unauthenticated, ERR_UNAUTHORIZED_CREATE_RUN)
-		return nil, st.Err()
-	}
-
-	resp, err := s.SchedulerService.CreateRun(ctx, &stores.WorkflowRun{
-		RunId:       req.RunId,
-		WorkflowId:  req.WorkflowId,
-		Type:        req.Type,
-		ExternalRef: req.ExternalRef,
-	})
-	if err != nil {
-		l.Error("error creating workflow run", "error", err.Error(), "req", req)
-		st := status.New(codes.Internal, err.Error())
-		return &api.RunResponse{
-			Ok: false,
-		}, st.Err()
-	}
-	l.Debug("create workflow run response", "resp", resp)
-	return &api.RunResponse{
-		Ok:  true,
-		Run: stores.MapWorkflowRunToProto(resp),
-	}, nil
-}
-
-func (s *grpcServer) GetRun(ctx context.Context, req *api.RunRequest) (*api.RunResponse, error) {
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("SchedulerServer:GetRun - %w", err)
-	}
-
-	if err := s.Authorizer.Authorize(
-		subject(ctx),
-		objectWildcard,
-		getRunAction,
-	); err != nil {
-		st := status.New(codes.Unauthenticated, ERR_UNAUTHORIZED_GET_RUN)
-		return nil, st.Err()
-	}
-
-	resp, err := s.SchedulerService.GetRun(ctx, req.RunId)
-	if err != nil {
-		l.Error("error fetching run details", "error", err.Error())
-		st := status.New(codes.Internal, err.Error())
-
-		return &api.RunResponse{
-			Ok: false,
-		}, st.Err()
-	}
-
-	l.Debug("workflow run details", "resp", resp)
-	return &api.RunResponse{
-		Ok:  true,
-		Run: stores.MapWorkflowRunToProto(resp),
-	}, nil
-}
-
-func (s *grpcServer) DeleteRun(ctx context.Context, req *api.DeleteRunRequest) (*api.DeleteResponse, error) {
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("SchedulerServer:DeleteRun - %w", err)
-	}
-
-	if err := s.Authorizer.Authorize(
-		subject(ctx),
-		objectWildcard,
-		deleteRunAction,
-	); err != nil {
-		st := status.New(codes.Unauthenticated, ERR_UNAUTHORIZED_DELETE_RUN)
-		return nil, st.Err()
-	}
-
-	if err := s.SchedulerService.DeleteRun(ctx, req.Id); err != nil {
-		l.Error("error deleting workflow run", "error", err.Error(), "runId", req.Id)
-		st := status.New(codes.Internal, err.Error())
-		return nil, st.Err()
-	}
-
-	return &api.DeleteResponse{
-		Ok: true,
-	}, nil
-}
-
 // Business Entities
 
-func (s *grpcServer) AddBusinessEntities(stream api.Scheduler_AddBusinessEntitiesServer) error {
+func (s *grpcServer) AddBusinessEntities(stream api.Business_AddBusinessEntitiesServer) error {
 	ctx := stream.Context()
 
 	l, err := logger.LoggerFromContext(ctx)
@@ -389,7 +185,7 @@ func (s *grpcServer) AddEntity(ctx context.Context, req *api.AddEntityRequest) (
 	resp := api.EntityResponse{}
 	switch req.Type {
 	case api.EntityType_AGENT:
-		if entityId, entity, err := s.SchedulerService.AddAgent(ctx, stores.MapAgentFieldsToMongoModel(req.Fields)); err != nil {
+		if entityId, entity, err := s.BusinessService.AddAgent(ctx, stores.MapAgentFieldsToMongoModel(req.Fields)); err != nil {
 			l.Error("error adding agent entity", "error", err.Error())
 			st := status.New(codes.FailedPrecondition, err.Error())
 			return nil, st.Err()
@@ -399,7 +195,7 @@ func (s *grpcServer) AddEntity(ctx context.Context, req *api.AddEntityRequest) (
 			}
 		}
 	case api.EntityType_FILING:
-		if entityId, entity, err := s.SchedulerService.AddFiling(ctx, stores.MapFilingFieldsToMongoModel(req.Fields)); err != nil {
+		if entityId, entity, err := s.BusinessService.AddFiling(ctx, stores.MapFilingFieldsToMongoModel(req.Fields)); err != nil {
 			l.Error("error adding filing entity", "error", err.Error())
 			st := status.New(codes.FailedPrecondition, err.Error())
 			return nil, st.Err()
@@ -436,7 +232,7 @@ func (s *grpcServer) GetEntity(ctx context.Context, req *api.EntityRequest) (*ap
 	resp := api.EntityResponse{}
 	switch req.Type {
 	case api.EntityType_AGENT:
-		if entity, err := s.SchedulerService.GetAgent(ctx, req.Id); err != nil {
+		if entity, err := s.BusinessService.GetAgent(ctx, req.Id); err != nil {
 			l.Error("error fetching agent entity", "error", err.Error(), "id", req.Id)
 			st := status.New(codes.Internal, "error fetching agent entity")
 			return nil, st.Err()
@@ -446,7 +242,7 @@ func (s *grpcServer) GetEntity(ctx context.Context, req *api.EntityRequest) (*ap
 			}
 		}
 	case api.EntityType_FILING:
-		if entity, err := s.SchedulerService.GetFiling(ctx, req.Id); err != nil {
+		if entity, err := s.BusinessService.GetFiling(ctx, req.Id); err != nil {
 			l.Error("error fetching filing entity", "error", err.Error(), "id", req.Id)
 			st := status.New(codes.Internal, "error fetching filing entity")
 			return nil, st.Err()
@@ -480,7 +276,7 @@ func (s *grpcServer) DeleteEntity(ctx context.Context, req *api.EntityRequest) (
 		return nil, st.Err()
 	}
 
-	ok, err := s.SchedulerService.DeleteEntity(ctx, stores.MapEntityTypeToModel(req.Type), req.Id)
+	ok, err := s.BusinessService.DeleteEntity(ctx, stores.MapEntityTypeToModel(req.Type), req.Id)
 	if err != nil {
 		l.Error("error deleting business entity", "error", err.Error(), "id", req.Id)
 		st := status.New(codes.Internal, "error deleting business entity")

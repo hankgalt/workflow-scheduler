@@ -3,6 +3,8 @@ vendor
 
 creds
 certs
+logs
+policies
 
 go.sum
 
