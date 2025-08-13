@@ -1,9 +1,11 @@
 
+######## - Proto - #######
 # build scheduler service proto
 build-proto:
 	@echo "building latest scheduler proto for ${HEAD}"
 	scripts/build-proto.sh
 
+# setup proto tools
 setup-proto:
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
@@ -13,6 +15,7 @@ setup-proto:
 # 	protoc -I . --go_out ./api --go_opt=paths=source_relative ./**/*.proto --experimental_allow_proto3_optional && \
 # 	protoc -I . --go-grpc_out ./api --go-grpc_opt=paths=source_relative ./**/*.proto --experimental_allow_proto3_optional
 
+######## - Network - #######
 # setup docker network for local development
 network:
 	@echo "Creating schenet network if it doesn't exist..."
@@ -23,16 +26,13 @@ network:
 		echo "Network schenet already exists."; \
 	fi
 
-# wait for 10 seconds
-wait-10:
-	@echo "Waiting 10 seconds..."
-	sleep 10
-
+######## - Data stores - #######
 # start mysql database
 mysql:
 	@echo "Starting mysql db"
 	scripts/start-mysql.sh
 
+# start mysql database with network check
 start-mysql: network mysql
 
 # stop mysql database
@@ -45,42 +45,67 @@ mongo:
 	@echo "Starting MongoDB cluster..."
 	scripts/start-mongo.sh
 
+# start mongo cluster with network check
 start-mongo: network mongo
 
+# stop mongo cluster
 stop-mongo:
 	@echo "Stopping MongoDB cluster..."
 	@set -a; . deploy/scheduler/mongo.env; set +a; docker-compose -f deploy/scheduler/docker-compose-mongo.yml down -v 
 
-# start scheduler service from local repo
-start-server:
-	@echo "starting local scheduler service"
-	scripts/start-server.sh
-
-test-server:
-	@echo " - testing scheduler server"
-	cd cmd/client && grpcurl -key certs/client-key.pem -cert certs/client.pem -cacert certs/ca.pem localhost:65051 list scheduler.v1.Scheduler
-
-# start scheduler service client from local repo
-run-client:
-	@echo "starting local scheduler client"
-	scripts/start-client.sh
-
-# start temporal server
+######## - Temporal - #######
+# start Temporal server
 temporal:
 	@echo "starting temporal server"
 	docker-compose -f deploy/scheduler/docker-compose-temporal.yml up -d
 
+# start Temporal server with network check
 start-temporal: network temporal
 
-# stop temporal server
+# stop Temporal server
 stop-temporal:
 	@echo "stopping temporal server"
 	docker-compose -f deploy/scheduler/docker-compose-temporal.yml down
 
+# register Temporal domain
 register-domain:
 	@echo "registering scheduler temporal domain"
 	docker exec temporal-admin-tools tctl --namespace scheduler-domain namespace register
 	docker exec temporal-admin-tools tctl namespace describe scheduler-domain
+
+# start Temporal worker
+start-worker:
+	scripts/start-worker.sh ${TARGET}
+
+######## - Observability - #######
+# start observability
+obs:
+	@echo "starting observability"
+	docker-compose -f deploy/scheduler/docker-compose-observability.yml up -d --force-recreate --build
+
+# start observability with network check
+start-obs: network obs
+
+# stop observability
+stop-obs:
+	@echo "stopping observability"
+	docker-compose -f deploy/scheduler/docker-compose-observability.yml down
+
+######## - Clients - #######
+# start service client from local repo
+run-client:
+	@echo "starting local $(TARGET) client"
+	scripts/start-client.sh TARGET=$(TARGET)
+
+######## - Services - #######
+# start service from local repo
+start-server:
+	@echo "starting local $(TARGET) service"
+	scripts/start-server.sh TARGET=$(TARGET)
+
+test-server:
+	@echo " - testing $(TARGET) server"
+	cd cmd/scheduler/client && grpcurl -key certs/client-key.pem -cert certs/client.pem -cacert certs/ca.pem localhost:65051 list scheduler.v1.Scheduler
 
 # start scheduler service with docker compose
 start-service:
@@ -89,22 +114,11 @@ start-service:
 
 # stop docker composed scheduler service
 stop-service:
-	@echo "starting scheduler service"
+	@echo "stopping scheduler service"
 	docker-compose -f deploy/scheduler/docker-compose-sch.yml down
 
-# start worker from local repo
-start-worker:
-	scripts/start-worker.sh ${TARGET}
-
-# start observability
-obs:
-	@echo "starting observability"
-	docker-compose -f deploy/scheduler/docker-compose-observability.yml up -d --force-recreate --build
-
-# start observability
-start-obs: network obs
-
-# stop observability
-stop-obs:
-	@echo "stopping observability"
-	docker-compose -f deploy/scheduler/docker-compose-observability.yml down
+######## - Utilities - #######
+# wait for 10 seconds
+wait-10:
+	@echo "Waiting 10 seconds..."
+	sleep 10
