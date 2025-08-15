@@ -77,6 +77,11 @@ register-domain:
 start-worker:
 	scripts/start-worker.sh ${TARGET}
 
+# start Temporal dev server for local development & testing
+start-dev-server:
+	@echo "starting temporal dev server for testing"
+	docker run --rm -p 7233:7233 -p 8233:8233 temporalio/temporal server start-dev --ip 0.0.0.0
+
 ######## - Observability - #######
 # start observability
 obs:
