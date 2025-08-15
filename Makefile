@@ -122,3 +122,12 @@ stop-service:
 wait-10:
 	@echo "Waiting 10 seconds..."
 	sleep 10
+
+wait-30:
+	@echo "Waiting 30 seconds..."
+	sleep 30
+
+start-infra: network obs temporal mongo wait-30 register-domain wait-10
+	docker logs scheduler-mongo-setup
+
+stop-infra: stop-temporal stop-mongo stop-obs

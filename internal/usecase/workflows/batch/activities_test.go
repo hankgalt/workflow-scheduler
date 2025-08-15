@@ -36,11 +36,6 @@ const (
 	HandleCloudCSVMongoBatchDataAlias string = "handle-cloud-csv-mongo-batch-data-alias"
 )
 
-var agentHeaderMapping = map[string]string{
-	"ENTITY_NUM":       "ENTITY_ID",
-	"PHYSICAL_ADDRESS": "ADDRESS",
-}
-
 type BatchActivitiesTestSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
@@ -306,7 +301,7 @@ func (s *BatchActivitiesTestSuite) Test_LocalCSVBatchActivityQueue() {
 	})
 
 	// build inital request
-	max, size := uint(2), uint(500)
+	max, size := uint(2), uint(800)
 	req, err := envutils.BuildLocalCSVBatchRequest(max, size)
 	s.NoError(err)
 
@@ -593,7 +588,9 @@ func (s *BatchActivitiesTestSuite) Test_SetupLocalCSVMongoBatchActivity() {
 
 func (s *BatchActivitiesTestSuite) testSetupLocalCSVMongoBatch() {
 	l := s.GetLogger()
-	req, err := envutils.BuildLocalCSVMongoBatchRequest(2, 500)
+
+	mappingRules := map[string]batch.Rule{}
+	req, err := envutils.BuildLocalCSVMongoBatchRequest(2, 500, mappingRules)
 	s.NoError(err)
 
 	l.Debug("csv file read headers request", "req", req)
@@ -639,8 +636,9 @@ func (s *BatchActivitiesTestSuite) Test_LocalCSVMongoBatchActivityQueue() {
 	})
 
 	// build inital request
-	max, size := uint(2), uint(500)
-	req, err := envutils.BuildLocalCSVMongoBatchRequest(max, size)
+	max, size := uint(2), uint(800)
+	mappingRules := map[string]batch.Rule{}
+	req, err := envutils.BuildLocalCSVMongoBatchRequest(max, size, mappingRules)
 	s.NoError(err)
 
 	// setup batch map
@@ -762,7 +760,9 @@ func (s *BatchActivitiesTestSuite) Test_SetupCloudCSVMongoBatchActivity() {
 
 func (s *BatchActivitiesTestSuite) testSetupCloudCSVMongoBatch() {
 	l := s.GetLogger()
-	req, err := envutils.BuildCloudCSVMongoBatchRequest(2, 500, agentHeaderMapping)
+
+	mappingRules := map[string]batch.Rule{}
+	req, err := envutils.BuildCloudCSVMongoBatchRequest(2, 500, mappingRules)
 	s.NoError(err)
 
 	l.Debug("csv file read headers request", "req", req)
@@ -809,7 +809,8 @@ func (s *BatchActivitiesTestSuite) Test_CloudCSVMongoBatchActivityQueue() {
 
 	// build inital request
 	max, size := uint(2), uint(500)
-	req, err := envutils.BuildCloudCSVMongoBatchRequest(max, size, agentHeaderMapping)
+	mappingRules := map[string]batch.Rule{}
+	req, err := envutils.BuildCloudCSVMongoBatchRequest(max, size, mappingRules)
 	s.NoError(err)
 
 	// setup batch map
@@ -1084,7 +1085,8 @@ func (s *BatchActivitiesTestSuite) Test_HandleLocalCSVMongoBatchDataActivity() {
 func (s *BatchActivitiesTestSuite) testHandleLocalCSVMongoBatchData() {
 	l := s.GetLogger()
 
-	req, err := envutils.BuildLocalCSVMongoBatchRequest(2, 500)
+	mappingRules := map[string]batch.Rule{}
+	req, err := envutils.BuildLocalCSVMongoBatchRequest(2, 500, mappingRules)
 	s.NoError(err)
 
 	// setup batch map

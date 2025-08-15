@@ -20,18 +20,18 @@ import (
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )
 
-type ProcessLocalCSVMongoWorkflowTestSuite struct {
+type ProcessCloudCSVMongoWorkflowTestSuite struct {
 	suite.Suite
 	testsuite.WorkflowTestSuite
 
 	env *testsuite.TestWorkflowEnvironment
 }
 
-func TestProcessLocalCSVMongoWorkflowTestSuite(t *testing.T) {
-	suite.Run(t, new(ProcessLocalCSVMongoWorkflowTestSuite))
+func TestProcessCloudCSVMongoWorkflowTestSuite(t *testing.T) {
+	suite.Run(t, new(ProcessCloudCSVMongoWorkflowTestSuite))
 }
 
-func (s *ProcessLocalCSVMongoWorkflowTestSuite) SetupTest() {
+func (s *ProcessCloudCSVMongoWorkflowTestSuite) SetupTest() {
 	// get test logger
 	l := logger.GetSlogLogger()
 
@@ -39,29 +39,29 @@ func (s *ProcessLocalCSVMongoWorkflowTestSuite) SetupTest() {
 	s.SetLogger(l)
 }
 
-func (s *ProcessLocalCSVMongoWorkflowTestSuite) TearDownTest() {
+func (s *ProcessCloudCSVMongoWorkflowTestSuite) TearDownTest() {
 	s.env.AssertExpectations(s.T())
 
 	// err := os.RemoveAll(TEST_DIR)
 	// s.NoError(err)
 }
 
-func (s *ProcessLocalCSVMongoWorkflowTestSuite) Test_ProcessLocalCSVMongoWorkflow() {
+func (s *ProcessCloudCSVMongoWorkflowTestSuite) Test_ProcessCloudCSVMongoWorkflow() {
 	l := s.GetLogger()
 
 	s.env = s.NewTestWorkflowEnvironment()
 
 	// register workflow
-	s.env.RegisterWorkflow(btchwkfl.ProcessLocalCSVMongo)
+	s.env.RegisterWorkflow(btchwkfl.ProcessCloudCSVMongo)
 
 	// register activities
 	s.env.RegisterActivityWithOptions(
-		btchwkfl.SetupLocalCSVMongoBatch,
-		activity.RegisterOptions{Name: btchwkfl.SetupLocalCSVMongoBatchActivity},
+		btchwkfl.SetupCloudCSVMongoBatch,
+		activity.RegisterOptions{Name: btchwkfl.SetupCloudCSVMongoBatchActivity},
 	)
 	s.env.RegisterActivityWithOptions(
-		btchwkfl.HandleLocalCSVMongoBatchData,
-		activity.RegisterOptions{Name: btchwkfl.HandleLocalCSVMongoBatchDataActivity},
+		btchwkfl.HandleCloudCSVMongoBatchData,
+		activity.RegisterOptions{Name: btchwkfl.HandleCloudCSVMongoBatchDataActivity},
 	)
 
 	s.env.SetWorkerOptions(worker.Options{
@@ -71,15 +71,16 @@ func (s *ProcessLocalCSVMongoWorkflowTestSuite) Test_ProcessLocalCSVMongoWorkflo
 
 	s.env.SetTestTimeout(24 * time.Hour)
 
-	s.Run("valid csv to mongo request", func() {
+	s.Run("valid cloud csv to mongo request", func() {
 		start := time.Now()
+		mappingRules := map[string]batch.Rule{}
 
-		req, err := envutils.BuildLocalCSVMongoBatchRequest(2, 700)
+		req, err := envutils.BuildCloudCSVMongoBatchRequest(2, 500, mappingRules)
 		s.NoError(err)
 
 		expectedCall := []string{
-			btchwkfl.SetupLocalCSVMongoBatchActivity,
-			btchwkfl.HandleLocalCSVMongoBatchDataActivity,
+			btchwkfl.SetupCloudCSVMongoBatchActivity,
+			btchwkfl.HandleCloudCSVMongoBatchDataActivity,
 		}
 
 		var activityCalled []string
@@ -97,50 +98,54 @@ func (s *ProcessLocalCSVMongoWorkflowTestSuite) Test_ProcessLocalCSVMongoWorkflo
 				switch activityType {
 				case expectedCall[0]:
 					l.Debug(
-						"Test_ProcessLocalCSVMongoWorkflow - expected activity call",
+						"Test_ProcessCloudCSVMongoWorkflow - expected activity call",
 						"activity-type", activityType)
 					var input batch.RequestConfig
 					s.NoError(args.Get(&input))
 					l.Debug(
-						"Test_ProcessLocalCSVMongoWorkflow - received activity input",
+						"Test_ProcessCloudCSVMongoWorkflow - received activity input",
 						"activity-type", activityType,
-						"offsets", input.Offsets)
+						"offsets", input.Offsets,
+					)
 				case expectedCall[1]:
 					l.Debug(
-						"Test_ProcessLocalCSVMongoWorkflow - expected activity call",
+						"Test_ProcessCloudCSVMongoWorkflow - expected activity call",
 						"activity-type", activityType)
 					var input batch.Batch
 					s.NoError(args.Get(&input))
 					l.Debug(
-						"Test_ProcessLocalCSVMongoWorkflow - received activity input",
+						"Test_ProcessCloudCSVMongoWorkflow - received activity input",
 						"activity-type", activityType,
 						"batch-id", input.BatchID,
 						"start", input.Start,
-						"end", input.End)
+						"end", input.End,
+					)
 				default:
 					l.Debug(
-						"Test_ProcessLocalCSVMongoWorkflow - unexpected activity call",
+						"Test_ProcessCloudCSVMongoWorkflow - unexpected activity call",
 						"activity-type", activityType)
-					panic("Test_ProcessLocalCSVMongoWorkflow - unexpected activity call")
+					panic("Test_ProcessCloudCSVMongoWorkflow - unexpected activity call")
 
 				}
-			})
+			},
+		)
 
 		defer func() {
 			if err := recover(); err != nil {
 				l.Error(
-					"Test_ProcessLocalCSVMongoWorkflow - panicked",
+					"Test_ProcessCloudCSVMongoWorkflow - panicked",
 					"error", err,
-					"wkfl", btchwkfl.ProcessLocalCSVWorkflow)
+					"wkfl", btchwkfl.ProcessCloudCSVMongoWorkflow,
+				)
 			}
 
 			err := s.env.GetWorkflowError()
 			if err != nil {
-				l.Error("Test_ProcessLocalCSVMongoWorkflow - error", "error", err.Error())
+				l.Error("Test_ProcessCloudCSVMongoWorkflow - error", "error", err.Error())
 			} else {
-				var result batch.LocalCSVMongoBatchRequest
+				var result batch.CloudCSVMongoBatchRequest
 				err := s.env.GetWorkflowResult(&result)
-				s.NoError(err, "Test_ProcessLocalCSVMongoWorkflow - failed to get workflow result")
+				s.NoError(err, "Test_ProcessCloudCSVMongoWorkflow - failed to get workflow result")
 
 				timeTaken := time.Since(start)
 				batches := [][]uint64{}
@@ -151,20 +156,21 @@ func (s *ProcessLocalCSVMongoWorkflowTestSuite) Test_ProcessLocalCSVMongoWorkflo
 
 					for _, rec := range v.Records {
 						l.Debug(
-							"Test_ProcessLocalCSVMongoWorkflow",
+							"Test_ProcessCloudCSVMongoWorkflow",
 							"recordId", rec.RecordID,
 							"result", rec.Record)
 					}
 				}
 
 				l.Info(
-					"Test_ProcessLocalCSVMongoWorkflow result",
+					"Test_ProcessCloudCSVMongoWorkflow result",
 					"time-taken", fmt.Sprintf("%dms", timeTaken.Milliseconds()),
-					"record-count", recordCount)
+					"record-count", recordCount,
+				)
 			}
 		}()
 
-		s.env.ExecuteWorkflow(btchwkfl.ProcessLocalCSVMongo, req)
+		s.env.ExecuteWorkflow(btchwkfl.ProcessCloudCSVMongo, req)
 
 		s.True(s.env.IsWorkflowCompleted())
 		s.NoError(s.env.GetWorkflowError())

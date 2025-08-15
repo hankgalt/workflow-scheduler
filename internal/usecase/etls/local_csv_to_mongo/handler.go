@@ -6,15 +6,12 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/comfforts/logger"
 
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
-	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
-	"github.com/hankgalt/workflow-scheduler/internal/repo/vypar"
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/etls"
 	localcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv"
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
@@ -23,13 +20,14 @@ import (
 type LocalCSVToMongoHandler struct {
 	dataPoint    batch.CSVDataPoint
 	csvHandler   batch.CSVDataProcessor
-	mongoHandler vypar.VyparRepo
+	mongoHandler mongostore.MongoStore
 }
 
 func NewLocalCSVToMongoHandler(
 	ctx context.Context,
 	cfg localcsv.LocalCSVFileHandlerConfig,
 	sCfg infra.StoreConfig,
+	coll string,
 ) (*LocalCSVToMongoHandler, error) {
 	if cfg.Name() == "" {
 		return nil, etls.ErrMissingFileName
@@ -45,15 +43,14 @@ func NewLocalCSVToMongoHandler(
 		return nil, err
 	}
 
-	vr, err := vypar.NewVyparRepo(ctx, mongoStore)
-	if err != nil {
-		return nil, err
-	}
-
 	return &LocalCSVToMongoHandler{
-		dataPoint:    batch.CSVDataPoint{Name: cfg.Name(), Path: cfg.Path()},
+		dataPoint: batch.CSVDataPoint{
+			Name:       cfg.Name(),
+			Path:       cfg.Path(),
+			Collection: coll,
+		},
 		csvHandler:   csvHandler,
-		mongoHandler: vr,
+		mongoHandler: mongoStore,
 	}, nil
 }
 
@@ -72,7 +69,7 @@ func (h *LocalCSVToMongoHandler) HandleData(
 	ctx context.Context,
 	start uint64,
 	data any,
-	headers []string,
+	transFunc batch.TransformerFunc,
 ) (<-chan batch.Result, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
@@ -121,13 +118,9 @@ func (h *LocalCSVToMongoHandler) HandleData(
 			lastOffset, currOffset = currOffset, csvReader.InputOffset()
 			cleanedRec := strutils.CleanAlphaNumericsArr(record, []rune{'.', '-', '_', '#', '&', '@'})
 
-			fields := map[string]string{}
-			for i, field := range headers {
-				fields[strings.ToLower(field)] = cleanedRec[i]
-			}
+			fields := transFunc(cleanedRec)
 
-			mongoModel := stores.MapAgentFieldsToMongoModel(fields)
-			agID, err := h.mongoHandler.AddAgent(ctx, mongoModel)
+			resID, err := h.mongoHandler.AddCollectionDoc(ctx, h.dataPoint.Collection, fields)
 			if err != nil {
 				resStream <- batch.Result{
 					Start: start + uint64(lastOffset),
@@ -140,7 +133,7 @@ func (h *LocalCSVToMongoHandler) HandleData(
 			resStream <- batch.Result{
 				Start:  start + uint64(lastOffset),
 				End:    start + uint64(currOffset),
-				Record: map[string]string{"mongoId": agID},
+				Record: map[string]string{"mongoId": resID},
 			}
 		}
 	}()

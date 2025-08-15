@@ -188,11 +188,11 @@ func (s *grpcServer) ProcessCloudCSVMongoWorkflow(ctx context.Context, req *api.
 	batReq := batch.CloudCSVMongoBatchRequest{
 		CSVBatchRequest: batch.CSVBatchRequest{
 			RequestConfig: &batch.RequestConfig{
-				MaxBatches: uint(req.MaxBatches),
-				BatchSize:  uint(req.BatchSize),
-				Offsets:    []uint64{},
-				Headers:    []string{},
-				Mappings:   req.Mappings,
+				MaxBatches:   uint(req.MaxBatches),
+				BatchSize:    uint(req.BatchSize),
+				Offsets:      []uint64{},
+				Headers:      []string{},
+				MappingRules: map[string]batch.Rule{},
 			},
 		},
 		Config: reqCfg,

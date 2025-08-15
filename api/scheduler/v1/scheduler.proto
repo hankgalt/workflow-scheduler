@@ -13,10 +13,16 @@ message WorkflowRun {
     string external_ref = 6;
 }
 
+message Rule {
+    string target = 1;
+    bool group = 2;
+    string new_field = 3;
+}
+
 message BatchCSVRequest {
     uint32 max_batches = 1;
     uint64 batch_size = 2;
-    map<string, string> mappings = 3;
+    map<string, Rule> mapping_rules = 3;
 }
 
 message RunResponse {

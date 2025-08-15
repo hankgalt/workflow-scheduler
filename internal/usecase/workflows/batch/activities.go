@@ -16,7 +16,7 @@ import (
 	cloudcsvtomongo "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/cloud_csv_to_mongo"
 	localcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv"
 	localcsvtomongo "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv_to_mongo"
-	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
+	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
 )
 
 const (
@@ -114,7 +114,7 @@ func SetupLocalCSVMongoBatch(
 	mCtx = logger.WithLogger(mCtx, l)
 
 	// Create a new LocalCSVToMongoHandler with the provided configurations
-	hndlr, err := localcsvtomongo.NewLocalCSVToMongoHandler(mCtx, csvCfg, mdbCfg)
+	hndlr, err := localcsvtomongo.NewLocalCSVToMongoHandler(mCtx, csvCfg, mdbCfg, hndlrCfg.Collection)
 	if err != nil {
 		l.Error("SetupLocalCSVMongoBatch - error creating handler", "error", err.Error())
 		return rqstCfg, temporal.NewApplicationErrorWithCause(err.Error(), err.Error(), err)
@@ -200,10 +200,8 @@ func setupCSVBatch(
 	// If first batch, set the start offset & headers
 	if isFirstBatch {
 		if len(hndlr.Headers()) > 0 {
-			//TODO - Headers validation for CSV files
-			l.Debug("setupCSVBatch - checking for headers", "headers", hndlr.Headers())
-			rqstCfg.Headers = strutils.MapTokens(hndlr.Headers(), rqstCfg.Mappings)
-			// rqstCfg.Headers = hndlr.Headers()
+			l.Debug("setupCSVBatch - first batch fetched headers", "headers", hndlr.Headers())
+			rqstCfg.Headers = hndlr.Headers()
 			activity.RecordHeartbeat(ctx, rqstCfg)
 		}
 		// TODO - Update first offset from 0 to start of first record
@@ -348,8 +346,19 @@ func handleCSVBatchData(
 		btch.Records = map[string]*batch.Result{}
 	}
 
+	// get business entity transform rules & build the transformer function
+	var rules map[string]batch.Rule
+	if len(rqstCfg.MappingRules) > 0 {
+		rules = rqstCfg.MappingRules
+	} else {
+		// If no mapping rules are provided, use default rules
+		l.Debug("handleCSVBatchData - using default mapping rules")
+		rules = btchutils.BuildBusinessModelTransformRules()
+	}
+	transFunc := btchutils.BuildTransformerWithRules(rqstCfg.Headers, rules)
+
 	// Process data using the handler
-	resStream, err := hndlr.HandleData(hCtx, btch.Start, data, rqstCfg.Headers)
+	resStream, err := hndlr.HandleData(hCtx, btch.Start, data, transFunc)
 	if err != nil {
 		l.Error("handleCSVBatchData - error handling data", "error", err.Error())
 		return btch, temporal.NewApplicationErrorWithCause(err.Error(), err.Error(), err)
@@ -444,7 +453,7 @@ func getLocalCSVToMongoHandler(
 	mCtx = logger.WithLogger(mCtx, l)
 
 	// Create a new LocalCSVToMongoHandler with the provided configurations
-	hndlr, err := localcsvtomongo.NewLocalCSVToMongoHandler(mCtx, csvCfg, mdbCfg)
+	hndlr, err := localcsvtomongo.NewLocalCSVToMongoHandler(mCtx, csvCfg, mdbCfg, cfg.Collection)
 	if err != nil {
 		return nil, err
 	}

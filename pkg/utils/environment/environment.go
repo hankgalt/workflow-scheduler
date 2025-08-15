@@ -60,7 +60,7 @@ func BuildCloudCSVBatchRequest(max, size uint) (*batch.CloudCSVBatchRequest, err
 }
 
 // BuildLocalCSVMongoBatchRequest constructs a LocalCSVMongoBatchRequest with the specified max batches, batch size & relevant environment variables.
-func BuildLocalCSVMongoBatchRequest(max, size uint) (*batch.LocalCSVMongoBatchRequest, error) {
+func BuildLocalCSVMongoBatchRequest(max, size uint, mappingRules map[string]batch.Rule) (*batch.LocalCSVMongoBatchRequest, error) {
 	reqCfg, err := BuildLocalCSVMongoBatchConfig()
 	if err != nil {
 		return nil, err
@@ -69,10 +69,11 @@ func BuildLocalCSVMongoBatchRequest(max, size uint) (*batch.LocalCSVMongoBatchRe
 	req := &batch.LocalCSVMongoBatchRequest{
 		CSVBatchRequest: batch.CSVBatchRequest{
 			RequestConfig: &batch.RequestConfig{
-				MaxBatches: max,
-				BatchSize:  size,
-				Offsets:    []uint64{},
-				Headers:    []string{},
+				MaxBatches:   max,
+				BatchSize:    size,
+				Offsets:      []uint64{},
+				Headers:      []string{},
+				MappingRules: mappingRules,
 			},
 		},
 		Config: reqCfg,
@@ -82,7 +83,7 @@ func BuildLocalCSVMongoBatchRequest(max, size uint) (*batch.LocalCSVMongoBatchRe
 }
 
 // BuildCloudCSVMongoBatchRequest constructs a CloudCSVMongoBatchRequest with the specified max batches, batch size & relevant environment variables.
-func BuildCloudCSVMongoBatchRequest(max, size uint, mappings map[string]string) (*batch.CloudCSVMongoBatchRequest, error) {
+func BuildCloudCSVMongoBatchRequest(max, size uint, mappingRules map[string]batch.Rule) (*batch.CloudCSVMongoBatchRequest, error) {
 	reqCfg, err := BuildCloudCSVMongoBatchConfig()
 	if err != nil {
 		return nil, err
@@ -91,11 +92,11 @@ func BuildCloudCSVMongoBatchRequest(max, size uint, mappings map[string]string) 
 	req := &batch.CloudCSVMongoBatchRequest{
 		CSVBatchRequest: batch.CSVBatchRequest{
 			RequestConfig: &batch.RequestConfig{
-				MaxBatches: max,
-				BatchSize:  size,
-				Offsets:    []uint64{},
-				Headers:    []string{},
-				Mappings:   mappings,
+				MaxBatches:   max,
+				BatchSize:    size,
+				Offsets:      []uint64{},
+				Headers:      []string{},
+				MappingRules: mappingRules,
 			},
 		},
 		Config: reqCfg,
@@ -137,6 +138,14 @@ func BuildLocalCSVMongoBatchConfig() (batch.LocalCSVMongoBatchConfig, error) {
 		return batch.LocalCSVMongoBatchConfig{}, err
 	}
 	fileName, mCfg := BuildFileName(), BuildMongoConfig()
+	collection, err := BuildMongoCollection()
+	if err != nil {
+		return batch.LocalCSVMongoBatchConfig{}, err
+	}
+
+	// fileName, mCfg := "Principals-sample.csv", BuildMongoConfig()
+	// fileName, mCfg := "Filings-sample.csv", BuildMongoConfig()
+	// collection := "vypar.filings"
 
 	return batch.LocalCSVMongoBatchConfig{
 		LocalCSVBatchConfig: batch.LocalCSVBatchConfig{
@@ -144,6 +153,7 @@ func BuildLocalCSVMongoBatchConfig() (batch.LocalCSVMongoBatchConfig, error) {
 			Path: filePath,
 		},
 		MongoBatchConfig: mCfg,
+		Collection:       collection,
 	}, nil
 }
 
@@ -156,9 +166,9 @@ func BuildCloudCSVMongoBatchConfig() (batch.CloudCSVMongoBatchConfig, error) {
 		return batch.CloudCSVMongoBatchConfig{}, fmt.Errorf("BUCKET environment variable is not set")
 	}
 
-	collection := os.Getenv("MONGO_COLLECTION")
-	if collection == "" {
-		return batch.CloudCSVMongoBatchConfig{}, fmt.Errorf("MONGO_COLLECTION environment variable is not set")
+	collection, err := BuildMongoCollection()
+	if err != nil {
+		return batch.CloudCSVMongoBatchConfig{}, err
 	}
 
 	return batch.CloudCSVMongoBatchConfig{
@@ -198,6 +208,15 @@ func BuildFileName() string {
 	}
 
 	return fileName
+}
+
+func BuildMongoCollection() (string, error) {
+	collection := os.Getenv("MONGO_COLLECTION")
+	if collection == "" {
+		return "", fmt.Errorf("MONGO_COLLECTION environment variable is not set")
+	}
+
+	return collection, nil
 }
 
 func BuildMongoConfig() batch.MongoBatchConfig {

@@ -90,9 +90,9 @@ func testProcessCloudCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 	ctx := context.Background()
 
 	resp, err := client.ProcessCloudCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
-		MaxBatches: 2,
-		BatchSize:  400,
-		Mappings:   agentHeaderMapping,
+		MaxBatches:   2,
+		BatchSize:    400,
+		MappingRules: map[string]*api.Rule{},
 	})
 	if err != nil {
 		l.Error("error processing cloud CSV to mongo workflow", "error", err.Error())

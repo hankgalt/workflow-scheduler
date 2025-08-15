@@ -120,7 +120,7 @@ func (h *LocalCSVFileHandler) HandleData(
 	ctx context.Context,
 	start uint64,
 	data any,
-	headers []string,
+	transFunc batch.TransformerFunc,
 ) (<-chan batch.Result, error) {
 	chnk, ok := data.([]byte)
 	if !ok {

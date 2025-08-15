@@ -14,11 +14,6 @@ import (
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )
 
-var agentHeaderMapping = map[string]string{
-	"ENTITY_NUM":       "ENTITY_ID",
-	"PHYSICAL_ADDRESS": "ADDRESS",
-}
-
 func TestProcessLocalCSVToMongoWorkflow(t *testing.T) {
 	// Initialize logger
 	l := logger.GetSlogLogger()
@@ -49,10 +44,11 @@ func TestProcessLocalCSVToMongoWorkflow(t *testing.T) {
 	req := batch.LocalCSVMongoBatchRequest{
 		CSVBatchRequest: batch.CSVBatchRequest{
 			RequestConfig: &batch.RequestConfig{
-				MaxBatches: 2,
-				BatchSize:  400,
-				Offsets:    []uint64{},
-				Headers:    []string{},
+				MaxBatches:   2,
+				BatchSize:    400,
+				Offsets:      []uint64{},
+				Headers:      []string{},
+				MappingRules: map[string]batch.Rule{},
 			},
 		},
 		Config: reqCfg,
@@ -88,17 +84,20 @@ func TestProcessCloudCSVToMongoWorkflow(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
+	mappingRules := map[string]batch.Rule{}
+	envutils.BuildCloudCSVMongoBatchRequest(2, 400, mappingRules)
+
 	reqCfg, err := envutils.BuildCloudCSVMongoBatchConfig()
 	require.NoError(t, err)
 
 	req := batch.CloudCSVMongoBatchRequest{
 		CSVBatchRequest: batch.CSVBatchRequest{
 			RequestConfig: &batch.RequestConfig{
-				MaxBatches: 2,
-				BatchSize:  400,
-				Offsets:    []uint64{},
-				Headers:    []string{},
-				Mappings:   agentHeaderMapping,
+				MaxBatches:   2,
+				BatchSize:    400,
+				Offsets:      []uint64{},
+				Headers:      []string{},
+				MappingRules: map[string]batch.Rule{},
 			},
 		},
 		Config: reqCfg,

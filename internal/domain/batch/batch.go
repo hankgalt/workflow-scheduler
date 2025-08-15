@@ -1,6 +1,8 @@
 package batch
 
-import "context"
+import (
+	"context"
+)
 
 type DataReader interface {
 	// ReadData reads data from data reader source at the specified offset and limit.
@@ -21,7 +23,7 @@ type CSVDataHandler interface {
 	// HandleData processes the data.
 	// The start parameter indicates the relative starting position for this chunk of data.
 	// It returns a channel for results and errors.
-	HandleData(ctx context.Context, start uint64, data any, headers []string) (<-chan Result, error)
+	HandleData(ctx context.Context, start uint64, data any, transFunc TransformerFunc) (<-chan Result, error)
 }
 
 type CSVSource interface {
@@ -77,6 +79,7 @@ type MongoBatchConfig struct {
 type LocalCSVMongoBatchConfig struct {
 	LocalCSVBatchConfig `json:"localCsvConfig"` // Configuration for local CSV batch processing
 	MongoBatchConfig    `json:"mongoConfig"`    // Configuration for MongoDB batch processing
+	Collection          string                  `json:"collection"` // Collection name for MongoDB
 }
 
 type CloudCSVMongoBatchConfig struct {
@@ -101,13 +104,13 @@ type Batch struct {
 }
 
 type RequestConfig struct {
-	MaxBatches uint              `json:"maxBatches"` // Maximum number of batches to process
-	BatchSize  uint              `json:"batchSize"`  // Size of each batch
-	Start      uint64            `json:"start"`      // Start position for processing
-	End        uint64            `json:"end"`        // End position for processing
-	Offsets    []uint64          `json:"offsets"`    // List of offsets for batch processing
-	Headers    []string          `json:"headers"`    // Headers for the CSV file
-	Mappings   map[string]string `json:"mappings"`   // Optional mappings for CSV headers to MongoDB fields
+	MaxBatches   uint            `json:"maxBatches"`   // Maximum number of batches to process
+	BatchSize    uint            `json:"batchSize"`    // Size of each batch
+	Start        uint64          `json:"start"`        // Start position for processing
+	End          uint64          `json:"end"`          // End position for processing
+	Offsets      []uint64        `json:"offsets"`      // List of offsets for batch processing
+	Headers      []string        `json:"headers"`      // Headers for the CSV file
+	MappingRules map[string]Rule `json:"mappingRules"` // Optional mappings for CSV headers to MongoDB fields
 }
 
 type CSVBatchRequest struct {
@@ -134,3 +137,18 @@ type CloudCSVMongoBatchRequest struct {
 	CSVBatchRequest `json:"csvBatchRequest"` // CSV batch request with additional fields
 	Config          CloudCSVMongoBatchConfig `json:"config"` // Configuration for the cloud CSV and MongoDB source
 }
+
+type Rule struct {
+	Target   string // this value replaces the header in the CSV file
+	Group    bool   // if true, include this Target column's value in a grouped field
+	NewField string // if has value, include Target as new field with this value
+}
+
+// TransformerBuilderWithRulesFunc builds a transformer from headers and mapping rules.
+type TransformerBuilderWithRulesFunc func(headers []string, rules map[string]Rule) TransformerFunc
+
+// TransformerBuilderFunc builds a transformer from headers and mapping rules.
+type TransformerBuilderFunc func(headers []string, rules map[string]string) TransformerFunc
+
+// TransformerFunc transforms a slice of values into a key-value map based on, in closure, headers and rules.
+type TransformerFunc func(values []string) map[string]any

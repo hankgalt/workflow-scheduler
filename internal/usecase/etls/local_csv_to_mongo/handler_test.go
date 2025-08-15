@@ -40,14 +40,18 @@ func TestLocalCSVToMongoHandler(t *testing.T) {
 	defer cancel()
 	ctx = logger.WithLogger(ctx, l)
 
+	collName, err := envutils.BuildMongoCollection()
+	require.NoError(t, err, "Mongo collection name should be set")
+
 	// get local csv to mongo handler instance
-	hndlr, err := localcsvtomongo.NewLocalCSVToMongoHandler(ctx, handlerCfg, nmCfg)
+	hndlr, err := localcsvtomongo.NewLocalCSVToMongoHandler(ctx, handlerCfg, nmCfg, collName)
 	require.NoError(t, err)
 
 	// setup batch size
 	batchSize := uint64(400)
 
 	// read first batch data from local csv file
+	// data, n, endOfFile, err := hndlr.ReadData(ctx, 0, batchSize)
 	data, n, endOfFile, err := hndlr.ReadData(ctx, 0, batchSize)
 	require.NoError(t, err)
 
@@ -55,11 +59,20 @@ func TestLocalCSVToMongoHandler(t *testing.T) {
 	headers := hndlr.Headers()
 	require.NotEmpty(t, headers, "Headers should not be empty")
 	require.Equal(t, true, n < batchSize, "Read less than batch size")
-	l.Debug("TestLocalCSVToMongoHandler - Read data from file", "fileName", fileName, "batchSize", batchSize, "nextOffset", n)
-	l.Debug("TestLocalCSVToMongoHandler - File headers", "headers", hndlr.Headers())
+	l.Debug(
+		"TestLocalCSVToMongoHandler - Read data from file",
+		"fileName", fileName,
+		"batchSize", batchSize,
+		"headers", hndlr.Headers(),
+		"nextOffset", n,
+	)
+
+	// get business entity transform rules & build the transformer function
+	rules := btchutils.BuildBusinessEntityTransformRules()
+	transFunc := btchutils.BuildTransformer(headers, rules)
 
 	// handle data read from local csv file & acquire record stream
-	recStream, err := hndlr.HandleData(ctx, 0, data, headers)
+	recStream, err := hndlr.HandleData(ctx, 0, data, transFunc)
 	require.NoError(t, err)
 
 	// process record stream for record count & error count
@@ -76,7 +89,7 @@ func TestLocalCSVToMongoHandler(t *testing.T) {
 
 		l.Debug("TestLocalCSVToMongoHandler - Read data from file", "fileName", fileName, "batchSize", batchSize, "nextOffset", n)
 
-		recStream, err = hndlr.HandleData(ctx, 0, data, headers)
+		recStream, err = hndlr.HandleData(ctx, 0, data, transFunc)
 		require.NoError(t, err)
 
 		recCnt, errCnt, err := btchutils.ProcessCSVRecordStream(ctx, recStream)

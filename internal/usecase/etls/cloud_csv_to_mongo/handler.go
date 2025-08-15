@@ -6,7 +6,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/comfforts/logger"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
@@ -73,7 +72,7 @@ func (h *CloudCSVToMongoHandler) HandleData(
 	ctx context.Context,
 	start uint64,
 	data any,
-	headers []string,
+	transFunc batch.TransformerFunc,
 ) (<-chan batch.Result, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
@@ -122,10 +121,7 @@ func (h *CloudCSVToMongoHandler) HandleData(
 			lastOffset, currOffset = currOffset, csvReader.InputOffset()
 			cleanedRec := strutils.CleanAlphaNumericsArr(record, []rune{'.', '-', '_', '#', '&', '@'})
 
-			fields := map[string]any{}
-			for i, field := range headers {
-				fields[strings.ToLower(field)] = cleanedRec[i]
-			}
+			fields := transFunc(cleanedRec)
 
 			resID, err := h.mongoHandler.AddCollectionDoc(ctx, h.dataPoint.Collection, fields)
 			if err != nil {
