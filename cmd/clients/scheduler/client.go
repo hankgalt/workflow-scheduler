@@ -16,11 +16,6 @@ import (
 const SERVICE_PORT = 65051
 const SERVICE_DOMAIN = "127.0.0.1"
 
-var agentHeaderMapping = map[string]string{
-	"ENTITY_NUM":       "ENTITY_ID",
-	"PHYSICAL_ADDRESS": "ADDRESS",
-}
-
 func main() {
 
 	// initialize app logger instance
@@ -43,6 +38,7 @@ func main() {
 	defer conn.Close()
 
 	client := api.NewSchedulerClient(conn)
+
 	err = testWorkflowCRUD(client, l)
 	if err != nil {
 		l.Error("error: workflow CRUD", "error", err.Error())
@@ -52,6 +48,12 @@ func main() {
 	err = testProcessCloudCSVMongoWorkflow(client, l)
 	if err != nil {
 		l.Error("error: process cloud CSV Mongo workflow", "error", err.Error())
+		return
+	}
+
+	err = testProcessLocalCSVMongoWorkflow(client, l)
+	if err != nil {
+		l.Error("error: process local CSV Mongo workflow", "error", err.Error())
 		return
 	}
 }
@@ -100,6 +102,24 @@ func testProcessCloudCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 	}
 
 	l.Info("ProcessCloudCSVMongoWorkflow response", "response", resp)
+
+	return nil
+}
+
+func testProcessLocalCSVMongoWorkflow(client api.SchedulerClient, l logger.Logger) error {
+	ctx := context.Background()
+
+	resp, err := client.ProcessLocalCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
+		MaxBatches:   2,
+		BatchSize:    400,
+		MappingRules: map[string]*api.Rule{},
+	})
+	if err != nil {
+		l.Error("error processing local CSV to mongo workflow", "error", err.Error())
+		return err
+	}
+
+	l.Info("ProcessLocalCSVMongoWorkflow response", "response", resp)
 
 	return nil
 }

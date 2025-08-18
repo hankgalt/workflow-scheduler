@@ -142,6 +142,7 @@ type Rule struct {
 	Target   string // this value replaces the header in the CSV file
 	Group    bool   // if true, include this Target column's value in a grouped field
 	NewField string // if has value, include Target as new field with this value
+	Order    int    // order of the rule in the mapping
 }
 
 // TransformerBuilderWithRulesFunc builds a transformer from headers and mapping rules.

@@ -8,31 +8,6 @@ import (
 	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
 )
 
-func TestBuildTransformer(t *testing.T) {
-	inputs := [][][]string{
-		{
-			{"ENTITY_NAME", "ENTITY_NUM", "PHYSICAL_ADDRESS", "STATUS"},
-			{"Alice", "306749", "23781 WASHINGTON AVE C-100 #184 MURRIETA CA 92562 United States", ""},
-		},
-		{
-			{"ENTITY_NAME", "ENTITY_NUM", "PHYSICAL_ADDRESS1", "PHYSICAL_ADDRESS2", "PHYSICAL_ADDRESS3", "PHYSICAL_CITY", "PHYSICAL_STATE", "PHYSICAL_POSTAL_CODE", "PHYSICAL_COUNTRY", "STATUS"},
-			{"Alice", "306749", "23781 WASHINGTON AVE C-100 #184", "", "", "MURRIETA", "CA", "92562", "United States", ""},
-		},
-	}
-
-	rules := btchutils.BuildBusinessEntityTransformRules()
-	require.NotEmpty(t, rules, "Transform rules should not be empty")
-
-	for _, input := range inputs {
-		tranFunc := btchutils.BuildTransformer(input[0], rules)
-		mapped := tranFunc(input[1])
-		require.Equal(t, "306749", mapped["entity_id"])
-		require.Equal(t, "Alice", mapped["entity_name"])
-		require.Equal(t, "23781 WASHINGTON AVE C-100 #184 MURRIETA CA 92562 United States", mapped["address"])
-		require.Equal(t, "", mapped["status"])
-	}
-}
-
 func TestBuildTransformerWithRules(t *testing.T) {
 	inputs := [][][]string{
 		{
@@ -40,8 +15,8 @@ func TestBuildTransformerWithRules(t *testing.T) {
 			{"Alice", "306749", "23781 WASHINGTON AVE C-100 #184 MURRIETA CA 92562 United States", "", "Manager"},
 		},
 		{
-			{"ENTITY_NAME", "ENTITY_NUM", "PHYSICAL_ADDRESS1", "PHYSICAL_ADDRESS2", "PHYSICAL_ADDRESS3", "PHYSICAL_CITY", "PHYSICAL_STATE", "PHYSICAL_POSTAL_CODE", "PHYSICAL_COUNTRY", "STATUS", "POSITION_TYPE"},
-			{"Alice", "306749", "23781 WASHINGTON AVE C-100 #184", "", "", "MURRIETA", "CA", "92562", "United States", "", "Manager"},
+			{"ENTITY_NAME", "ENTITY_NUM", "PHYSICAL_ADDRESS1", "PHYSICAL_ADDRESS2", "PHYSICAL_ADDRESS3", "PHYSICAL_CITY", "PHYSICAL_STATE", "PHYSICAL_COUNTRY", "PHYSICAL_POSTAL_CODE", "STATUS", "POSITION_TYPE"},
+			{"Alice", "306749", "23781 WASHINGTON AVE C-100 #184", "", "", "MURRIETA", "CA", "United States", "92562", "", "Manager"},
 		},
 	}
 

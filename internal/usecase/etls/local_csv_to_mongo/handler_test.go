@@ -67,9 +67,9 @@ func TestLocalCSVToMongoHandler(t *testing.T) {
 		"nextOffset", n,
 	)
 
-	// get business entity transform rules & build the transformer function
-	rules := btchutils.BuildBusinessEntityTransformRules()
-	transFunc := btchutils.BuildTransformer(headers, rules)
+	// get business model transform rules & build the transformer function
+	rules := btchutils.BuildBusinessModelTransformRules()
+	transFunc := btchutils.BuildTransformerWithRules(headers, rules)
 
 	// handle data read from local csv file & acquire record stream
 	recStream, err := hndlr.HandleData(ctx, 0, data, transFunc)

@@ -63,6 +63,66 @@ func TestWorkflowRuns(t *testing.T) {
 	}
 }
 
+func TestWorkflows(t *testing.T) {
+	for scenario, fn := range map[string]func(
+		t *testing.T,
+		client api.SchedulerClient,
+		nbClient api.SchedulerClient,
+	){
+		"test process cloud CSV to mongo workflow, started": testProcessCloudCSVMongoWorkflow,
+		"test process local CSV to mongo workflow, started": testProcessLocalCSVMongoWorkflow,
+	} {
+		t.Run(scenario, func(t *testing.T) {
+			client, nbClient, teardown := setupTest(t, nil)
+			defer teardown()
+			fn(t, client, nbClient)
+		})
+
+		err := os.RemoveAll(TEST_DIR)
+		require.NoError(t, err)
+	}
+}
+
+func testProcessCloudCSVMongoWorkflow(t *testing.T, client, nbClient api.SchedulerClient) {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	l := logger.GetSlogLogger()
+	ctx = logger.WithLogger(ctx, l)
+
+	// Process cloud CSV to mongo workflow
+	resp, err := client.ProcessCloudCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
+		MaxBatches:   2,
+		BatchSize:    400,
+		MappingRules: map[string]*api.Rule{},
+	})
+	require.NoError(t, err)
+
+	l.Info("ProcessCloudCSVMongoWorkflow - started workflow successfully", "workflow-run", resp)
+}
+
+func testProcessLocalCSVMongoWorkflow(t *testing.T, client, nbClient api.SchedulerClient) {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	l := logger.GetSlogLogger()
+	ctx = logger.WithLogger(ctx, l)
+
+	// Process local CSV to mongo workflow
+	resp, err := client.ProcessLocalCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
+		MaxBatches:   2,
+		BatchSize:    400,
+		MappingRules: map[string]*api.Rule{},
+	})
+	require.NoError(t, err)
+
+	l.Info("ProcessLocalCSVMongoWorkflow - started workflow successfully", "workflow-run", resp)
+}
+
 func testUnauthorizedClient(t *testing.T, client, nbClient api.SchedulerClient) {
 	t.Helper()
 
