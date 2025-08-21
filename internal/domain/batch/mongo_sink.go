@@ -9,6 +9,10 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 )
 
+const (
+	MongoSink = "mongo-sink"
+)
+
 // MongoDocWriter is the tiny capability we need.
 type MongoDocWriter interface {
 	AddCollectionDoc(ctx context.Context, collectionName string, doc map[string]any) (string, error)
@@ -22,7 +26,7 @@ type mongoSink[T any] struct {
 }
 
 // Name returns the name of the mongo sink.
-func (s *mongoSink[T]) Name() string { return "mongo-sink" }
+func (s *mongoSink[T]) Name() string { return MongoSink }
 
 // Write writes the batch of records to MongoDB.
 func (s *mongoSink[T]) Write(ctx context.Context, b *BatchProcess[T]) (*BatchProcess[T], error) {
@@ -83,6 +87,9 @@ type MongoSinkConfig[T any] struct {
 	Params     string // e.g., "retryWrites=true&w=majority"
 	Collection string
 }
+
+// Name of the sink.
+func (c MongoSinkConfig[T]) Name() string { return MongoSink }
 
 // BuildSink builds a MongoDB sink from the config.
 func (c MongoSinkConfig[T]) BuildSink(ctx context.Context) (Sink[T], error) {

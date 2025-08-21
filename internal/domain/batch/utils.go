@@ -123,6 +123,9 @@ func BuildTransformerWithRules(headers []string, rules map[string]Rule) Transfor
 func BuildBusinessModelTransformRules() map[string]Rule {
 	return map[string]Rule{
 		"ENTITY_NUM":                  {Target: "ENTITY_ID"},                                // rename to ENTITY_ID
+		"FIRST_NAME":                  {Target: "NAME", Group: true, Order: 1},              // group into NAME
+		"MIDDLE_NAME":                 {Target: "NAME", Group: true, Order: 2},              // group into NAME
+		"LAST_NAME":                   {Target: "NAME", Group: true, Order: 3},              // group into NAME
 		"PHYSICAL_ADDRESS":            {Target: "ADDRESS"},                                  // rename to ADDRESS
 		"PHYSICAL_ADDRESS1":           {Target: "ADDRESS", Group: true, Order: 1},           // group into ADDRESS
 		"PHYSICAL_ADDRESS2":           {Target: "ADDRESS", Group: true, Order: 2},           // group into ADDRESS

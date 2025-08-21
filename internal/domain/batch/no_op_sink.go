@@ -4,11 +4,15 @@ import (
 	"context"
 )
 
+const (
+	NoopSink = "noop-sink"
+)
+
 // No operation sink for testing or defaulting.
 type noopSink[T any] struct{}
 
 // Name returns the name of the noop sink.
-func (s *noopSink[T]) Name() string { return "noop" }
+func (s *noopSink[T]) Name() string { return NoopSink }
 
 // Write does nothing and returns the count of records as written.
 func (s *noopSink[T]) Write(ctx context.Context, b *BatchProcess[T]) (*BatchProcess[T], error) {
@@ -26,6 +30,9 @@ func (s *noopSink[T]) Close(ctx context.Context) error {
 
 // No operation sink config for testing or defaulting.
 type NoopSinkConfig[T any] struct{}
+
+// Name of the sink.
+func (c NoopSinkConfig[T]) Name() string { return NoopSink }
 
 // BuildSink returns a noop sink.
 func (c NoopSinkConfig[T]) BuildSink(ctx context.Context) (Sink[T], error) {

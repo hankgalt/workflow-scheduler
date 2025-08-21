@@ -24,12 +24,14 @@ type BatchProcess[T any] struct {
 	Records     []*BatchRecord[T]
 	StartOffset uint64 // start offset in the source
 	NextOffset  uint64 // cursor / next-page token / byte offset
+	Error       string
 	Done        bool
 }
 
 // SourceConfig[T any] is a config that *knows how to build* a Source for a specific T.
 type SourceConfig[T any] interface {
 	BuildSource(ctx context.Context) (Source[T], error)
+	Name() string
 }
 
 // Source[T any] is a source of batches of T, e.g., a CSV file, a database table, etc.
@@ -43,6 +45,7 @@ type Source[T any] interface {
 // SinkConfig[T any] is a config that *knows how to build* a Sink for a specific T.
 type SinkConfig[T any] interface {
 	BuildSink(ctx context.Context) (Sink[T], error)
+	Name() string
 }
 
 // Sink[T any] is a sink that writes a batch of T to a destination, e.g., a database, a file, etc.

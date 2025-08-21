@@ -8,6 +8,15 @@ import (
 	"go.temporal.io/sdk/temporal"
 )
 
+type ActivityAlias string
+
+const (
+	FetchNextLocalCSVSourceBatchAlias string = "fetch-next-" + batch.LocalCSVSource + "-batch-alias"
+	FetchNextCloudCSVSourceBatchAlias string = "fetch-next-" + batch.CloudCSVSource + "-batch-alias"
+	WriteNextNoopSinkBatchAlias       string = "write-next-" + batch.NoopSink + "-batch-alias"
+	WriteNextMongoSinkBatchAlias      string = "write-next-" + batch.MongoSink + "-batch-alias"
+)
+
 // FetchNextActivity fetches the next batch of data from the source.
 // It builds the source from the provided configuration, fetches the next batch,
 // and records a heartbeat for the activity.
@@ -43,15 +52,6 @@ func FetchNextActivity[T any, S batch.SourceConfig[T]](
 	return &batch.FetchOutput[T]{
 		Batch: b,
 	}, nil
-}
-
-// Optional transform activity (CSVRow -> BSON, validation, enrichment, etc.)
-func TransformActivity[T any](
-	ctx context.Context,
-	b *batch.BatchProcess[T],
-) (*batch.BatchProcess[T], error) {
-	// no-op or real transforms/validations
-	return b, nil
 }
 
 // WriteActivity writes a batch of data to the sink.

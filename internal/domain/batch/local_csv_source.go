@@ -12,6 +12,10 @@ import (
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
 
+const (
+	LocalCSVSource = "local-csv-source"
+)
+
 // Local CSV source.
 type localCSVSource struct {
 	path      string
@@ -21,7 +25,7 @@ type localCSVSource struct {
 }
 
 // Name of the source.
-func (s *localCSVSource) Name() string { return "local_csv" }
+func (s *localCSVSource) Name() string { return LocalCSVSource }
 
 // Close closes the local CSV source.
 func (s *localCSVSource) Close(ctx context.Context) error {
@@ -193,6 +197,9 @@ type LocalCSVConfig struct {
 	HasHeader    bool
 	MappingRules map[string]Rule // mapping rules for the CSV rows
 }
+
+// Name of the source.
+func (c LocalCSVConfig) Name() string { return LocalCSVSource }
 
 // BuildSource builds a local CSV source from the config.
 // It reads headers if HasHeader is true and caches it.

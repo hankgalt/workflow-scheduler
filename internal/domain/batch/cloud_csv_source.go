@@ -15,6 +15,10 @@ import (
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
 
+const (
+	CloudCSVSource = "cloud-csv-source"
+)
+
 type CloudSource string
 
 const (
@@ -59,7 +63,7 @@ func (s *cloudCSVSource) Close(ctx context.Context) error {
 }
 
 // Name of the source.
-func (s *cloudCSVSource) Name() string { return "cloud_csv" }
+func (s *cloudCSVSource) Name() string { return CloudCSVSource }
 
 // Next reads the next batch of CSV rows from the cloud storage (S3/GCS/Azure).
 // It reads from the cloud storage at the specified offset and returns a batch of CSVRow.
@@ -250,6 +254,9 @@ type CloudCSVConfig struct {
 	HasHeader    bool
 	MappingRules map[string]Rule
 }
+
+// Name of the source.
+func (c CloudCSVConfig) Name() string { return CloudCSVSource }
 
 // BuildSource builds a cloud CSV source from the config.
 func (c CloudCSVConfig) BuildSource(ctx context.Context) (Source[CSVRow], error) {

@@ -12,12 +12,28 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 )
 
-// A single generic orchestration.
-// You get strong typing across the whole path.
+const (
+	ProcessLocalCSVMongoWorkflowAlias string = "process-local-csv-mongo-workflow-alias"
+	ProcessCloudCSVMongoWorkflowAlias string = "process-cloud-csv-mongo-workflow-alias"
+)
+
+const (
+	FAILED_REMOVE_FUTURE = "failed to remove future from queue"
+)
+
+var (
+	ErrFailedRemoveFuture = errors.New(FAILED_REMOVE_FUTURE)
+)
+
+// ProcessBatchWorkflow processes a batch of records from a source to a sink.
 func ProcessBatchWorkflow[T any, S batch.SourceConfig[T], D batch.SinkConfig[T]](
 	ctx workflow.Context,
-	req batch.BatchRequest[T, S, D],
-) (batch.BatchRequest[T, S, D], error) {
+	req *batch.BatchRequest[T, S, D],
+) (*batch.BatchRequest[T, S, D], error) {
+	l := workflow.GetLogger(ctx)
+	l.Debug("ProcessBatchWorkflow workflow started", "source", req.Source.Name(), "sink", req.Sink.Name())
+
+	// setup activity options
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: time.Minute * 10,
 		RetryPolicy: &temporal.RetryPolicy{
@@ -26,133 +42,117 @@ func ProcessBatchWorkflow[T any, S batch.SourceConfig[T], D batch.SinkConfig[T]]
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
+	// setup request state
 	if req.Batches == nil {
 		req.Batches = map[string]*batch.BatchProcess[T]{}
 	}
-
 	if req.Offsets == nil {
 		req.Offsets = []uint64{}
 		req.Offsets = append(req.Offsets, req.StartAt)
 	}
-
 	if req.MaxBatches < 2 {
 		req.MaxBatches = 2
 	}
 
-	// initiate a new queue
+	// Get the fetch and write activity aliases based on the source and sink
+	fetchActivityAlias, writeActivityAlias := getFetchActivityName(req), getWriteActivityName(req)
+
+	// TODO retry case, check for error
+
+	// Initiate a new queue
 	q := list.New()
 
-	// Execute the fetch activity for first batch
+	// Fetch first batch from source
 	var fetched batch.FetchOutput[T]
-	if err := workflow.ExecuteActivity(
-		ctx, FetchNextActivity[T, S],
-		batch.FetchInput[T, S]{
-			Source:    req.Source,
-			Offset:    req.Offsets[len(req.Offsets)-1],
-			BatchSize: req.BatchSize,
-		}).Get(ctx, &fetched); err != nil {
+	if err := workflow.ExecuteActivity(ctx, fetchActivityAlias, &batch.FetchInput[T, S]{
+		Source:    req.Source,
+		Offset:    req.Offsets[len(req.Offsets)-1],
+		BatchSize: req.BatchSize,
+	}).Get(ctx, &fetched); err != nil {
 		return req, err
 	}
 
-	// Update request state
+	// Update request state with fetched batch
 	req.Offsets = append(req.Offsets, fetched.Batch.NextOffset)
-	req.Batches[fmt.Sprintf("batch-%d-%d", fetched.Batch.StartOffset, fetched.Batch.NextOffset)] = fetched.Batch
+	req.Batches[getBatchId(fetched.Batch.StartOffset, fetched.Batch.NextOffset, "", "")] = fetched.Batch
 	req.Done = fetched.Batch.Done
 
-	// Execute async the write activity for first batch
-	future := workflow.ExecuteActivity(ctx, WriteActivity[T, D], batch.WriteInput[T, D]{
+	// Write first batch to sink (async) & push resulting future/promise to queue
+	future := workflow.ExecuteActivity(ctx, writeActivityAlias, &batch.WriteInput[T, D]{
 		Sink:  req.Sink,
 		Batch: fetched.Batch,
 	})
-
 	q.PushBack(future)
 
-	// while there are items in queue
+	// While there are items in queue
 	for q.Len() > 0 {
-		// if queue has less than max batches and batches are not done
 		if q.Len() < int(req.MaxBatches) && !req.Done {
-			if err := workflow.ExecuteActivity(
-				ctx,
-				FetchNextActivity[T, S],
-				batch.FetchInput[T, S]{
-					Source:    req.Source,
-					Offset:    req.Offsets[len(req.Offsets)-1],
-					BatchSize: req.BatchSize,
-				},
-			).Get(ctx, &fetched); err != nil {
+			// If # of items in queue are less than concurrent processing limit & there's more data
+			// Fetch the next batch from the source
+			if err := workflow.ExecuteActivity(ctx, fetchActivityAlias, &batch.FetchInput[T, S]{
+				Source:    req.Source,
+				Offset:    req.Offsets[len(req.Offsets)-1],
+				BatchSize: req.BatchSize,
+			}).Get(ctx, &fetched); err != nil {
 				return req, err
 			}
 
-			// Update request state
+			// Update request state with fetched batch
 			req.Offsets = append(req.Offsets, fetched.Batch.NextOffset)
+			req.Batches[getBatchId(fetched.Batch.StartOffset, fetched.Batch.NextOffset, "", "")] = fetched.Batch
 			req.Done = fetched.Batch.Done
 
-			// Execute async the write activity for first batch
-			future := workflow.ExecuteActivity(ctx, WriteActivity[T, D], batch.WriteInput[T, D]{
+			// Write next batch to sink (async) & push resulting future/promise to queue
+			future := workflow.ExecuteActivity(ctx, writeActivityAlias, &batch.WriteInput[T, D]{
 				Sink:  req.Sink,
 				Batch: fetched.Batch,
 			})
-
 			q.PushBack(future)
-
 		} else {
+			// Remove future from queue & get output
 			future, ok := q.Remove(q.Front()).(workflow.Future)
 			if !ok {
-				return req, errors.New("failed to remove future from queue")
+				return req, temporal.NewApplicationErrorWithCause(FAILED_REMOVE_FUTURE, FAILED_REMOVE_FUTURE, ErrFailedRemoveFuture)
 			}
-
 			var wOut batch.WriteOutput[T]
 			if err := future.Get(ctx, &wOut); err != nil {
 				return req, err
 			}
 
-			batchId := fmt.Sprintf("batch-%d-%d", wOut.Batch.StartOffset, wOut.Batch.NextOffset)
+			// Update request state
+			batchId := getBatchId(wOut.Batch.StartOffset, wOut.Batch.NextOffset, "", "")
 			if _, ok := req.Batches[batchId]; !ok {
 				req.Batches[batchId] = wOut.Batch
 			} else {
 				req.Batches[batchId] = wOut.Batch
 			}
 		}
-
 	}
 
-	// for {
-	// 	// 1) Fetch
-	// 	var fetched batch.FetchOutput[T]
-	// 	if err := workflow.ExecuteActivity(ctx, FetchNextActivity[T, S], batch.FetchInput[T, S]{
-	// 		Source: req.Source, Offset: offset, BatchSize: req.BatchSize,
-	// 	}).Get(ctx, &fetched); err != nil {
-	// 		return err
-	// 	}
-
-	// 	// 2) Transform (optional)
-	// 	var tb batch.BatchProcess[T]
-	// 	if err := workflow.ExecuteActivity(ctx, TransformActivity[T], fetched.Batch).Get(ctx, &tb); err != nil {
-	// 		return err
-	// 	}
-
-	// 	// 3) Write
-	// 	if len(tb.Records) > 0 {
-	// 		if err := workflow.ExecuteActivity(ctx, WriteActivity[T, D], batch.WriteInput[T, D]{
-	// 			Sink:  req.Sink,
-	// 			Batch: tb,
-	// 		}).Get(ctx, nil); err != nil {
-	// 			return err
-	// 		}
-	// 	}
-
-	// 	if tb.Done {
-	// 		return nil
-	// 	}
-	// 	offset = tb.NextOffset
-
-	// 	// Continue-as-new guard to cap history
-	// 	if workflow.GetInfo(ctx).GetCurrentHistoryLength() > 8_000 {
-	// 		return workflow.NewContinueAsNewError(ctx, ProcessBatchWorkflow[T, S, D], batch.BatchRequest[T, S, D]{
-	// 			JobID: req.JobID, BatchSize: req.BatchSize, StartAt: offset, Source: req.Source, Sink: req.Sink,
-	// 		})
-	// 	}
-	// }
-
+	l.Debug("ProcessBatchWorkflow workflow completed", "source", req.Source.Name(), "sink", req.Sink.Name())
 	return req, nil
+}
+
+func getFetchActivityName[T any, S batch.SourceConfig[T], D batch.SinkConfig[T]](req *batch.BatchRequest[T, S, D]) string {
+	return "fetch-next-" + req.Source.Name() + "-batch-alias"
+}
+
+func getWriteActivityName[T any, S batch.SourceConfig[T], D batch.SinkConfig[T]](req *batch.BatchRequest[T, S, D]) string {
+	return "write-next-" + req.Sink.Name() + "-batch-alias"
+}
+
+func getBatchId(start, end uint64, prefix, suffix string) string {
+	if prefix == "" && suffix == "" {
+		return fmt.Sprintf("batch-%d-%d", start, end)
+	}
+
+	if prefix != "" && suffix != "" {
+		return fmt.Sprintf("%s-%d-%d-%s", prefix, start, end, suffix)
+	}
+
+	if prefix != "" {
+		return fmt.Sprintf("%s-%d-%d", prefix, start, end)
+	}
+
+	return fmt.Sprintf("%d-%d-%s", start, end, suffix)
 }
