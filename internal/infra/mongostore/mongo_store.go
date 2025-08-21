@@ -18,20 +18,20 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 )
 
-type MongoStore interface {
-	Store() *mongo.Database
-	Close(ctx context.Context) error
-	Stats(ctx context.Context, db string)
-	EnsureIndexes(ctx context.Context, collectionName string, indexes []mongo.IndexModel) error
-	AddCollectionDoc(ctx context.Context, collectionName string, doc map[string]any) (string, error)
-}
+// type MongoStore interface {
+// 	Store() *mongo.Database
+// 	Close(ctx context.Context) error
+// 	Stats(ctx context.Context, db string)
+// 	EnsureIndexes(ctx context.Context, collectionName string, indexes []mongo.IndexModel) error
+// 	AddCollectionDoc(ctx context.Context, collectionName string, doc map[string]any) (string, error)
+// }
 
-type mongoStore struct {
+type MongoStore struct {
 	client *mongo.Client
 	store  *mongo.Database
 }
 
-func NewMongoStore(ctx context.Context, cfg infra.StoreConfig) (*mongoStore, error) {
+func NewMongoStore(ctx context.Context, cfg infra.StoreConfig) (*MongoStore, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("NewMongoStore - %w", err)
@@ -86,24 +86,24 @@ func NewMongoStore(ctx context.Context, cfg infra.StoreConfig) (*mongoStore, err
 		return nil, ErrMongoClientConn
 	}
 
-	return &mongoStore{
+	return &MongoStore{
 		client: cl,
 		store:  cl.Database(opts.DBName),
 	}, nil
 }
 
-func (ms *mongoStore) Store() *mongo.Database {
+func (ms *MongoStore) Store() *mongo.Database {
 	return ms.store
 }
 
-func (ms *mongoStore) Close(ctx context.Context) error {
+func (ms *MongoStore) Close(ctx context.Context) error {
 	if err := ms.client.Disconnect(ctx); err != nil && err != mongo.ErrClientDisconnected {
 		return ErrMongoClientDisconn
 	}
 	return nil
 }
 
-func (ms *mongoStore) Stats(ctx context.Context, db string) {
+func (ms *MongoStore) Stats(ctx context.Context, db string) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return
@@ -118,7 +118,7 @@ func (ms *mongoStore) Stats(ctx context.Context, db string) {
 	l.Debug("mongo client stats", slog.Any("stats", stats))
 }
 
-func (ms *mongoStore) EnsureIndexes(
+func (ms *MongoStore) EnsureIndexes(
 	ctx context.Context,
 	collectionName string,
 	indexes []mongo.IndexModel,
@@ -131,7 +131,7 @@ func (ms *mongoStore) EnsureIndexes(
 	return nil
 }
 
-func (ms *mongoStore) AddCollectionDoc(
+func (ms *MongoStore) AddCollectionDoc(
 	ctx context.Context,
 	collectionName string,
 	doc map[string]any,

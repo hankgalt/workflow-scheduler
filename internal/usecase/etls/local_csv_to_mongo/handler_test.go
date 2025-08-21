@@ -9,6 +9,7 @@ import (
 
 	"github.com/comfforts/logger"
 
+	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	localcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv"
 	localcsvtomongo "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv_to_mongo"
 	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
@@ -68,8 +69,8 @@ func TestLocalCSVToMongoHandler(t *testing.T) {
 	)
 
 	// get business model transform rules & build the transformer function
-	rules := btchutils.BuildBusinessModelTransformRules()
-	transFunc := btchutils.BuildTransformerWithRules(headers, rules)
+	rules := batch.BuildBusinessModelTransformRules()
+	transFunc := batch.BuildTransformerWithRules(headers, rules)
 
 	// handle data read from local csv file & acquire record stream
 	recStream, err := hndlr.HandleData(ctx, 0, data, transFunc)

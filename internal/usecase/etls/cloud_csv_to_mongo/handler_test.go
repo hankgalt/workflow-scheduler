@@ -8,6 +8,7 @@ import (
 	"github.com/comfforts/logger"
 	"github.com/stretchr/testify/require"
 
+	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	cloudcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/cloud_csv"
 	cloudcsvtomongo "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/cloud_csv_to_mongo"
 	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
@@ -65,8 +66,8 @@ func TestCloudCSVFileHandler(t *testing.T) {
 	)
 
 	// get business model transform rules & build the transformer function
-	rules := btchutils.BuildBusinessModelTransformRules()
-	transFunc := btchutils.BuildTransformerWithRules(hndlr.Headers(), rules)
+	rules := batch.BuildBusinessModelTransformRules()
+	transFunc := batch.BuildTransformerWithRules(hndlr.Headers(), rules)
 
 	// handle data read from local csv file & acquire record stream
 	recStream, err := hndlr.HandleData(ctx, 0, data, transFunc)

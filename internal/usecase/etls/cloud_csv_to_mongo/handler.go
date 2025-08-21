@@ -19,7 +19,7 @@ import (
 type CloudCSVToMongoHandler struct {
 	dataPoint    batch.CSVDataPoint
 	csvHandler   batch.CSVDataProcessorWithClose
-	mongoHandler mongostore.MongoStore
+	mongoHandler *mongostore.MongoStore
 }
 
 func NewCloudCSVToMongoHandler(

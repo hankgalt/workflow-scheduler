@@ -20,7 +20,7 @@ import (
 type LocalCSVToMongoHandler struct {
 	dataPoint    batch.CSVDataPoint
 	csvHandler   batch.CSVDataProcessor
-	mongoHandler mongostore.MongoStore
+	mongoHandler *mongostore.MongoStore
 }
 
 func NewLocalCSVToMongoHandler(

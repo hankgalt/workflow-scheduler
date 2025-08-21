@@ -16,7 +16,6 @@ import (
 	cloudcsvtomongo "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/cloud_csv_to_mongo"
 	localcsv "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv"
 	localcsvtomongo "github.com/hankgalt/workflow-scheduler/internal/usecase/etls/local_csv_to_mongo"
-	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
 )
 
 const (
@@ -353,9 +352,9 @@ func handleCSVBatchData(
 	} else {
 		// If no mapping rules are provided, use default rules
 		l.Debug("handleCSVBatchData - using default mapping rules")
-		rules = btchutils.BuildBusinessModelTransformRules()
+		rules = batch.BuildBusinessModelTransformRules()
 	}
-	transFunc := btchutils.BuildTransformerWithRules(rqstCfg.Headers, rules)
+	transFunc := batch.BuildTransformerWithRules(rqstCfg.Headers, rules)
 
 	// Process data using the handler
 	resStream, err := hndlr.HandleData(hCtx, btch.Start, data, transFunc)
