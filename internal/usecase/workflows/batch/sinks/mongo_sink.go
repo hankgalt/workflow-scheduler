@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/hankgalt/batch-orchestra/pkg/domain"
+
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
 )
 
@@ -29,7 +31,7 @@ type mongoSink[T any] struct {
 func (s *mongoSink[T]) Name() string { return MongoSink }
 
 // Write writes the batch of records to MongoDB.
-func (s *mongoSink[T]) Write(ctx context.Context, b *BatchProcess[T]) (*BatchProcess[T], error) {
+func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess[T]) (*domain.BatchProcess[T], error) {
 	if s == nil {
 		return b, errors.New("mongo sink is nil")
 	}
@@ -92,7 +94,7 @@ type MongoSinkConfig[T any] struct {
 func (c MongoSinkConfig[T]) Name() string { return MongoSink }
 
 // BuildSink builds a MongoDB sink from the config.
-func (c MongoSinkConfig[T]) BuildSink(ctx context.Context) (Sink[T], error) {
+func (c MongoSinkConfig[T]) BuildSink(ctx context.Context) (domain.Sink[T], error) {
 	if c.Protocol == "" {
 		return nil, errors.New("mongo sink: DB protocol is required")
 	}

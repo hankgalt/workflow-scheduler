@@ -20,9 +20,10 @@ import (
 const DEFAULT_METRICS_ADDR = ":9464"
 
 type InitOptions struct {
-	ServiceName  string
-	MetricsAddr  string // e.g. ":9464" (Prom’s Prometheus exporter defaults to 9464)
-	OTLPEndpoint string // e.g. "otel-collector:4317" or "" to skip tracing exporter
+	ServiceName   string
+	MetricsAddr   string // e.g. ":9464" (Prom’s Prometheus exporter defaults to 9464)
+	OTLPEndpoint  string // e.g. "otel-collector:4317" or "" to skip tracing exporter
+	MetricsHandle string // e.g. "/metrics" (defaults to /metrics)
 }
 
 func Init(ctx context.Context, opt InitOptions) (shutdown func(context.Context) error, err error) {
@@ -49,9 +50,14 @@ func Init(ctx context.Context, opt InitOptions) (shutdown func(context.Context) 
 	if opt.MetricsAddr == "" {
 		opt.MetricsAddr = DEFAULT_METRICS_ADDR
 	}
+
+	if opt.MetricsHandle == "" {
+		opt.MetricsHandle = "/metrics"
+	}
+
 	go func() {
-		http.Handle("/metrics", promhttp.Handler())
-		log.Printf("Prometheus metrics on %s/metrics", opt.MetricsAddr)
+		http.Handle(opt.MetricsHandle, promhttp.Handler())
+		log.Printf("Prometheus metrics on %s%s", opt.MetricsAddr, opt.MetricsHandle)
 		if err := http.ListenAndServe(opt.MetricsAddr, nil); err != nil {
 			log.Printf("metrics server error: %v", err)
 		}

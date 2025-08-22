@@ -1,4 +1,4 @@
-package batch
+package sources
 
 import (
 	"bytes"
@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/hankgalt/batch-orchestra/pkg/domain"
 
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
@@ -21,7 +23,7 @@ type localCSVSource struct {
 	path      string
 	delimiter rune
 	hasHeader bool
-	transFunc TransformerFunc // transformer function to apply to each row
+	transFunc domain.TransformerFunc // transformer function to apply to each row
 }
 
 // Name of the source.
@@ -35,8 +37,8 @@ func (s *localCSVSource) Close(ctx context.Context) error {
 
 // Next reads the next batch of CSV rows from the local file.
 // It reads from the file at the specified offset and returns a batch of CSVRow.
-func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*BatchProcess[CSVRow], error) {
-	bp := &BatchProcess[CSVRow]{
+func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*domain.BatchProcess[domain.CSVRow], error) {
+	bp := &domain.BatchProcess[domain.CSVRow]{
 		Records:     nil,
 		NextOffset:  offset,
 		StartOffset: offset,
@@ -115,10 +117,10 @@ func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*B
 			cleanedStr := strutils.CleanRecord(string(data[nextOffset:csvReader.InputOffset()]))
 			record, err := strutils.ReadSingleRecord(cleanedStr)
 			if err != nil {
-				bp.Records = append(bp.Records, &BatchRecord[CSVRow]{
+				bp.Records = append(bp.Records, &domain.BatchRecord[domain.CSVRow]{
 					Start: uint64(nextOffset),
 					End:   uint64(csvReader.InputOffset()),
-					BatchResult: BatchResult{
+					BatchResult: domain.BatchResult{
 						Error: fmt.Sprintf("read data row: %v", err),
 					},
 				})
@@ -152,7 +154,7 @@ func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*B
 		}
 
 		// Create a BatchRecord for the current record
-		br := BatchRecord[CSVRow]{
+		br := domain.BatchRecord[domain.CSVRow]{
 			Start: uint64(startIndex),
 			End:   uint64(csvReader.InputOffset()),
 		}
@@ -170,7 +172,7 @@ func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*B
 		rec = strutils.CleanAlphaNumericsArr(rec, []rune{'.', '-', '_', '#', '&', '@'})
 		res := s.transFunc(rec)
 
-		row := CSVRow{}
+		row := domain.CSVRow{}
 		for k, v := range res {
 			st, ok := v.(string)
 			if !ok {
@@ -195,7 +197,7 @@ type LocalCSVConfig struct {
 	Path         string
 	Delimiter    rune // e.g., ',', '|'
 	HasHeader    bool
-	MappingRules map[string]Rule // mapping rules for the CSV rows
+	MappingRules map[string]domain.Rule // mapping rules for the CSV rows
 }
 
 // Name of the source.
@@ -203,7 +205,7 @@ func (c LocalCSVConfig) Name() string { return LocalCSVSource }
 
 // BuildSource builds a local CSV source from the config.
 // It reads headers if HasHeader is true and caches it.
-func (c LocalCSVConfig) BuildSource(ctx context.Context) (Source[CSVRow], error) {
+func (c LocalCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.CSVRow], error) {
 	if c.Path == "" {
 		return nil, errors.New("local csv: path is required")
 	}
@@ -243,14 +245,14 @@ func (c LocalCSVConfig) BuildSource(ctx context.Context) (Source[CSVRow], error)
 		headers := strutils.CleanHeaders(h)
 
 		// build transformer function
-		var rules map[string]Rule
+		var rules map[string]domain.Rule
 		if len(c.MappingRules) > 0 {
 			rules = c.MappingRules
 		} else {
 			// If no mapping rules are provided, use default rules
-			rules = BuildBusinessModelTransformRules()
+			rules = domain.BuildBusinessModelTransformRules()
 		}
-		transFunc := BuildTransformerWithRules(headers, rules)
+		transFunc := domain.BuildTransformerWithRules(headers, rules)
 		src.transFunc = transFunc
 	}
 

@@ -15,9 +15,13 @@ import (
 	"go.temporal.io/sdk/workflow"
 
 	"github.com/comfforts/logger"
+	bo "github.com/hankgalt/batch-orchestra"
+	"github.com/hankgalt/batch-orchestra/pkg/domain"
 
 	"github.com/hankgalt/workflow-scheduler/internal/infra/temporal"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
+	bsinks "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sinks"
+	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sources"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )
 
@@ -26,6 +30,9 @@ const DEFAULT_WORKER_HOST = "batch-worker"
 func main() {
 	fmt.Println("Starting batch worker - setting up logger instance")
 	l := logger.GetSlogMultiLogger("data")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	ctx = logger.WithLogger(ctx, l)
 
 	// setup host identity for worker
 	host, err := os.Hostname()
@@ -50,7 +57,7 @@ func main() {
 	)
 
 	// setup startup context with timeout
-	startupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	startupCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	startupCtx = logger.WithLogger(startupCtx, l)
 
@@ -59,7 +66,7 @@ func main() {
 		if shutdown != nil {
 			// shutdown OTel if it was initialized
 			l.Info("closing otel client", "host", host)
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 			if err := shutdown(ctx); err != nil {
 				l.Error("error shutting down OTel", "error", err.Error())
@@ -87,7 +94,7 @@ func main() {
 	// build worker options with tracing interceptor & initialize worker instance
 	// TODO - add worker context
 	workerOptions := worker.Options{
-		BackgroundActivityContext: context.Background(),
+		BackgroundActivityContext: ctx,
 		Interceptors:              []interceptor.WorkerInterceptor{tracingInt},
 		EnableLoggingInReplay:     true,
 		EnableSessionWorker:       true,
@@ -127,50 +134,91 @@ func main() {
 
 func registerBatchWorkflow(worker worker.Worker) {
 	// register batch task processing workflows
+	// Register the workflow
 	worker.RegisterWorkflowWithOptions(
-		btchwkfl.ProcessLocalCSV,
-		workflow.RegisterOptions{Name: btchwkfl.ProcessLocalCSVWorkflow},
+		bo.ProcessBatchWorkflow[domain.CSVRow, sources.LocalCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow]],
+		workflow.RegisterOptions{
+			Name: btchwkfl.ProcessLocalCSVMongoWorkflowAlias,
+		},
 	)
 	worker.RegisterWorkflowWithOptions(
-		btchwkfl.ProcessLocalCSVMongo,
-		workflow.RegisterOptions{Name: btchwkfl.ProcessLocalCSVMongoWorkflow},
-	)
-	worker.RegisterWorkflowWithOptions(
-		btchwkfl.ProcessCloudCSVMongo,
-		workflow.RegisterOptions{Name: btchwkfl.ProcessCloudCSVMongoWorkflow},
+		bo.ProcessBatchWorkflow[domain.CSVRow, sources.CloudCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow]],
+		workflow.RegisterOptions{
+			Name: btchwkfl.ProcessCloudCSVMongoWorkflowAlias,
+		},
 	)
 
 	// register batch task processing activities
 	worker.RegisterActivityWithOptions(
-		btchwkfl.SetupLocalCSVBatch,
-		activity.RegisterOptions{Name: btchwkfl.SetupLocalCSVBatchActivity},
+		bo.FetchNextActivity[domain.CSVRow, sources.LocalCSVConfig],
+		activity.RegisterOptions{
+			Name: btchwkfl.FetchNextLocalCSVSourceBatchAlias,
+		},
 	)
 	worker.RegisterActivityWithOptions(
-		btchwkfl.SetupCloudCSVBatch,
-		activity.RegisterOptions{Name: btchwkfl.SetupCloudCSVBatchActivity},
+		bo.FetchNextActivity[domain.CSVRow, sources.CloudCSVConfig],
+		activity.RegisterOptions{
+			Name: btchwkfl.FetchNextCloudCSVSourceBatchAlias,
+		},
 	)
 	worker.RegisterActivityWithOptions(
-		btchwkfl.SetupLocalCSVMongoBatch,
-		activity.RegisterOptions{Name: btchwkfl.SetupLocalCSVMongoBatchActivity},
+		bo.WriteActivity[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]],
+		activity.RegisterOptions{
+			Name: btchwkfl.WriteNextMongoSinkBatchAlias,
+		},
 	)
 	worker.RegisterActivityWithOptions(
-		btchwkfl.SetupCloudCSVMongoBatch,
-		activity.RegisterOptions{Name: btchwkfl.SetupCloudCSVMongoBatchActivity},
+		bo.WriteActivity[domain.CSVRow, bsinks.NoopSinkConfig[domain.CSVRow]],
+		activity.RegisterOptions{
+			Name: btchwkfl.WriteNextNoopSinkBatchAlias,
+		},
 	)
-	worker.RegisterActivityWithOptions(
-		btchwkfl.HandleLocalCSVBatchData,
-		activity.RegisterOptions{Name: btchwkfl.HandleLocalCSVBatchDataActivity},
-	)
-	worker.RegisterActivityWithOptions(
-		btchwkfl.HandleCloudCSVBatchData,
-		activity.RegisterOptions{Name: btchwkfl.HandleCloudCSVBatchDataActivity},
-	)
-	worker.RegisterActivityWithOptions(
-		btchwkfl.HandleLocalCSVMongoBatchData,
-		activity.RegisterOptions{Name: btchwkfl.HandleLocalCSVMongoBatchDataActivity},
-	)
-	worker.RegisterActivityWithOptions(
-		btchwkfl.HandleCloudCSVMongoBatchData,
-		activity.RegisterOptions{Name: btchwkfl.HandleCloudCSVMongoBatchDataActivity},
-	)
+
+	// Register the workflow
+	// worker.RegisterWorkflowWithOptions(
+	// 	btchwkfl.ProcessLocalCSV,
+	// 	workflow.RegisterOptions{Name: btchwkfl.ProcessLocalCSVWorkflow},
+	// )
+	// worker.RegisterWorkflowWithOptions(
+	// 	btchwkfl.ProcessLocalCSVMongo,
+	// 	workflow.RegisterOptions{Name: btchwkfl.ProcessLocalCSVMongoWorkflow},
+	// )
+	// worker.RegisterWorkflowWithOptions(
+	// 	btchwkfl.ProcessCloudCSVMongo,
+	// 	workflow.RegisterOptions{Name: btchwkfl.ProcessCloudCSVMongoWorkflow},
+	// )
+
+	// register batch task processing activities
+	// worker.RegisterActivityWithOptions(
+	// 	btchwkfl.SetupLocalCSVBatch,
+	// 	activity.RegisterOptions{Name: btchwkfl.SetupLocalCSVBatchActivity},
+	// )
+	// worker.RegisterActivityWithOptions(
+	// 	btchwkfl.SetupCloudCSVBatch,
+	// 	activity.RegisterOptions{Name: btchwkfl.SetupCloudCSVBatchActivity},
+	// )
+	// worker.RegisterActivityWithOptions(
+	// 	btchwkfl.SetupLocalCSVMongoBatch,
+	// 	activity.RegisterOptions{Name: btchwkfl.SetupLocalCSVMongoBatchActivity},
+	// )
+	// worker.RegisterActivityWithOptions(
+	// 	btchwkfl.SetupCloudCSVMongoBatch,
+	// 	activity.RegisterOptions{Name: btchwkfl.SetupCloudCSVMongoBatchActivity},
+	// )
+	// worker.RegisterActivityWithOptions(
+	// 	btchwkfl.HandleLocalCSVBatchData,
+	// 	activity.RegisterOptions{Name: btchwkfl.HandleLocalCSVBatchDataActivity},
+	// )
+	// worker.RegisterActivityWithOptions(
+	// 	btchwkfl.HandleCloudCSVBatchData,
+	// 	activity.RegisterOptions{Name: btchwkfl.HandleCloudCSVBatchDataActivity},
+	// )
+	// worker.RegisterActivityWithOptions(
+	// 	btchwkfl.HandleLocalCSVMongoBatchData,
+	// 	activity.RegisterOptions{Name: btchwkfl.HandleLocalCSVMongoBatchDataActivity},
+	// )
+	// worker.RegisterActivityWithOptions(
+	// 	btchwkfl.HandleCloudCSVMongoBatchData,
+	// 	activity.RegisterOptions{Name: btchwkfl.HandleCloudCSVMongoBatchDataActivity},
+	// )
 }

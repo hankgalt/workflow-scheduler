@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/comfforts/logger"
+	"github.com/hankgalt/batch-orchestra/pkg/domain"
 
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/services/scheduler"
@@ -46,9 +47,7 @@ func TestProcessLocalCSVToMongoWorkflow(t *testing.T) {
 			RequestConfig: &batch.RequestConfig{
 				MaxBatches:   2,
 				BatchSize:    400,
-				Offsets:      []uint64{},
-				Headers:      []string{},
-				MappingRules: map[string]batch.Rule{},
+				MappingRules: domain.BuildBusinessModelTransformRules(),
 			},
 		},
 		Config: reqCfg,
@@ -84,9 +83,6 @@ func TestProcessCloudCSVToMongoWorkflow(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	mappingRules := map[string]batch.Rule{}
-	envutils.BuildCloudCSVMongoBatchRequest(2, 400, mappingRules)
-
 	reqCfg, err := envutils.BuildCloudCSVMongoBatchConfig()
 	require.NoError(t, err)
 
@@ -95,9 +91,7 @@ func TestProcessCloudCSVToMongoWorkflow(t *testing.T) {
 			RequestConfig: &batch.RequestConfig{
 				MaxBatches:   2,
 				BatchSize:    400,
-				Offsets:      []uint64{},
-				Headers:      []string{},
-				MappingRules: map[string]batch.Rule{},
+				MappingRules: domain.BuildBusinessModelTransformRules(),
 			},
 		},
 		Config: reqCfg,

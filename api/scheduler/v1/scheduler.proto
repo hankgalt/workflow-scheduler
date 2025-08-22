@@ -17,6 +17,7 @@ message Rule {
     string target = 1;
     bool group = 2;
     string new_field = 3;
+    int32 order = 4;
 }
 
 message BatchCSVRequest {

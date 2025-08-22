@@ -10,14 +10,19 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"go.temporal.io/sdk/activity"
+	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/testsuite"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 
 	"github.com/comfforts/logger"
-	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
+	bo "github.com/hankgalt/batch-orchestra"
+	"github.com/hankgalt/batch-orchestra/pkg/domain"
+
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
+	bsinks "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sinks"
+	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sources"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )
 
@@ -65,7 +70,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 	s.Run("valid cloud csv to mongo migration request", func() {
 		// Register the workflow
 		s.env.RegisterWorkflowWithOptions(
-			btchwkfl.ProcessBatchWorkflow[batch.CSVRow, batch.CloudCSVConfig, batch.MongoSinkConfig[batch.CSVRow]],
+			bo.ProcessBatchWorkflow[domain.CSVRow, sources.CloudCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow]],
 			workflow.RegisterOptions{
 				Name: btchwkfl.ProcessCloudCSVMongoWorkflowAlias,
 			},
@@ -73,13 +78,13 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 
 		// Register activities.
 		s.env.RegisterActivityWithOptions(
-			btchwkfl.FetchNextActivity[batch.CSVRow, batch.CloudCSVConfig],
+			bo.FetchNextActivity[domain.CSVRow, sources.CloudCSVConfig],
 			activity.RegisterOptions{
 				Name: btchwkfl.FetchNextCloudCSVSourceBatchAlias,
 			},
 		)
 		s.env.RegisterActivityWithOptions(
-			btchwkfl.WriteActivity[batch.CSVRow, batch.MongoSinkConfig[batch.CSVRow]],
+			bo.WriteActivity[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]],
 			activity.RegisterOptions{
 				Name: btchwkfl.WriteNextMongoSinkBatchAlias,
 			},
@@ -90,20 +95,20 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 		envCfg, err := envutils.BuildCloudCSVBatchConfig()
 		s.NoError(err, "error building cloud CSV config for test environment")
 		path := filepath.Join(envCfg.Path, envCfg.Name)
-		sourceCfg := batch.CloudCSVConfig{
+		sourceCfg := sources.CloudCSVConfig{
 			Path:         path,
 			Bucket:       envCfg.Bucket,
-			Provider:     string(batch.CloudSourceGCS),
+			Provider:     string(sources.CloudSourceGCS),
 			Delimiter:    '|',
 			HasHeader:    true,
-			MappingRules: batch.BuildBusinessModelTransformRules(),
+			MappingRules: domain.BuildBusinessModelTransformRules(),
 		}
 
 		// Sink - MongoDB
 		mCfg := envutils.BuildMongoStoreConfig()
 		s.Require().NotEmpty(mCfg.Name(), "MongoDB name should not be empty")
 		s.Require().NotEmpty(mCfg.Host(), "MongoDB host should not be empty")
-		sinkCfg := batch.MongoSinkConfig[batch.CSVRow]{
+		sinkCfg := bsinks.MongoSinkConfig[domain.CSVRow]{
 			Protocol:   mCfg.Protocol(),
 			Host:       mCfg.Host(),
 			DBName:     mCfg.Name(),
@@ -113,12 +118,12 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 			Collection: "vypar.agents",
 		}
 
-		req := &batch.BatchRequest[batch.CSVRow, batch.CloudCSVConfig, batch.MongoSinkConfig[batch.CSVRow]]{
-			JobID:     "cloud-csv-mongo-happy",
-			BatchSize: 400,
-			StartAt:   0,
-			Source:    sourceCfg,
-			Sink:      sinkCfg,
+		req := &btchwkfl.CloudCSVMongoBatchRequest{
+			JobID:      "cloud-csv-mongo-happy",
+			BatchSize:  400,
+			MaxBatches: 2,
+			Source:     sourceCfg,
+			Sink:       sinkCfg,
 		}
 
 		s.env.SetOnActivityStartedListener(
@@ -144,7 +149,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 				l.Error(
 					"Test_ProcessBatchWorkflow_CloudCSV_Mongo_HappyPath - panicked",
 					"error", err,
-					"wkfl", btchwkfl.ProcessCloudCSVMongoWorkflowAlias)
+					"wkfl", bo.ProcessCloudCSVMongoWorkflowAlias)
 			}
 
 			err := s.env.GetWorkflowError()
@@ -154,7 +159,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 					"error", err.Error(),
 				)
 			} else {
-				var result batch.BatchRequest[batch.CSVRow, batch.CloudCSVConfig, batch.MongoSinkConfig[batch.CSVRow]]
+				var result btchwkfl.CloudCSVMongoBatchRequest
 				err := s.env.GetWorkflowResult(&result)
 				if err != nil {
 					l.Error(
@@ -172,7 +177,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 		}()
 
 		l.Debug("Test_ProcessBatchWorkflow_CloudCSV_Mongo_HappyPath - Starting workflow test")
-		s.env.ExecuteWorkflow(btchwkfl.ProcessCloudCSVMongoWorkflowAlias, req)
+		s.env.ExecuteWorkflow(bo.ProcessCloudCSVMongoWorkflowAlias, req)
 		s.True(s.env.IsWorkflowCompleted())
 		l.Debug("Test_ProcessBatchWorkflow_CloudCSV_Mongo_HappyPath - test completed")
 	})
@@ -197,21 +202,21 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 
 	// Register the workflow
 	env.RegisterWorkflowWithOptions(
-		btchwkfl.ProcessBatchWorkflow[batch.CSVRow, batch.LocalCSVConfig, batch.MongoSinkConfig[batch.CSVRow]],
+		bo.ProcessBatchWorkflow[domain.CSVRow, sources.LocalCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow]],
 		workflow.RegisterOptions{
-			Name: btchwkfl.ProcessLocalCSVMongoWorkflowAlias,
+			Name: bo.ProcessLocalCSVMongoWorkflowAlias,
 		},
 	)
 
 	// Register activities.
 	env.RegisterActivityWithOptions(
-		btchwkfl.FetchNextActivity[batch.CSVRow, batch.LocalCSVConfig],
+		bo.FetchNextActivity[domain.CSVRow, sources.LocalCSVConfig],
 		activity.RegisterOptions{
 			Name: btchwkfl.FetchNextLocalCSVSourceBatchAlias,
 		},
 	)
 	env.RegisterActivityWithOptions(
-		btchwkfl.WriteActivity[batch.CSVRow, batch.MongoSinkConfig[batch.CSVRow]],
+		bo.WriteActivity[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]],
 		activity.RegisterOptions{
 			Name: btchwkfl.WriteNextMongoSinkBatchAlias,
 		},
@@ -223,18 +228,18 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 	filePath, err := envutils.BuildFilePath()
 	require.NoError(t, err, "error building csv file path for test")
 	path := filepath.Join(filePath, fileName)
-	sourceCfg := batch.LocalCSVConfig{
+	sourceCfg := sources.LocalCSVConfig{
 		Path:         path,
 		Delimiter:    '|',
 		HasHeader:    true,
-		MappingRules: batch.BuildBusinessModelTransformRules(),
+		MappingRules: domain.BuildBusinessModelTransformRules(),
 	}
 
 	// Sink - MongoDB
 	mCfg := envutils.BuildMongoStoreConfig()
 	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
-	sinkCfg := batch.MongoSinkConfig[batch.CSVRow]{
+	sinkCfg := bsinks.MongoSinkConfig[domain.CSVRow]{
 		Protocol:   mCfg.Protocol(),
 		Host:       mCfg.Host(),
 		DBName:     mCfg.Name(),
@@ -244,12 +249,12 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 		Collection: "vypar.agents",
 	}
 
-	req := &batch.BatchRequest[batch.CSVRow, batch.LocalCSVConfig, batch.MongoSinkConfig[batch.CSVRow]]{
-		JobID:     "job-happy",
-		BatchSize: 400,
-		StartAt:   0,
-		Source:    sourceCfg,
-		Sink:      sinkCfg,
+	req := &btchwkfl.LocalCSVMongoBatchRequest{
+		JobID:      "job-happy",
+		BatchSize:  400,
+		MaxBatches: 2,
+		Source:     sourceCfg,
+		Sink:       sinkCfg,
 	}
 
 	env.SetOnActivityStartedListener(
@@ -275,7 +280,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 			l.Error(
 				"Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath - panicked",
 				"error", err,
-				"wkfl", btchwkfl.ProcessLocalCSVMongoWorkflowAlias)
+				"wkfl", bo.ProcessLocalCSVMongoWorkflowAlias)
 		}
 
 		err := env.GetWorkflowError()
@@ -285,7 +290,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 				"error", err.Error(),
 			)
 		} else {
-			var result batch.BatchRequest[batch.CSVRow, batch.LocalCSVConfig, batch.MongoSinkConfig[batch.CSVRow]]
+			var result btchwkfl.LocalCSVMongoBatchRequest
 			err := env.GetWorkflowResult(&result)
 			if err != nil {
 				l.Error(
@@ -302,8 +307,133 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 
 	}()
 
-	env.ExecuteWorkflow(btchwkfl.ProcessLocalCSVMongoWorkflowAlias, req)
+	env.ExecuteWorkflow(bo.ProcessLocalCSVMongoWorkflowAlias, req)
 
 	require.True(t, env.IsWorkflowCompleted())
+
+}
+
+// Integration test for ProcessBatchWorkflow on a dev Temporal server.
+// Start temporal dev server before running this test.
+func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath_Server(t *testing.T) {
+	// get test logger
+	l := logger.GetSlogLogger()
+
+	// setup context with logger
+	ctx := logger.WithLogger(context.Background(), l)
+
+	// Temporal client connection
+	c, err := client.Dial(
+		client.Options{
+			HostPort: client.DefaultHostPort,
+			Logger:   l,
+		},
+	)
+	if err != nil {
+		l.Error("Temporal dev server not running (localhost:7233)", "error", err)
+		return
+	}
+	defer c.Close()
+
+	// workflow task queue
+	const tq = "process-batch-workflow-local-csv-mongo-tq"
+
+	// Temporal worker for the task queue
+	w := worker.New(c, tq, worker.Options{
+		BackgroundActivityContext: ctx,            // Global worker context for activities
+		DeadlockDetectionTimeout:  24 * time.Hour, // set a long timeout to avoid deadlock detection during tests
+	})
+
+	// Register the workflow function
+	w.RegisterWorkflowWithOptions(
+		bo.ProcessBatchWorkflow[domain.CSVRow, sources.LocalCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow]],
+		workflow.RegisterOptions{
+			Name: bo.ProcessLocalCSVMongoWorkflowAlias,
+		},
+	)
+
+	// Register activities.
+	w.RegisterActivityWithOptions(
+		bo.FetchNextActivity[domain.CSVRow, sources.LocalCSVConfig],
+		activity.RegisterOptions{
+			Name: btchwkfl.FetchNextLocalCSVSourceBatchAlias,
+		},
+	)
+	w.RegisterActivityWithOptions(
+		bo.WriteActivity[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]],
+		activity.RegisterOptions{
+			Name: btchwkfl.WriteNextMongoSinkBatchAlias,
+		},
+	)
+
+	// Start the worker in a goroutine
+	go func() {
+		// Stop worker when test ends.
+		if err := w.Run(worker.InterruptCh()); err != nil {
+			l.Error("Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath_Server - worker stopped:", "error", err.Error())
+		}
+	}()
+
+	// Build source & sink configurations
+	// Source - local CSV
+	fileName := envutils.BuildFileName()
+	filePath, err := envutils.BuildFilePath()
+	require.NoError(t, err, "error building csv file path for test")
+	path := filepath.Join(filePath, fileName)
+	sourceCfg := sources.LocalCSVConfig{
+		Path:         path,
+		Delimiter:    '|',
+		HasHeader:    true,
+		MappingRules: domain.BuildBusinessModelTransformRules(),
+	}
+
+	// Sink - MongoDB
+	mCfg := envutils.BuildMongoStoreConfig()
+	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
+	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
+	sinkCfg := bsinks.MongoSinkConfig[domain.CSVRow]{
+		Protocol:   mCfg.Protocol(),
+		Host:       mCfg.Host(),
+		DBName:     mCfg.Name(),
+		User:       mCfg.User(),
+		Pwd:        mCfg.Pwd(),
+		Params:     mCfg.Params(),
+		Collection: "vypar.agents",
+	}
+
+	req := &btchwkfl.LocalCSVMongoBatchRequest{
+		JobID:      "process-batch-workflow-local-csv-mongo-server-happy",
+		BatchSize:  400,
+		MaxBatches: 2,
+		Source:     sourceCfg,
+		Sink:       sinkCfg,
+	}
+
+	// Create workflow execution context
+	ctx, cancel := context.WithCancel(ctx)
+	t.Cleanup(cancel)
+
+	// Kick off the workflow.
+	run, err := c.ExecuteWorkflow(
+		ctx, // context
+		client.StartWorkflowOptions{ // workflow options
+			ID:        "pbwlcmsh-" + time.Now().Format("150405.000"),
+			TaskQueue: tq,
+		},
+		bo.ProcessLocalCSVMongoWorkflowAlias, // workflow function
+		req,                                  // workflow input arg1
+	)
+	require.NoError(t, err)
+
+	// With a real server, Continue-As-New chains transparently; Get waits for the final run.
+	var out btchwkfl.LocalCSVMongoBatchRequest
+	require.NoError(t, run.Get(ctx, &out))
+	require.NotNil(t, out)
+
+	l.Debug("Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath_Server - workflow completed successfully",
+		"workflow-id", run.GetID(),
+		"workflow-run-id", run.GetRunID(),
+		"offsets", out.Offsets,
+	)
 
 }

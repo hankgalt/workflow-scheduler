@@ -1,60 +1,10 @@
 package batch
 
 import (
-	"context"
+	"github.com/hankgalt/batch-orchestra/pkg/domain"
+
+	api "github.com/hankgalt/workflow-scheduler/api/scheduler/v1"
 )
-
-type DataReader interface {
-	// ReadData reads data from data reader source at the specified offset and limit.
-	// It returns the data read, the next offset to read from,
-	// a boolean indicating if end of data at source was reached,
-	// and any error encountered during the read operation.
-	ReadData(ctx context.Context, offset, limit uint64) (any, uint64, bool, error)
-}
-
-type DataHandler interface {
-	// HandleData processes the data.
-	// The start parameter indicates the relative starting position for this chunk of data.
-	// It returns a channel for results and errors.
-	HandleData(ctx context.Context, start uint64, data any) (<-chan Result, error)
-}
-
-type CSVDataHandler interface {
-	// HandleData processes the data.
-	// The start parameter indicates the relative starting position for this chunk of data.
-	// It returns a channel for results and errors.
-	HandleData(ctx context.Context, start uint64, data any, transFunc TransformerFunc) (<-chan Result, error)
-}
-
-type CSVSource interface {
-	Headers() []string // Get headers for the CSV source
-}
-
-type Closer interface {
-	Close() error // Close the data source
-}
-
-type DataProcessor interface {
-	DataReader
-	DataHandler
-}
-
-type CSVDataProcessor interface {
-	CSVSource
-	DataReader
-	CSVDataHandler
-}
-type CSVDataProcessorWithClose interface {
-	CSVDataProcessor
-	Closer
-}
-
-type CSVDataPoint struct {
-	Name       string `json:"name"`       // Name of the data point
-	Path       string `json:"path"`       // Path to the data point
-	Bucket     string `json:"bucket"`     // Bucket where the data point is stored
-	Collection string `json:"collection"` // Collection name for MongoDB
-}
 
 type LocalCSVBatchConfig struct {
 	Name string `json:"name"` // Name of the CSV file
@@ -88,34 +38,15 @@ type CloudCSVMongoBatchConfig struct {
 	Collection          string                  `json:"collection"` // Collection name for MongoDB
 }
 
-type Result struct {
-	RecordID string `json:"recordId"` // Unique identifier for the record
-	Start    uint64 `json:"start"`    // Start and end positions of the record in the file
-	End      uint64 `json:"end"`      // End position of the record in the file
-	Record   any    `json:"record"`   // Result data
-	Error    string `json:"error"`    // Error message if any error occurred during processing
-}
-
-type Batch struct {
-	BatchID string             `json:"batchId"` // Unique identifier for the batch
-	Start   uint64             `json:"start"`   // Start position of the batch in the file
-	End     uint64             `json:"end"`     // End position of the batch in the
-	Records map[string]*Result `json:"records"` // List of records in the batch
-}
-
 type RequestConfig struct {
-	MaxBatches   uint            `json:"maxBatches"`   // Maximum number of batches to process
-	BatchSize    uint            `json:"batchSize"`    // Size of each batch
-	Start        uint64          `json:"start"`        // Start position for processing
-	End          uint64          `json:"end"`          // End position for processing
-	Offsets      []uint64        `json:"offsets"`      // List of offsets for batch processing
-	Headers      []string        `json:"headers"`      // Headers for the CSV file
-	MappingRules map[string]Rule `json:"mappingRules"` // Optional mappings for CSV headers to MongoDB fields
+	MaxBatches   uint                   `json:"maxBatches"`   // Maximum number of batches to process
+	BatchSize    uint                   `json:"batchSize"`    // Size of each batch
+	Start        uint64                 `json:"start"`        // Start position for processing
+	MappingRules map[string]domain.Rule `json:"mappingRules"` // Optional mappings for CSV headers to MongoDB fields
 }
 
 type CSVBatchRequest struct {
 	*RequestConfig `json:"requestConfig"` // Configuration for the batch request
-	Batches        map[string]*Batch      `json:"batches"` // Map of batch IDs to Batch objects
 }
 
 type LocalCSVBatchRequest struct {
@@ -138,18 +69,36 @@ type CloudCSVMongoBatchRequest struct {
 	Config          CloudCSVMongoBatchConfig `json:"config"` // Configuration for the cloud CSV and MongoDB source
 }
 
-type Rule struct {
-	Target   string // this value replaces the header in the CSV file
-	Group    bool   // if true, include this Target column's value in a grouped field
-	NewField string // if has value, include Target as new field with this value
-	Order    int    // order of the rule in the mapping
+func MapRuleFromProto(protoRule *api.Rule) domain.Rule {
+	return domain.Rule{
+		Target:   protoRule.Target,
+		Group:    protoRule.Group,
+		NewField: protoRule.NewField,
+		Order:    int(protoRule.Order),
+	}
 }
 
-// TransformerBuilderWithRulesFunc builds a transformer from headers and mapping rules.
-type TransformerBuilderWithRulesFunc func(headers []string, rules map[string]Rule) TransformerFunc
+func MapRulesFromProto(protoRules map[string]*api.Rule) map[string]domain.Rule {
+	rules := make(map[string]domain.Rule)
+	for key, protoRule := range protoRules {
+		rules[key] = MapRuleFromProto(protoRule)
+	}
+	return rules
+}
 
-// TransformerBuilderFunc builds a transformer from headers and mapping rules.
-type TransformerBuilderFunc func(headers []string, rules map[string]string) TransformerFunc
+func MapRuleToProto(rule domain.Rule) *api.Rule {
+	return &api.Rule{
+		Target:   rule.Target,
+		Group:    rule.Group,
+		NewField: rule.NewField,
+		Order:    int32(rule.Order),
+	}
+}
 
-// TransformerFunc transforms a slice of values into a key-value map based on, in closure, headers and rules.
-type TransformerFunc func(values []string) map[string]any
+func MapRulesToProto(rules []domain.Rule) []*api.Rule {
+	var protoRules []*api.Rule
+	for _, rule := range rules {
+		protoRules = append(protoRules, MapRuleToProto(rule))
+	}
+	return protoRules
+}

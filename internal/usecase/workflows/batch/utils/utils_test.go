@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
+	"github.com/hankgalt/batch-orchestra/pkg/domain"
 )
 
 func TestBuildTransformerWithRules(t *testing.T) {
@@ -20,11 +20,11 @@ func TestBuildTransformerWithRules(t *testing.T) {
 		},
 	}
 
-	rules := batch.BuildBusinessModelTransformRules()
+	rules := domain.BuildBusinessModelTransformRules()
 	require.NotEmpty(t, rules, "Transform rules should not be empty")
 
 	for _, input := range inputs {
-		tranFunc := batch.BuildTransformerWithRules(input[0], rules)
+		tranFunc := domain.BuildTransformerWithRules(input[0], rules)
 		mapped := tranFunc(input[1])
 		require.Equal(t, "306749", mapped["entity_id"])
 		require.Equal(t, "Alice", mapped["entity_name"])

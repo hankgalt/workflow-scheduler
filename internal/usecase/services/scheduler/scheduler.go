@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"go.temporal.io/sdk/client"
 
 	"github.com/comfforts/logger"
 
+	"github.com/hankgalt/batch-orchestra/pkg/domain"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
@@ -17,6 +19,8 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/infra/temporal"
 	"github.com/hankgalt/workflow-scheduler/internal/repo/daud"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
+	bsinks "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sinks"
+	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sources"
 	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
 )
 
@@ -121,7 +125,42 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 		WorkflowTaskTimeout:      time.Minute * 5, // set to max, as there are decision tasks that'll take as long as max
 		WorkflowIDReusePolicy:    1,
 	}
-	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessCloudCSVMongo, &req)
+
+	// Build source & sink configurations
+	// Source - local CSV
+	fCfg := req.Config.CloudCSVBatchConfig
+	path := filepath.Join(fCfg.Path, fCfg.Name)
+	sourceCfg := sources.CloudCSVConfig{
+		Path:         path,
+		Bucket:       fCfg.Bucket,
+		Provider:     string(sources.CloudSourceGCS),
+		Delimiter:    '|',
+		HasHeader:    true,
+		MappingRules: req.RequestConfig.MappingRules,
+	}
+
+	// Sink - MongoDB
+	mdbCfg := req.Config.MongoBatchConfig
+	sinkCfg := bsinks.MongoSinkConfig[domain.CSVRow]{
+		Protocol:   mdbCfg.Protocol,
+		Host:       mdbCfg.Host,
+		DBName:     mdbCfg.Name,
+		User:       mdbCfg.User,
+		Pwd:        mdbCfg.Pwd,
+		Params:     mdbCfg.Params,
+		Collection: req.Config.Collection,
+	}
+
+	batReq := &btchwkfl.CloudCSVMongoBatchRequest{
+		JobID:      fmt.Sprintf("cloud-csv-mongo-%s", runId),
+		BatchSize:  req.CSVBatchRequest.BatchSize,
+		MaxBatches: req.CSVBatchRequest.MaxBatches,
+		Source:     sourceCfg,
+		Sink:       sinkCfg,
+	}
+
+	// we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessCloudCSVMongo, &req)
+	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessCloudCSVMongoWorkflowAlias, &batReq)
 	if err != nil {
 		l.Error("error starting workflow", "error", err.Error())
 		return nil, err
@@ -157,9 +196,41 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 		WorkflowTaskTimeout:      time.Minute * 5, // set to max, as there are decision tasks that'll take as long as max
 		WorkflowIDReusePolicy:    1,
 	}
-	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessLocalCSVMongo, &req)
+
+	// Build source & sink configurations
+	// Source - local CSV
+	fCfg := req.Config.LocalCSVBatchConfig
+	path := filepath.Join(fCfg.Path, fCfg.Name)
+	sourceCfg := sources.LocalCSVConfig{
+		Path:         path,
+		Delimiter:    '|',
+		HasHeader:    true,
+		MappingRules: req.RequestConfig.MappingRules,
+	}
+	// Sink - MongoDB
+	mdbCfg := req.Config.MongoBatchConfig
+	sinkCfg := bsinks.MongoSinkConfig[domain.CSVRow]{
+		Protocol:   mdbCfg.Protocol,
+		Host:       mdbCfg.Host,
+		DBName:     mdbCfg.Name,
+		User:       mdbCfg.User,
+		Pwd:        mdbCfg.Pwd,
+		Params:     mdbCfg.Params,
+		Collection: req.Config.Collection,
+	}
+
+	batReq := &btchwkfl.LocalCSVMongoBatchRequest{
+		JobID:      fmt.Sprintf("local-csv-mongo-%s", runId),
+		BatchSize:  req.CSVBatchRequest.BatchSize,
+		MaxBatches: req.CSVBatchRequest.MaxBatches,
+		Source:     sourceCfg,
+		Sink:       sinkCfg,
+	}
+
+	// we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessLocalCSVMongo, &req)
+	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessLocalCSVMongoWorkflowAlias, &batReq)
 	if err != nil {
-		l.Error("error starting workflow", "error", err.Error())
+		l.Error("SchedulerService:ProcessLocalCSVToMongoWorkflow - error starting workflow", "error", err.Error())
 		return nil, err
 	}
 

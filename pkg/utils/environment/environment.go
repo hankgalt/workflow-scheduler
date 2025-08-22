@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hankgalt/batch-orchestra/pkg/domain"
+
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/test"
@@ -27,8 +29,6 @@ func BuildLocalCSVBatchRequest(max, size uint) (*batch.LocalCSVBatchRequest, err
 			RequestConfig: &batch.RequestConfig{
 				MaxBatches: max,
 				BatchSize:  size,
-				Offsets:    []uint64{},
-				Headers:    []string{},
 			},
 		},
 		Config: reqCfg,
@@ -49,8 +49,6 @@ func BuildCloudCSVBatchRequest(max, size uint) (*batch.CloudCSVBatchRequest, err
 			RequestConfig: &batch.RequestConfig{
 				MaxBatches: max,
 				BatchSize:  size,
-				Offsets:    []uint64{},
-				Headers:    []string{},
 			},
 		},
 		Config: reqCfg,
@@ -60,7 +58,7 @@ func BuildCloudCSVBatchRequest(max, size uint) (*batch.CloudCSVBatchRequest, err
 }
 
 // BuildLocalCSVMongoBatchRequest constructs a LocalCSVMongoBatchRequest with the specified max batches, batch size & relevant environment variables.
-func BuildLocalCSVMongoBatchRequest(max, size uint, mappingRules map[string]batch.Rule) (*batch.LocalCSVMongoBatchRequest, error) {
+func BuildLocalCSVMongoBatchRequest(max, size uint, mappingRules map[string]domain.Rule) (*batch.LocalCSVMongoBatchRequest, error) {
 	reqCfg, err := BuildLocalCSVMongoBatchConfig()
 	if err != nil {
 		return nil, err
@@ -71,8 +69,6 @@ func BuildLocalCSVMongoBatchRequest(max, size uint, mappingRules map[string]batc
 			RequestConfig: &batch.RequestConfig{
 				MaxBatches:   max,
 				BatchSize:    size,
-				Offsets:      []uint64{},
-				Headers:      []string{},
 				MappingRules: mappingRules,
 			},
 		},
@@ -83,7 +79,7 @@ func BuildLocalCSVMongoBatchRequest(max, size uint, mappingRules map[string]batc
 }
 
 // BuildCloudCSVMongoBatchRequest constructs a CloudCSVMongoBatchRequest with the specified max batches, batch size & relevant environment variables.
-func BuildCloudCSVMongoBatchRequest(max, size uint, mappingRules map[string]batch.Rule) (*batch.CloudCSVMongoBatchRequest, error) {
+func BuildCloudCSVMongoBatchRequest(max, size uint, mappingRules map[string]domain.Rule) (*batch.CloudCSVMongoBatchRequest, error) {
 	reqCfg, err := BuildCloudCSVMongoBatchConfig()
 	if err != nil {
 		return nil, err
@@ -94,8 +90,6 @@ func BuildCloudCSVMongoBatchRequest(max, size uint, mappingRules map[string]batc
 			RequestConfig: &batch.RequestConfig{
 				MaxBatches:   max,
 				BatchSize:    size,
-				Offsets:      []uint64{},
-				Headers:      []string{},
 				MappingRules: mappingRules,
 			},
 		},

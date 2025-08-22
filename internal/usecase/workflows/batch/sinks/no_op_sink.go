@@ -2,6 +2,8 @@ package batch
 
 import (
 	"context"
+
+	"github.com/hankgalt/batch-orchestra/pkg/domain"
 )
 
 const (
@@ -15,7 +17,7 @@ type noopSink[T any] struct{}
 func (s *noopSink[T]) Name() string { return NoopSink }
 
 // Write does nothing and returns the count of records as written.
-func (s *noopSink[T]) Write(ctx context.Context, b *BatchProcess[T]) (*BatchProcess[T], error) {
+func (s *noopSink[T]) Write(ctx context.Context, b *domain.BatchProcess[T]) (*domain.BatchProcess[T], error) {
 	for _, rec := range b.Records {
 		rec.BatchResult.Result = rec.Data // echo the record as result
 	}
@@ -35,6 +37,6 @@ type NoopSinkConfig[T any] struct{}
 func (c NoopSinkConfig[T]) Name() string { return NoopSink }
 
 // BuildSink returns a noop sink.
-func (c NoopSinkConfig[T]) BuildSink(ctx context.Context) (Sink[T], error) {
+func (c NoopSinkConfig[T]) BuildSink(ctx context.Context) (domain.Sink[T], error) {
 	return &noopSink[T]{}, nil
 }
