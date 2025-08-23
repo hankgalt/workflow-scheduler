@@ -59,8 +59,7 @@ func NewVyparRepo(ctx context.Context, rc infra.DBStore) (*vyparRepo, error) {
 		{
 			Keys: bson.D{
 				{Key: "entity_id", Value: 1},
-				{Key: "first_name", Value: 1},
-				{Key: "last_name", Value: 1},
+				{Key: "name", Value: 1},
 				{Key: "agent_type", Value: 1},
 			},
 			Options: options.Index().SetUnique(true), // Composite unique index

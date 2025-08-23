@@ -73,9 +73,7 @@ func getDummyAgent(entityId string) stores.Agent {
 		EntityID:   entityId,
 		EntityName: "TestEntity",
 		OrgName:    "TestOrg",
-		FirstName:  "John",
-		MiddleName: "M",
-		LastName:   "Doe",
+		Name:       "John M Doe",
 		Address:    "123 Test St, Test City, TC 12345",
 		AgentType:  "Individual",
 	}

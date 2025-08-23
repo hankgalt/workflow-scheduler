@@ -2,6 +2,7 @@ package stores
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	api "github.com/hankgalt/workflow-scheduler/api/business/v1"
@@ -15,17 +16,16 @@ const (
 )
 
 type Agent struct {
-	EntityName string            `bson:"entity_name"`
-	EntityID   string            `bson:"entity_id"`
-	OrgName    string            `bson:"org_name"`
-	FirstName  string            `bson:"first_name"`
-	MiddleName string            `bson:"middle_name,omitempty"`
-	LastName   string            `bson:"last_name"`
-	Address    string            `bson:"address"`
-	AgentType  string            `bson:"agent_type"`
-	CreatedAt  time.Time         `bson:"created_at"`
-	UpdatedAt  time.Time         `bson:"updated_at"`
-	Metadata   map[string]string `bson:"metadata,omitempty"` // additional metadata for the agent
+	EntityName   string            `bson:"entity_name"`
+	EntityID     string            `bson:"entity_id"`
+	OrgName      string            `bson:"org_name"`
+	Name         string            `bson:"name"`
+	Address      string            `bson:"address"`
+	AgentType    string            `bson:"agent_type"`
+	PositionType string            `bson:"position_type,omitempty"`
+	CreatedAt    time.Time         `bson:"created_at"`
+	UpdatedAt    time.Time         `bson:"updated_at"`
+	Metadata     map[string]string `bson:"metadata,omitempty"` // additional metadata for the agent
 }
 
 type Filing struct {
@@ -61,15 +61,13 @@ func MapAgentFieldsToMongoModel(fields map[string]string) Agent {
 	var entityName string
 	if name, ok := fields["entity_name"]; ok {
 		entityName = name
-	} else {
-		entityName = "Unknown Entity"
 	}
+
 	var orgName string
 	if name, ok := fields["org_name"]; ok {
 		orgName = name
-	} else {
-		orgName = "Unknown Organization"
 	}
+
 	var firstName, middleName, lastName string
 	if name, ok := fields["first_name"]; ok {
 		firstName = name
@@ -80,28 +78,37 @@ func MapAgentFieldsToMongoModel(fields map[string]string) Agent {
 	if name, ok := fields["last_name"]; ok {
 		lastName = name
 	}
+
+	name := firstName
+	for _, v := range []string{middleName, lastName} {
+		if v != "" {
+			name += " " + v
+		}
+	}
+	name = strings.TrimSpace(name)
+
 	var agentType string
 	if at, ok := fields["agent_type"]; ok {
 		agentType = at
-	} else {
-		agentType = "Unknown Type"
-	}
-	address := fields["physical_address1"] + " " + fields["physical_city"] + " " + fields["physical_state"] + " " + fields["physical_postal_code"] + " " + fields["physical_country"]
-
-	if entityId == "" || entityName == "" || firstName == "" {
-
 	}
 
-	return Agent{
+	ag := Agent{
 		EntityID:   entityId,
 		EntityName: entityName,
 		OrgName:    orgName,
-		FirstName:  firstName,
-		MiddleName: middleName,
-		LastName:   lastName,
-		Address:    address,
+		Name:       name,
 		AgentType:  agentType,
 	}
+
+	if pt, ok := fields["position_type"]; ok {
+		ag.PositionType = pt
+		ag.AgentType = "Principal"
+		ag.Address = BuildAddress(fields, "principal")
+	} else {
+		ag.Address = BuildAddress(fields, "agent")
+	}
+
+	return ag
 }
 
 func MapEntityTypeToModel(ty api.EntityType) BusinessEntityType {
@@ -121,15 +128,14 @@ func MapAgentModelToProto(agent *Agent, id string) *api.Agent {
 	}
 
 	return &api.Agent{
-		Id:         id,
-		EntityName: agent.EntityName,
-		EntityId:   agent.EntityID,
-		EntityOrg:  agent.OrgName,
-		FirstName:  agent.FirstName,
-		MiddleName: agent.MiddleName,
-		LastName:   agent.LastName,
-		Address:    agent.Address,
-		AgentType:  agent.AgentType,
+		Id:           id,
+		EntityName:   agent.EntityName,
+		EntityId:     agent.EntityID,
+		EntityOrg:    agent.OrgName,
+		Name:         agent.Name,
+		Address:      agent.Address,
+		AgentType:    agent.AgentType,
+		PositionType: agent.PositionType,
 	}
 }
 
@@ -182,4 +188,72 @@ func MapFilingModelToProto(filing *Filing, id string) *api.Filing {
 		PrincipalAddress:  filing.PrincipalAddress,
 		MailingAddress:    filing.MailingAddress,
 	}
+}
+
+func BuildAddress(fields map[string]string, addrType string) string {
+	var address string
+	if addrType == "agent" {
+		var addr1, addr2, addr3, city, state, postalCode, country string
+		if a1, ok := fields["physical_address1"]; ok {
+			addr1 = a1
+		}
+		if a2, ok := fields["physical_address2"]; ok {
+			addr2 = a2
+		}
+		if a3, ok := fields["physical_address3"]; ok {
+			addr3 = a3
+		}
+		if c, ok := fields["physical_city"]; ok {
+			city = c
+		}
+		if s, ok := fields["physical_state"]; ok {
+			state = s
+		}
+		if zip, ok := fields["physical_postal_code"]; ok {
+			postalCode = zip
+		}
+		if cntry, ok := fields["physical_country"]; ok {
+			country = cntry
+		}
+
+		address = addr1
+		for _, v := range []string{addr2, addr3, city, state, postalCode, country} {
+			if v != "" {
+				address += " " + v
+			}
+		}
+	} else {
+		var addr1, addr2, addr3, city, state, postalCode, country string
+		if a1, ok := fields["address1"]; ok {
+			addr1 = a1
+		}
+		if a2, ok := fields["address2"]; ok {
+			addr2 = a2
+		}
+		if a3, ok := fields["address3"]; ok {
+			addr3 = a3
+		}
+		if c, ok := fields["city"]; ok {
+			city = c
+		}
+		if s, ok := fields["state"]; ok {
+			state = s
+		}
+		if zip, ok := fields["postal_code"]; ok {
+			postalCode = zip
+		}
+		if cntry, ok := fields["country"]; ok {
+			country = cntry
+		}
+
+		address = addr1
+		for _, v := range []string{addr2, addr3, city, state, postalCode, country} {
+			if v != "" {
+				address += " " + v
+			}
+		}
+	}
+
+	address = strings.TrimSpace(address)
+	return address
 }
