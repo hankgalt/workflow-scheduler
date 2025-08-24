@@ -6,9 +6,7 @@ import (
 	"github.com/hankgalt/batch-orchestra/pkg/domain"
 )
 
-const (
-	NoopSink = "noop-sink"
-)
+const NoopSink = "noop-sink"
 
 // No operation sink for testing or defaulting.
 type noopSink[T any] struct{}

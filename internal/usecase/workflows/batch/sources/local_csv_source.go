@@ -1,7 +1,6 @@
 package sources
 
 import (
-	"bytes"
 	"context"
 	"encoding/csv"
 	"errors"
@@ -9,13 +8,25 @@ import (
 	"io"
 	"os"
 
+	"github.com/comfforts/logger"
 	"github.com/hankgalt/batch-orchestra/pkg/domain"
 
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
 
+const LocalCSVSource = "local-csv-source"
+
 const (
-	LocalCSVSource = "local-csv-source"
+	ERR_LOCAL_CSV_PATH_REQUIRED   = "local csv: path is required"
+	ERR_LOCAL_CSV_TRANSFORMER_NIL = "local csv: transformer function is not set for local CSV source with headers"
+	ERR_LOCAL_CSV_FILE_OPEN       = "local csv: open"
+	ERR_LOCAL_CSV_SIZE_INVALID    = "local csv: size must be greater than 0"
+)
+
+var (
+	ErrLocalCSVPathRequired = errors.New(ERR_LOCAL_CSV_PATH_REQUIRED)
+	ErrLocalCSVFileOpen     = errors.New(ERR_LOCAL_CSV_FILE_OPEN)
+	ErrLocalCSVSizeInvalid  = errors.New(ERR_LOCAL_CSV_SIZE_INVALID)
 )
 
 // Local CSV source.
@@ -38,6 +49,21 @@ func (s *localCSVSource) Close(ctx context.Context) error {
 // Next reads the next batch of CSV rows from the local file.
 // It reads from the file at the specified offset and returns a batch of CSVRow.
 func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*domain.BatchProcess[domain.CSVRow], error) {
+	// If size is 0 or negative, return an empty batch.
+	if size <= 0 {
+		return nil, ErrLocalCSVSizeInvalid
+	}
+
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("localCSVSource:Next - error getting logger from context: %w", err)
+	}
+
+	// If headers are enabled but transformer function is not set.
+	if s.hasHeader && s.transFunc == nil {
+		return nil, fmt.Errorf("transformer function is not set for local CSV source with headers")
+	}
+
 	bp := &domain.BatchProcess[domain.CSVRow]{
 		Records:     nil,
 		NextOffset:  offset,
@@ -45,31 +71,20 @@ func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*d
 		Done:        false,
 	}
 
-	// If size is 0 or negative, return an empty batch.
-	if size <= 0 {
-		return bp, nil
-	}
-
 	// Open the local CSV file.
 	f, err := os.Open(s.path)
 	if err != nil {
-		return bp, fmt.Errorf("open file: %w", err)
+		l.Error("error opening local CSV file", "path", s.path, "error", err.Error())
+		return nil, fmt.Errorf("%w: %v", ErrLocalCSVFileOpen, err)
 	}
 	defer f.Close()
 
-	// If headers are enabled but transformer function is not set.
-	if s.hasHeader && s.transFunc == nil {
-		return bp, fmt.Errorf("transformer function is not set for local CSV source with headers")
-	}
-
-	// Set start index to the specified offset.
-	startIndex := int64(offset)
-
 	// Read data bytes from the file at the specified offset
 	data := make([]byte, size)
-	numBytesRead, err := f.ReadAt(data, startIndex)
+	numBytesRead, err := f.ReadAt(data, int64(offset))
 	if err != nil && err != io.EOF {
-		return bp, fmt.Errorf("error reading file %s at offset %d: %w", s.path, startIndex, err)
+		l.Error("error reading local CSV file", "path", s.path, "offset", offset, "error", err.Error())
+		return nil, fmt.Errorf("error reading file %s at offset %d: %w", s.path, offset, err)
 	}
 
 	// If read data is less than requested, it means we reached EOF, set Done
@@ -78,118 +93,100 @@ func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*d
 		done = true
 	}
 
-	// get last line break index to drop partial record
-	i := bytes.LastIndex(data, []byte{'\n'})
-	if i < 0 {
-		// If no newline found, we read till the end, set nextOffset to numBytesRead
-		i = numBytesRead - 1
+	records, nextOffset, err := ReadCSVBatch(
+		ctx,
+		data,
+		numBytesRead,
+		int64(offset),
+		s.delimiter,
+		s.hasHeader,
+		s.transFunc,
+	)
+	if err != nil {
+		l.Error("error reading CSV data", "path", s.path, "offset", offset, "error", err.Error())
+
+		bp.Records = records
+		bp.NextOffset = nextOffset
+		bp.Done = done
+
+		return bp, err
 	}
 
-	// create data buffer for bytes upto last line break
-	buffer := bytes.NewBuffer(data[:i+1])
-
-	// Create a CSV reader with the buffer
-	csvReader := csv.NewReader(buffer)
-	csvReader.Comma = s.delimiter
-	csvReader.FieldsPerRecord = -1 // Allow variable number of fields per record
-
-	// Initialize start & next offsets
-	nextOffset := csvReader.InputOffset()
-
-	// Initialize read count and records slice
-	readCount := 0
-
-	// Read records from the CSV reader
-	for {
-		// allow cancellation
-		select {
-		case <-ctx.Done():
-			return bp, ctx.Err()
-		default:
-		}
-
-		rec, err := csvReader.Read()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			// Attempt record cleanup if error occurs
-			cleanedStr := strutils.CleanRecord(string(data[nextOffset:csvReader.InputOffset()]))
-			record, err := strutils.ReadSingleRecord(cleanedStr)
-			if err != nil {
-				bp.Records = append(bp.Records, &domain.BatchRecord[domain.CSVRow]{
-					Start: uint64(nextOffset),
-					End:   uint64(csvReader.InputOffset()),
-					BatchResult: domain.BatchResult{
-						Error: fmt.Sprintf("read data row: %v", err),
-					},
-				})
-
-				// Update startIndex to the next record's offset
-				startIndex = nextOffset
-
-				// update nextOffset to the next record's offset
-				nextOffset = csvReader.InputOffset()
-				// update row read count
-				readCount++
-
-				continue
-			}
-
-			rec = record
-		}
-
-		// startIndex & nextOffset will be 0 for the first read, skip headers
-		if startIndex <= 0 && nextOffset <= 0 && s.hasHeader {
-			// Update startIndex to the next record's offset
-			startIndex = nextOffset
-
-			// update nextOffset to the next record's offset
-			nextOffset = csvReader.InputOffset()
-
-			// update row read count
-			readCount++
-
-			continue
-		}
-
-		// Create a BatchRecord for the current record
-		br := domain.BatchRecord[domain.CSVRow]{
-			Start: uint64(startIndex),
-			End:   uint64(csvReader.InputOffset()),
-		}
-
-		// Update startIndex to the next record's offset
-		startIndex = nextOffset
-
-		// update nextOffset to the next record's offset
-		nextOffset = csvReader.InputOffset()
-
-		// update row read count
-		readCount++
-
-		// Create a CSVRow from the transformed record
-		rec = strutils.CleanAlphaNumericsArr(rec, []rune{'.', '-', '_', '#', '&', '@'})
-		res := s.transFunc(rec)
-
-		row := domain.CSVRow{}
-		for k, v := range res {
-			st, ok := v.(string)
-			if !ok {
-				row[k] = ""
-			}
-			row[k] = st
-		}
-		br.Data = row
-
-		// Update records slice & read count
-		bp.Records = append(bp.Records, &br)
-	}
-
-	bp.NextOffset = offset + uint64(nextOffset)
+	bp.Records = records
+	bp.NextOffset = nextOffset
 	bp.Done = done
 
 	return bp, nil
+}
+
+func (s *localCSVSource) NextStream(
+	ctx context.Context,
+	offset uint64,
+	size uint,
+) (<-chan *domain.BatchRecord[domain.CSVRow], error) {
+	// If size is 0 or negative, return an empty batch.
+	if size <= 0 {
+		return nil, ErrLocalCSVSizeInvalid
+	}
+
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("localCSVSource:NextStream - error getting logger from context: %w", err)
+	}
+
+	// Open the local CSV file.
+	f, err := os.Open(s.path)
+	if err != nil {
+		l.Error("error opening local CSV file", "path", s.path, "error", err.Error())
+		return nil, fmt.Errorf("%w: %v", ErrLocalCSVFileOpen, err)
+	}
+	defer f.Close()
+
+	// Set start index to the specified offset.
+	startIndex := int64(offset)
+
+	// Read data bytes from the file at the specified offset
+	data := make([]byte, size)
+	numBytesRead, err := f.ReadAt(data, startIndex)
+	if err != nil && err != io.EOF {
+		l.Error("error reading file", "path", s.path, "offset", startIndex, "error", err.Error())
+		return nil, fmt.Errorf("error reading file %s at offset %d: %w", s.path, startIndex, err)
+	}
+
+	// If read data is less than requested, it means we reached EOF, set Done
+	done := false
+	if uint(numBytesRead) < size {
+		done = true
+	}
+
+	resStream := make(chan *domain.BatchRecord[domain.CSVRow])
+
+	if done {
+		resStream <- &domain.BatchRecord[domain.CSVRow]{
+			Start: offset,
+			End:   offset,
+			Done:  done,
+		}
+	}
+
+	go func() {
+		defer close(resStream)
+		err := ReadCSVStream(
+			ctx,
+			data,
+			numBytesRead,
+			int64(offset),
+			s.delimiter,
+			s.hasHeader,
+			s.transFunc,
+			resStream,
+		)
+		if err != nil {
+			l.Error("error reading CSV data stream", "path", s.path, "offset", offset, "error", err.Error())
+		}
+	}()
+
+	return resStream, nil
 }
 
 // Local CSV source config.
@@ -207,7 +204,7 @@ func (c LocalCSVConfig) Name() string { return LocalCSVSource }
 // It reads headers if HasHeader is true and caches it.
 func (c LocalCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.CSVRow], error) {
 	if c.Path == "" {
-		return nil, errors.New("local csv: path is required")
+		return nil, ErrLocalCSVPathRequired
 	}
 
 	delim := c.Delimiter
@@ -225,7 +222,7 @@ func (c LocalCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.C
 	if c.HasHeader {
 		f, err := os.Open(c.Path)
 		if err != nil {
-			return nil, fmt.Errorf("local csv: open: %w", err)
+			return nil, fmt.Errorf("%w: %v", ErrLocalCSVFileOpen, err)
 		}
 		defer f.Close()
 

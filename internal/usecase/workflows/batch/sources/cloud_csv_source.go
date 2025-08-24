@@ -1,7 +1,6 @@
 package sources
 
 import (
-	"bytes"
 	"context"
 	"encoding/csv"
 	"errors"
@@ -12,13 +11,32 @@ import (
 
 	"cloud.google.com/go/storage"
 
+	"github.com/comfforts/logger"
 	"github.com/hankgalt/batch-orchestra/pkg/domain"
 
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
 
+const CloudCSVSource = "cloud-csv-source"
+
 const (
-	CloudCSVSource = "cloud-csv-source"
+	ERR_CLOUD_CSV_READER_NIL           = "cloud csv: reader is nil"
+	ERR_CLOUD_CSV_CLIENT_NIL           = "cloud csv: client is not initialized"
+	ERR_CLOUD_CSV_OBJECT_PATH_REQUIRED = "cloud csv: object path is required"
+	ERR_CLOUD_CSV_BUCKET_REQUIRED      = "cloud csv: bucket name is required"
+	ERR_CLOUD_CSV_UNSUPPORTED_PROVIDER = "cloud csv: unsupported provider, only 'gcs' is supported"
+	ERR_CLOUD_CSV_MISSING_CREDENTIALS  = "cloud csv: missing credentials path"
+	ERR_CLOUD_CSV_SIZE_INVALID         = "cloud csv: size must be greater than 0"
+)
+
+var (
+	ErrCloudCSVReaderNil           = errors.New(ERR_CLOUD_CSV_READER_NIL)
+	ErrCloudCSVClientNil           = errors.New(ERR_CLOUD_CSV_CLIENT_NIL)
+	ErrCloudCSVObjectPathRequired  = errors.New(ERR_CLOUD_CSV_OBJECT_PATH_REQUIRED)
+	ErrCloudCSVBucketRequired      = errors.New(ERR_CLOUD_CSV_BUCKET_REQUIRED)
+	ErrCloudCSVUnsupportedProvider = errors.New(ERR_CLOUD_CSV_UNSUPPORTED_PROVIDER)
+	ErrCloudCSVMissingCredentials  = errors.New(ERR_CLOUD_CSV_MISSING_CREDENTIALS)
+	ErrCloudCSVSizeInvalid         = errors.New(ERR_CLOUD_CSV_SIZE_INVALID)
 )
 
 type CloudSource string
@@ -37,7 +55,7 @@ type GCPStorageReadAtAdapter struct {
 // ReadAt reads data from the GCP Storage reader at the specified offset.
 func (g *GCPStorageReadAtAdapter) ReadAt(p []byte, off int64) (n int, err error) {
 	if g.Reader == nil {
-		return 0, errors.New("cloud csv: reader is nil")
+		return 0, ErrCloudCSVReaderNil
 	}
 
 	// seek to the specified offset
@@ -70,7 +88,21 @@ func (s *cloudCSVSource) Name() string { return CloudCSVSource }
 // Next reads the next batch of CSV rows from the cloud storage (S3/GCS/Azure).
 // It reads from the cloud storage at the specified offset and returns a batch of CSVRow.
 // Currently only supports GCP Storage. Ensure the environment variable is set for GCP credentials
-func (s *cloudCSVSource) Next(ctx context.Context, offset uint64, size uint) (*domain.BatchProcess[domain.CSVRow], error) {
+func (s *cloudCSVSource) Next(
+	ctx context.Context,
+	offset uint64,
+	size uint,
+) (*domain.BatchProcess[domain.CSVRow], error) {
+	// If size is 0 or negative, return an empty batch.
+	if size <= 0 {
+		return nil, ErrLocalCSVSizeInvalid
+	}
+
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("CloudCSVSource:Next - error getting logger from context: %w", err)
+	}
+
 	bp := &domain.BatchProcess[domain.CSVRow]{
 		Records:     nil,
 		NextOffset:  offset,
@@ -78,31 +110,105 @@ func (s *cloudCSVSource) Next(ctx context.Context, offset uint64, size uint) (*d
 		Done:        false,
 	}
 
-	// If size is 0 or negative, return an empty batch.
-	if size <= 0 {
-		return bp, nil
-	}
-
 	// Ensure client is initialized
 	if s.client == nil {
-		return bp, errors.New("cloud csv: client is not initialized")
-	}
-
-	// If headers are enabled but transformer function is not set.
-	if s.hasHeader && s.transFunc == nil {
-		return bp, fmt.Errorf("cloud csv: transformer function is not set for cloud CSV source with headers")
+		return nil, ErrCloudCSVClientNil
 	}
 
 	// Ensure object exists in the bucket
 	obj := s.client.Bucket(s.bucket).Object(s.path)
 	if _, err := obj.Attrs(ctx); err != nil {
-		return bp, fmt.Errorf("cloud csv: object does not exist or error getting attributes: %w", err)
+		return nil, fmt.Errorf("cloud csv: object does not exist or error getting attributes: %w", err)
 	}
 
 	// Create a reader for the object
 	rc, err := obj.NewReader(ctx)
 	if err != nil {
-		return bp, fmt.Errorf("cloud csv: error creating reader for object %s in bucket %s: %w", s.path, s.bucket, err)
+		return nil, fmt.Errorf("cloud csv: error creating reader for object %s in bucket %s: %w", s.path, s.bucket, err)
+	}
+	defer func() {
+		if err := rc.Close(); err != nil {
+			log.Printf("cloud csv: error closing reader: %v", err)
+		}
+	}()
+
+	// Set start index & done flag.
+	// startIndex := int64(offset)
+	done := false
+
+	// Create a read-at adapter for the GCP Storage reader.
+	// This allows us to read data at specific offsets.
+	readAtAdapter := &GCPStorageReadAtAdapter{
+		Reader: rc,
+	}
+
+	// Read data bytes from the object at the specified offset
+	data := make([]byte, size)
+	numBytesRead, err := readAtAdapter.ReadAt(data, int64(offset))
+	if err != nil && err != io.EOF {
+		return nil, fmt.Errorf("error reading object %s in bucket %s at offset %d: %w", s.path, s.bucket, offset, err)
+	}
+
+	// If read data is less than requested, cursor reached EOF, set Done
+	if uint(numBytesRead) < size {
+		done = true
+	}
+
+	records, nextOffset, err := ReadCSVBatch(
+		ctx,
+		data,
+		numBytesRead,
+		int64(offset),
+		s.delimiter,
+		s.hasHeader,
+		s.transFunc,
+	)
+	if err != nil {
+		l.Error("error reading CSV data", "path", s.path, "offset", offset, "error", err.Error())
+		bp.Records = records
+		bp.NextOffset = nextOffset
+		bp.Done = done
+
+		return bp, err
+	}
+
+	bp.Records = records
+	bp.NextOffset = nextOffset
+	bp.Done = done
+
+	return bp, nil
+}
+
+func (s *cloudCSVSource) NextStream(
+	ctx context.Context,
+	offset uint64,
+	size uint,
+) (<-chan *domain.BatchRecord[domain.CSVRow], error) {
+	// If size is 0 or negative, return an empty batch.
+	if size <= 0 {
+		return nil, ErrCloudCSVSizeInvalid
+	}
+
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("CloudCSVSource:NextStream - error getting logger from context: %w", err)
+	}
+
+	// Ensure client is initialized
+	if s.client == nil {
+		return nil, ErrCloudCSVClientNil
+	}
+
+	// Ensure object exists in the bucket
+	obj := s.client.Bucket(s.bucket).Object(s.path)
+	if _, err := obj.Attrs(ctx); err != nil {
+		return nil, fmt.Errorf("cloud csv: object does not exist or error getting attributes: %w", err)
+	}
+
+	// Create a reader for the object
+	rc, err := obj.NewReader(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("cloud csv: error creating reader for object %s in bucket %s: %w", s.path, s.bucket, err)
 	}
 	defer func() {
 		if err := rc.Close(); err != nil {
@@ -124,7 +230,7 @@ func (s *cloudCSVSource) Next(ctx context.Context, offset uint64, size uint) (*d
 	data := make([]byte, size)
 	numBytesRead, err := readAtAdapter.ReadAt(data, startIndex)
 	if err != nil && err != io.EOF {
-		return bp, fmt.Errorf("error reading object %s in bucket %s at offset %d: %w", s.path, s.bucket, startIndex, err)
+		return nil, fmt.Errorf("error reading object %s in bucket %s at offset %d: %w", s.path, s.bucket, startIndex, err)
 	}
 
 	// If read data is less than requested, cursor reached EOF, set Done
@@ -132,119 +238,35 @@ func (s *cloudCSVSource) Next(ctx context.Context, offset uint64, size uint) (*d
 		done = true
 	}
 
-	// get last line break index to avoid partial record
-	i := bytes.LastIndex(data, []byte{'\n'})
-	if i < 0 {
-		// If no newline found, read till the end, set nextOffset to numBytesRead
-		i = numBytesRead - 1
+	resStream := make(chan *domain.BatchRecord[domain.CSVRow])
+
+	if done {
+		resStream <- &domain.BatchRecord[domain.CSVRow]{
+			Start: offset,
+			End:   offset,
+			Done:  done,
+		}
 	}
 
-	// create data buffer for bytes upto last line break
-	buffer := bytes.NewBuffer(data[:i+1])
+	go func() {
+		defer close(resStream)
 
-	// Create a CSV reader with the buffer
-	csvReader := csv.NewReader(buffer)
-	csvReader.Comma = s.delimiter
-	csvReader.FieldsPerRecord = -1 // Read all fields
-
-	// Initialize start & next offsets
-	nextOffset := csvReader.InputOffset()
-
-	// Initialize read count and records slice
-	readCount := 0
-
-	// Read records from the CSV reader
-	for {
-		// allow cancellation
-		select {
-		case <-ctx.Done():
-			return bp, ctx.Err()
-		default:
-		}
-
-		rec, err := csvReader.Read()
+		err := ReadCSVStream(
+			ctx,
+			data,
+			numBytesRead,
+			int64(offset),
+			s.delimiter,
+			s.hasHeader,
+			s.transFunc,
+			resStream,
+		)
 		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			// Attempt record cleanup if error occurs
-			cleanedStr := strutils.CleanRecord(string(data[nextOffset:csvReader.InputOffset()]))
-			record, err := strutils.ReadSingleRecord(cleanedStr)
-			if err != nil {
-				bp.Records = append(bp.Records, &domain.BatchRecord[domain.CSVRow]{
-					Start: uint64(startIndex),
-					End:   uint64(csvReader.InputOffset()),
-					BatchResult: domain.BatchResult{
-						Error: fmt.Sprintf("read data row: %v", err),
-					},
-				})
-
-				// Update startIndex to the next record's offset
-				startIndex = nextOffset
-
-				// update nextOffset to the next record's offset
-				nextOffset = csvReader.InputOffset()
-
-				// update row read count
-				readCount++
-
-				continue
-			}
-
-			rec = record
+			l.Error("error reading CSV data stream", "path", s.path, "offset", offset, "error", err.Error())
 		}
+	}()
 
-		// startIndex & nextOffset will be 0 for the first read, validate headers
-		if startIndex <= 0 && nextOffset <= 0 && s.hasHeader {
-			// Update startIndex to the next record's offset
-			startIndex = nextOffset
-
-			// update nextOffset to the next record's offset
-			nextOffset = csvReader.InputOffset()
-
-			// update row read count
-			readCount++
-
-			continue
-		}
-
-		// Create a BatchRecord for the current record
-		br := domain.BatchRecord[domain.CSVRow]{
-			Start: uint64(startIndex),
-			End:   uint64(csvReader.InputOffset()),
-		}
-
-		// Update startIndex to the next record's offset
-		startIndex = nextOffset
-
-		// update nextOffset to the csvReader's offset
-		nextOffset = csvReader.InputOffset()
-
-		// Update read count
-		readCount++
-
-		// Create a CSVRow from the transformed record
-		rec = strutils.CleanAlphaNumericsArr(rec, []rune{'.', '-', '_', '#', '&', '@'})
-		res := s.transFunc(rec)
-
-		row := domain.CSVRow{}
-		for k, v := range res {
-			st, ok := v.(string)
-			if !ok {
-				row[k] = ""
-			}
-			row[k] = st
-		}
-		br.Data = row
-
-		// Update records slice
-		bp.Records = append(bp.Records, &br)
-	}
-
-	bp.NextOffset = offset + uint64(nextOffset)
-	bp.Done = done
-
-	return bp, nil
+	return resStream, nil
 }
 
 // Cloud CSV (S3/GCS/Azure) - source config.
@@ -265,11 +287,11 @@ func (c CloudCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.C
 	// build s3/gcs/azure client from c.Provider, bucket, key
 
 	if c.Path == "" {
-		return nil, errors.New("cloud csv: object path is required")
+		return nil, ErrCloudCSVObjectPathRequired
 	}
 
 	if c.Bucket == "" {
-		return nil, errors.New("cloud csv: bucket name is required")
+		return nil, ErrCloudCSVBucketRequired
 	}
 
 	if c.Delimiter == 0 {
@@ -281,18 +303,18 @@ func (c CloudCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.C
 	}
 
 	if c.Provider != "gcs" {
-		return nil, errors.New("cloud csv: unsupported provider, only 'gcs' is supported")
+		return nil, ErrCloudCSVUnsupportedProvider
 	}
 
 	// Ensure the environment variable is set for GCP credentials
 	cPath := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 	if cPath == "" {
-		return nil, errors.New("cloud csv: missing credentials path")
+		return nil, ErrCloudCSVMissingCredentials
 	}
 
 	client, err := storage.NewClient(ctx)
 	if err != nil {
-		return nil, errors.New("cloud csv: failed to create storage client: " + err.Error())
+		return nil, fmt.Errorf("cloud csv: failed to create storage client: %w", err)
 	}
 
 	obj := client.Bucket(c.Bucket).Object(c.Path)
@@ -301,7 +323,7 @@ func (c CloudCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.C
 		if err := client.Close(); err != nil {
 			log.Printf("cloud csv: error closing client: %v", err)
 		}
-		return nil, errors.New("cloud csv: object does not exist or error getting attributes: " + err.Error())
+		return nil, fmt.Errorf("cloud csv: object does not exist or error getting attributes: %w", err)
 	}
 
 	rc, err := obj.NewReader(ctx)
@@ -353,52 +375,4 @@ func (c CloudCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.C
 	src.client = client
 
 	return src, nil
-}
-
-// ReadCSVRows reads CSV rows from the given data buffer using the specified delimiter.
-// It returns a slice of records and an error if any.
-func ReadCSVRows(data []byte, delimiter rune) ([][]string, error) {
-	// create data buffer for bytes upto last line break
-	buffer := bytes.NewBuffer(data)
-
-	// Create a CSV reader with the buffer
-	csvReader := csv.NewReader(buffer)
-	csvReader.Comma = delimiter
-	csvReader.FieldsPerRecord = -1 // Read all fields
-
-	// Initialize next offset
-	nextOffset := csvReader.InputOffset()
-
-	// Initialize read count and records slice
-	readCount := 0
-	records := [][]string{}
-
-	// Read records from the CSV reader
-	for {
-		rec, err := csvReader.Read()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			// Attempt record cleanup if error occurs
-			cleanedStr := strutils.CleanRecord(string(data[nextOffset:csvReader.InputOffset()]))
-			record, err := strutils.ReadSingleRecord(cleanedStr)
-			if err != nil {
-				return nil, fmt.Errorf("read data row: %w", err)
-			}
-
-			rec = record
-		}
-
-		// update nextOffset to the next record's offset
-		nextOffset = csvReader.InputOffset()
-
-		// Update read count
-		readCount++
-
-		// Update records slice
-		records = append(records, rec)
-	}
-
-	return records, nil
 }

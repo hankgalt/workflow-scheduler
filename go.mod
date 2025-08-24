@@ -17,7 +17,7 @@ require (
 	cloud.google.com/go/storage v1.55.0
 	github.com/comfforts/logger v0.2.12
 	github.com/google/uuid v1.6.0
-	github.com/hankgalt/batch-orchestra v0.1.11
+	github.com/hankgalt/batch-orchestra v0.1.14
 	github.com/prometheus/client_golang v1.23.0
 	go.mongodb.org/mongo-driver v1.17.4
 	go.opentelemetry.io/otel v1.37.0

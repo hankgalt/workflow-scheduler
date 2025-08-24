@@ -20,7 +20,7 @@ import (
 	"github.com/hankgalt/batch-orchestra/pkg/domain"
 
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
-	bsinks "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sinks"
+	sinks "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sinks"
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sources"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )
@@ -268,7 +268,7 @@ func Test_Write_NoopSink(t *testing.T) {
 	})
 
 	env.RegisterActivityWithOptions(
-		bo.WriteActivity[domain.CSVRow, bsinks.NoopSinkConfig[domain.CSVRow]],
+		bo.WriteActivity[domain.CSVRow, sinks.NoopSinkConfig[domain.CSVRow]],
 		activity.RegisterOptions{
 			Name: btchwkfl.WriteNextNoopSinkBatchAlias,
 		},
@@ -292,8 +292,8 @@ func Test_Write_NoopSink(t *testing.T) {
 		Done:       false,
 	}
 
-	in := &domain.WriteInput[domain.CSVRow, bsinks.NoopSinkConfig[domain.CSVRow]]{
-		Sink:  bsinks.NoopSinkConfig[domain.CSVRow]{},
+	in := &domain.WriteInput[domain.CSVRow, sinks.NoopSinkConfig[domain.CSVRow]]{
+		Sink:  sinks.NoopSinkConfig[domain.CSVRow]{},
 		Batch: b,
 	}
 
@@ -322,7 +322,7 @@ func Test_Write_MongoSink(t *testing.T) {
 	env.SetTestTimeout(24 * time.Hour)
 
 	env.RegisterActivityWithOptions(
-		bo.WriteActivity[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]],
+		bo.WriteActivity[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]],
 		activity.RegisterOptions{
 			Name: btchwkfl.WriteNextMongoSinkBatchAlias,
 		},
@@ -351,7 +351,7 @@ func Test_Write_MongoSink(t *testing.T) {
 	require.NotEmpty(t, nmCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, nmCfg.Host(), "MongoDB host should not be empty")
 
-	cfg := bsinks.MongoSinkConfig[domain.CSVRow]{
+	cfg := sinks.MongoSinkConfig[domain.CSVRow]{
 		Protocol:   nmCfg.Protocol(),
 		Host:       nmCfg.Host(),
 		DBName:     nmCfg.Name(),
@@ -361,7 +361,7 @@ func Test_Write_MongoSink(t *testing.T) {
 		Collection: "test.people",
 	}
 
-	in := &domain.WriteInput[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]]{
+	in := &domain.WriteInput[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]]{
 		Sink:  cfg,
 		Batch: b,
 	}
@@ -400,7 +400,7 @@ func Test_FetchAndWrite_LocalCSVSource_MongoSink_Queue(t *testing.T) {
 		},
 	)
 	env.RegisterActivityWithOptions(
-		bo.WriteActivity[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]],
+		bo.WriteActivity[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]],
 		activity.RegisterOptions{
 			Name: btchwkfl.WriteNextMongoSinkBatchAlias,
 		},
@@ -423,7 +423,7 @@ func Test_FetchAndWrite_LocalCSVSource_MongoSink_Queue(t *testing.T) {
 	mCfg := envutils.BuildMongoStoreConfig()
 	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
-	sinkCfg := bsinks.MongoSinkConfig[domain.CSVRow]{
+	sinkCfg := sinks.MongoSinkConfig[domain.CSVRow]{
 		Protocol:   mCfg.Protocol(),
 		Host:       mCfg.Host(),
 		DBName:     mCfg.Name(),
@@ -468,7 +468,7 @@ func Test_FetchAndWrite_LocalCSVSource_MongoSink_Queue(t *testing.T) {
 	etlReq.Done = fOut.Batch.Done
 
 	// setup first write request
-	wIn := &domain.WriteInput[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]]{
+	wIn := &domain.WriteInput[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]]{
 		Sink:  sinkCfg,
 		Batch: fOut.Batch,
 	}
@@ -502,7 +502,7 @@ func Test_FetchAndWrite_LocalCSVSource_MongoSink_Queue(t *testing.T) {
 			etlReq.Offsets = append(etlReq.Offsets, fOut.Batch.NextOffset)
 			etlReq.Batches[fmt.Sprintf("batch-%d-%d", fOut.Batch.StartOffset, fOut.Batch.NextOffset)] = fOut.Batch
 
-			wIn = &domain.WriteInput[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]]{
+			wIn = &domain.WriteInput[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]]{
 				Sink:  sinkCfg,
 				Batch: fOut.Batch,
 			}
@@ -559,7 +559,7 @@ func Test_FetchAndWrite_CloudCSVSource_MongoSink_Queue(t *testing.T) {
 		},
 	)
 	env.RegisterActivityWithOptions(
-		bo.WriteActivity[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]],
+		bo.WriteActivity[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]],
 		activity.RegisterOptions{
 			Name: btchwkfl.WriteNextMongoSinkBatchAlias,
 		},
@@ -583,7 +583,7 @@ func Test_FetchAndWrite_CloudCSVSource_MongoSink_Queue(t *testing.T) {
 	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
 
-	sinkCfg := bsinks.MongoSinkConfig[domain.CSVRow]{
+	sinkCfg := sinks.MongoSinkConfig[domain.CSVRow]{
 		Protocol:   mCfg.Protocol(),
 		Host:       mCfg.Host(),
 		DBName:     mCfg.Name(),
@@ -624,7 +624,7 @@ func Test_FetchAndWrite_CloudCSVSource_MongoSink_Queue(t *testing.T) {
 	etlReq.Offsets = append(etlReq.Offsets, fOut.Batch.NextOffset)
 	etlReq.Done = fOut.Batch.Done
 
-	wIn := &domain.WriteInput[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]]{
+	wIn := &domain.WriteInput[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]]{
 		Sink:  sinkCfg,
 		Batch: fOut.Batch,
 	}
@@ -655,7 +655,7 @@ func Test_FetchAndWrite_CloudCSVSource_MongoSink_Queue(t *testing.T) {
 			etlReq.Offsets = append(etlReq.Offsets, fOut.Batch.NextOffset)
 			etlReq.Batches[fmt.Sprintf("batch-%d-%d", fOut.Batch.StartOffset, fOut.Batch.NextOffset)] = fOut.Batch
 
-			wIn = &domain.WriteInput[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]]{
+			wIn = &domain.WriteInput[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]]{
 				Sink:  sinkCfg,
 				Batch: fOut.Batch,
 			}
