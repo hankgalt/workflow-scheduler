@@ -244,6 +244,18 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 	}, nil
 }
 
+func (ss *schedulerService) QueryWorkflowState(ctx context.Context, params *batch.WorkflowQueryParams) (any, error) {
+	if params.WorkflowId == "" || params.RunId == "" {
+		return nil, errors.New("missing required workflowId or runId")
+	}
+
+	if state, err := ss.temporal.QueryWorkflow(ctx, params.WorkflowId, params.RunId, "state"); err != nil {
+		return nil, err
+	} else {
+		return state, nil
+	}
+}
+
 // Workflow Runs
 
 func (bs *schedulerService) CreateRun(ctx context.Context, params *stores.WorkflowRun) (*stores.WorkflowRun, error) {

@@ -69,6 +69,11 @@ type CloudCSVMongoBatchRequest struct {
 	Config          CloudCSVMongoBatchConfig `json:"config"` // Configuration for the cloud CSV and MongoDB source
 }
 
+type WorkflowQueryParams struct {
+	RunId      string
+	WorkflowId string
+}
+
 func MapRuleFromProto(protoRule *api.Rule) domain.Rule {
 	return domain.Rule{
 		Target:   protoRule.Target,
