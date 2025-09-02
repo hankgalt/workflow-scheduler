@@ -23,7 +23,8 @@ message Rule {
 message BatchCSVRequest {
     uint32 max_batches = 1;
     uint64 batch_size = 2;
-    map<string, Rule> mapping_rules = 3;
+    uint32 max_in_process_batches = 3;
+    map<string, Rule> mapping_rules = 4;
 }
 
 message RunResponse {

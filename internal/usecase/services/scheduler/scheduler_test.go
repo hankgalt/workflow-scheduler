@@ -45,9 +45,9 @@ func TestProcessLocalCSVToMongoWorkflow(t *testing.T) {
 	req := batch.LocalCSVMongoBatchRequest{
 		CSVBatchRequest: batch.CSVBatchRequest{
 			RequestConfig: &batch.RequestConfig{
-				MaxBatches:   2,
-				BatchSize:    400,
-				MappingRules: domain.BuildBusinessModelTransformRules(),
+				MaxInProcessBatches: 2,
+				BatchSize:           400,
+				MappingRules:        domain.BuildBusinessModelTransformRules(),
 			},
 		},
 		Config: reqCfg,
@@ -89,9 +89,9 @@ func TestProcessCloudCSVToMongoWorkflow(t *testing.T) {
 	req := batch.CloudCSVMongoBatchRequest{
 		CSVBatchRequest: batch.CSVBatchRequest{
 			RequestConfig: &batch.RequestConfig{
-				MaxBatches:   2,
-				BatchSize:    400,
-				MappingRules: domain.BuildBusinessModelTransformRules(),
+				MaxInProcessBatches: 2,
+				BatchSize:           400,
+				MappingRules:        domain.BuildBusinessModelTransformRules(),
 			},
 		},
 		Config: reqCfg,

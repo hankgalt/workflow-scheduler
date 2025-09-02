@@ -120,11 +120,11 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 		}
 
 		req := &btchwkfl.CloudCSVMongoBatchRequest{
-			JobID:      "cloud-csv-mongo-happy",
-			BatchSize:  400,
-			MaxBatches: 2,
-			Source:     sourceCfg,
-			Sink:       sinkCfg,
+			JobID:               "cloud-csv-mongo-happy",
+			BatchSize:           400,
+			MaxInProcessBatches: 2,
+			Source:              sourceCfg,
+			Sink:                sinkCfg,
 		}
 
 		s.env.SetOnActivityStartedListener(
@@ -251,11 +251,11 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 	}
 
 	req := &btchwkfl.LocalCSVMongoBatchRequest{
-		JobID:      "job-happy",
-		BatchSize:  400,
-		MaxBatches: 2,
-		Source:     sourceCfg,
-		Sink:       sinkCfg,
+		JobID:               "job-happy",
+		BatchSize:           400,
+		MaxInProcessBatches: 2,
+		Source:              sourceCfg,
+		Sink:                sinkCfg,
 	}
 
 	env.SetOnActivityStartedListener(
@@ -403,11 +403,11 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath_Server(t *testing.T) {
 	}
 
 	req := &btchwkfl.LocalCSVMongoBatchRequest{
-		JobID:      "process-batch-workflow-local-csv-mongo-server-happy",
-		BatchSize:  400,
-		MaxBatches: 2,
-		Source:     sourceCfg,
-		Sink:       sinkCfg,
+		JobID:               "process-batch-workflow-local-csv-mongo-server-happy",
+		BatchSize:           400,
+		MaxInProcessBatches: 2,
+		Source:              sourceCfg,
+		Sink:                sinkCfg,
 	}
 
 	// Create workflow execution context

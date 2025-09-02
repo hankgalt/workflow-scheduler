@@ -94,9 +94,9 @@ func testProcessCloudCSVMongoWorkflow(t *testing.T, client, nbClient api.Schedul
 
 	// Process cloud CSV to mongo workflow
 	resp, err := client.ProcessCloudCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
-		MaxBatches:   2,
-		BatchSize:    400,
-		MappingRules: map[string]*api.Rule{},
+		MaxInProcessBatches: 2,
+		BatchSize:           400,
+		MappingRules:        map[string]*api.Rule{},
 	})
 	require.NoError(t, err)
 
@@ -114,9 +114,9 @@ func testProcessLocalCSVMongoWorkflow(t *testing.T, client, nbClient api.Schedul
 
 	// Process local CSV to mongo workflow
 	resp, err := client.ProcessLocalCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
-		MaxBatches:   2,
-		BatchSize:    400,
-		MappingRules: BuildBusinessModelTransformRules(),
+		MaxInProcessBatches: 2,
+		BatchSize:           400,
+		MappingRules:        BuildBusinessModelTransformRules(),
 	})
 	require.NoError(t, err)
 

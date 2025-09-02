@@ -152,11 +152,12 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 	}
 
 	batReq := &btchwkfl.CloudCSVMongoBatchRequest{
-		JobID:      fmt.Sprintf("cloud-csv-mongo-%s", runId),
-		BatchSize:  req.CSVBatchRequest.BatchSize,
-		MaxBatches: req.CSVBatchRequest.MaxBatches,
-		Source:     sourceCfg,
-		Sink:       sinkCfg,
+		JobID:               fmt.Sprintf("cloud-csv-mongo-%s", runId),
+		BatchSize:           req.CSVBatchRequest.BatchSize,
+		MaxInProcessBatches: req.CSVBatchRequest.MaxInProcessBatches,
+		MaxBatches:          req.CSVBatchRequest.MaxBatches,
+		Source:              sourceCfg,
+		Sink:                sinkCfg,
 	}
 
 	// we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessCloudCSVMongo, &req)
@@ -220,11 +221,12 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 	}
 
 	batReq := &btchwkfl.LocalCSVMongoBatchRequest{
-		JobID:      fmt.Sprintf("local-csv-mongo-%s", runId),
-		BatchSize:  req.CSVBatchRequest.BatchSize,
-		MaxBatches: req.CSVBatchRequest.MaxBatches,
-		Source:     sourceCfg,
-		Sink:       sinkCfg,
+		JobID:               fmt.Sprintf("local-csv-mongo-%s", runId),
+		BatchSize:           req.CSVBatchRequest.BatchSize,
+		MaxBatches:          req.CSVBatchRequest.MaxBatches,
+		MaxInProcessBatches: req.CSVBatchRequest.MaxInProcessBatches,
+		Source:              sourceCfg,
+		Sink:                sinkCfg,
 	}
 
 	// we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessLocalCSVMongo, &req)
