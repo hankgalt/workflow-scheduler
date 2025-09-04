@@ -75,6 +75,80 @@ type WorkflowQueryParams struct {
 	WorkflowId string
 }
 
+func MapLocalCSVMongoBatchConfigFromProto(req *api.LocalCSVMongoConfig) LocalCSVMongoBatchConfig {
+	return LocalCSVMongoBatchConfig{
+		LocalCSVBatchConfig: LocalCSVBatchConfig{
+			Name: req.CsvConfig.Name,
+			Path: req.CsvConfig.Path,
+		},
+		MongoBatchConfig: MongoBatchConfig{
+			Protocol: req.MongoConfig.Protocol,
+			Host:     req.MongoConfig.Host,
+			User:     req.MongoConfig.User,
+			Pwd:      req.MongoConfig.Pwd,
+			Params:   req.MongoConfig.Params,
+			Name:     req.MongoConfig.Name,
+		},
+		Collection: req.Collection,
+	}
+}
+
+func MapProtoFromLocalCSVMongoBatchConfig(req LocalCSVMongoBatchConfig) *api.LocalCSVMongoConfig {
+	return &api.LocalCSVMongoConfig{
+		CsvConfig: &api.LocalCSVConfig{
+			Name: req.LocalCSVBatchConfig.Name,
+			Path: req.LocalCSVBatchConfig.Path,
+		},
+		MongoConfig: &api.MongoConfig{
+			Protocol: req.MongoBatchConfig.Protocol,
+			Host:     req.MongoBatchConfig.Host,
+			User:     req.MongoBatchConfig.User,
+			Pwd:      req.MongoBatchConfig.Pwd,
+			Params:   req.MongoBatchConfig.Params,
+			Name:     req.MongoBatchConfig.Name,
+		},
+		Collection: req.Collection,
+	}
+}
+
+func MapCloudCSVMongoBatchConfigFromProto(req *api.CloudCSVMongoConfig) CloudCSVMongoBatchConfig {
+	return CloudCSVMongoBatchConfig{
+		CloudCSVBatchConfig: CloudCSVBatchConfig{
+			Name:   req.CsvConfig.Name,
+			Path:   req.CsvConfig.Path,
+			Bucket: req.CsvConfig.Bucket,
+		},
+		MongoBatchConfig: MongoBatchConfig{
+			Protocol: req.MongoConfig.Protocol,
+			Host:     req.MongoConfig.Host,
+			User:     req.MongoConfig.User,
+			Pwd:      req.MongoConfig.Pwd,
+			Params:   req.MongoConfig.Params,
+			Name:     req.MongoConfig.Name,
+		},
+		Collection: req.Collection,
+	}
+}
+
+func MapProtoFromCloudCSVMongoBatchConfig(req CloudCSVMongoBatchConfig) *api.CloudCSVMongoConfig {
+	return &api.CloudCSVMongoConfig{
+		CsvConfig: &api.CloudCSVConfig{
+			Name:   req.CloudCSVBatchConfig.Name,
+			Path:   req.CloudCSVBatchConfig.Path,
+			Bucket: req.CloudCSVBatchConfig.Bucket,
+		},
+		MongoConfig: &api.MongoConfig{
+			Protocol: req.MongoBatchConfig.Protocol,
+			Host:     req.MongoBatchConfig.Host,
+			User:     req.MongoBatchConfig.User,
+			Pwd:      req.MongoBatchConfig.Pwd,
+			Params:   req.MongoBatchConfig.Params,
+			Name:     req.MongoBatchConfig.Name,
+		},
+		Collection: req.Collection,
+	}
+}
+
 func MapRuleFromProto(protoRule *api.Rule) domain.Rule {
 	return domain.Rule{
 		Target:   protoRule.Target,

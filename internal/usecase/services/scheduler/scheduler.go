@@ -123,7 +123,8 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 		TaskQueue:                btchwkfl.ApplicationName,
 		WorkflowExecutionTimeout: time.Duration(24 * time.Hour),
 		WorkflowTaskTimeout:      time.Minute * 5, // set to max, as there are decision tasks that'll take as long as max
-		WorkflowIDReusePolicy:    1,
+		WorkflowIDReusePolicy:    2,
+		WorkflowIDConflictPolicy: 1,
 	}
 
 	// Build source & sink configurations
@@ -195,7 +196,8 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 		TaskQueue:                btchwkfl.ApplicationName,
 		WorkflowExecutionTimeout: time.Duration(24 * time.Hour),
 		WorkflowTaskTimeout:      time.Minute * 5, // set to max, as there are decision tasks that'll take as long as max
-		WorkflowIDReusePolicy:    1,
+		WorkflowIDReusePolicy:    2,
+		WorkflowIDConflictPolicy: 1,
 	}
 
 	// Build source & sink configurations

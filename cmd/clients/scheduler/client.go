@@ -11,6 +11,8 @@ import (
 	"github.com/comfforts/logger"
 
 	api "github.com/hankgalt/workflow-scheduler/api/scheduler/v1"
+	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
+	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )
 
 const SERVICE_PORT = 65051
@@ -91,10 +93,20 @@ func testWorkflowCRUD(client api.SchedulerClient, l logger.Logger) error {
 func testProcessCloudCSVMongoWorkflow(client api.SchedulerClient, l logger.Logger) error {
 	ctx := context.Background()
 
+	// build cloud csv to mongo job config
+	jobCfg, err := envutils.BuildCloudCSVMongoBatchConfig()
+	if err != nil {
+		l.Error("error building cloud CSV to mongo job config", "error", err.Error())
+		return err
+	}
+
 	resp, err := client.ProcessCloudCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
-		MaxBatches:   2,
-		BatchSize:    400,
-		MappingRules: map[string]*api.Rule{},
+		MaxInProcessBatches: 2,
+		BatchSize:           400,
+		MappingRules:        envutils.BuildBusinessModelTransformRules(),
+		JobConfig: &api.BatchCSVRequest_CloudCsvMongoConfig{
+			CloudCsvMongoConfig: batch.MapProtoFromCloudCSVMongoBatchConfig(jobCfg),
+		},
 	})
 	if err != nil {
 		l.Error("error processing cloud CSV to mongo workflow", "error", err.Error())
@@ -109,10 +121,20 @@ func testProcessCloudCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 func testProcessLocalCSVMongoWorkflow(client api.SchedulerClient, l logger.Logger) error {
 	ctx := context.Background()
 
+	// build local csv to mongo job config
+	jobCfg, err := envutils.BuildLocalCSVMongoBatchConfig()
+	if err != nil {
+		l.Error("error building local CSV to mongo job config", "error", err.Error())
+		return err
+	}
+
 	resp, err := client.ProcessLocalCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
-		MaxBatches:   2,
-		BatchSize:    400,
-		MappingRules: map[string]*api.Rule{},
+		MaxInProcessBatches: 2,
+		BatchSize:           400,
+		MappingRules:        envutils.BuildBusinessModelTransformRules(),
+		JobConfig: &api.BatchCSVRequest_LocalCsvMongoConfig{
+			LocalCsvMongoConfig: batch.MapProtoFromLocalCSVMongoBatchConfig(jobCfg),
+		},
 	})
 	if err != nil {
 		l.Error("error processing local CSV to mongo workflow", "error", err.Error())

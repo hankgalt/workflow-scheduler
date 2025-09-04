@@ -113,7 +113,7 @@ func main() {
 	// Start the gRPC server in a goroutine
 	go func() {
 		l.Info("scheduler server will start listening for requests", "port", listener.Addr().String(), "service-info", server.GetServiceInfo())
-		if err := server.Serve(listener); err != nil && !errors.Is(err, net.ErrClosed) {
+		if err := server.Serve(listener); err != nil && !errors.Is(err, net.ErrClosed) && !errors.Is(err, grpc.ErrServerStopped) {
 			l.Error("scheduler server failed to start serving", "error", err.Error())
 		}
 	}()
@@ -134,6 +134,7 @@ func main() {
 		server.GracefulStop()
 		cancel()
 	}()
+	shutdownCtx = logger.WithLogger(shutdownCtx, l)
 
 	if err := ss.Close(shutdownCtx); err != nil {
 		l.Error("error shutting down scheduler service", "error", err.Error())

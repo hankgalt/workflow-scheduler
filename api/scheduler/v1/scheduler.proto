@@ -13,20 +13,6 @@ message WorkflowRun {
     string external_ref = 6;
 }
 
-message Rule {
-    string target = 1;
-    bool group = 2;
-    string new_field = 3;
-    int32 order = 4;
-}
-
-message BatchCSVRequest {
-    uint32 max_batches = 1;
-    uint64 batch_size = 2;
-    uint32 max_in_process_batches = 3;
-    map<string, Rule> mapping_rules = 4;
-}
-
 message RunResponse {
     bool ok = 1;
     WorkflowRun run = 2;
@@ -46,6 +32,56 @@ message DeleteRunRequest {
 
 message DeleteResponse {
     bool ok = 1;
+}
+
+message Rule {
+    string target = 1;
+    bool group = 2;
+    string new_field = 3;
+    int32 order = 4;
+}
+
+message LocalCSVConfig {
+    string name = 1;
+    string path = 2;
+}
+
+message CloudCSVConfig {
+    string name = 1;
+    string path = 2;
+    string bucket = 3;
+}
+
+message MongoConfig {
+    string protocol = 1;
+    string host = 2;
+    string user = 3;
+    string pwd = 4;
+    string params = 5;
+    string name = 6;
+}
+
+message LocalCSVMongoConfig {
+    LocalCSVConfig csv_config = 1;
+    MongoConfig mongo_config = 2;
+    string collection = 3;
+}
+
+message CloudCSVMongoConfig {
+    CloudCSVConfig csv_config = 1;
+    MongoConfig mongo_config = 2;
+    string collection = 3;
+}
+
+message BatchCSVRequest {
+    uint32 max_batches = 1;
+    uint64 batch_size = 2;
+    uint32 max_in_process_batches = 3;
+    map<string, Rule> mapping_rules = 4;
+    oneof job_config {
+        CloudCSVMongoConfig cloud_csv_mongo_config = 5;
+        LocalCSVMongoConfig local_csv_mongo_config = 6;
+    }
 }
 
 service Scheduler {

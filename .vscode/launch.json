@@ -13,7 +13,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "cmd/servers/scheduler/scheduler.go",
+            "program": "cmd/servers/scheduler/server.go",
             "envFile": "${workspaceFolder}/env/scheduler.env",
         },
         {
@@ -21,7 +21,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "cmd/servers/business/business.go",
+            "program": "cmd/servers/business/server.go",
             "envFile": "${workspaceFolder}/env/business.env",
         },
         {

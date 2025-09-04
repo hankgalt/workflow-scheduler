@@ -24,7 +24,6 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/domain/batch"
 	"github.com/hankgalt/workflow-scheduler/internal/domain/stores"
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/services/scheduler"
-	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )
 
 var _ api.SchedulerServer = (*grpcServer)(nil)
@@ -133,10 +132,7 @@ func (s *grpcServer) ProcessLocalCSVMongoWorkflow(ctx context.Context, req *api.
 		return nil, st.Err()
 	}
 
-	reqCfg, err := envutils.BuildLocalCSVMongoBatchConfig()
-	if err != nil {
-		return nil, err
-	}
+	jobCfg := batch.MapLocalCSVMongoBatchConfigFromProto(req.GetLocalCsvMongoConfig())
 
 	batReq := batch.LocalCSVMongoBatchRequest{
 		CSVBatchRequest: batch.CSVBatchRequest{
@@ -147,7 +143,7 @@ func (s *grpcServer) ProcessLocalCSVMongoWorkflow(ctx context.Context, req *api.
 				MappingRules:        batch.MapRulesFromProto(req.MappingRules),
 			},
 		},
-		Config: reqCfg,
+		Config: jobCfg,
 	}
 
 	resp, err := s.SchedulerService.ProcessLocalCSVToMongoWorkflow(ctx, batReq)
@@ -180,10 +176,7 @@ func (s *grpcServer) ProcessCloudCSVMongoWorkflow(ctx context.Context, req *api.
 		return nil, st.Err()
 	}
 
-	reqCfg, err := envutils.BuildCloudCSVMongoBatchConfig()
-	if err != nil {
-		return nil, err
-	}
+	jobCfg := batch.MapCloudCSVMongoBatchConfigFromProto(req.GetCloudCsvMongoConfig())
 
 	batReq := batch.CloudCSVMongoBatchRequest{
 		CSVBatchRequest: batch.CSVBatchRequest{
@@ -194,7 +187,7 @@ func (s *grpcServer) ProcessCloudCSVMongoWorkflow(ctx context.Context, req *api.
 				MappingRules:        batch.MapRulesFromProto(req.MappingRules),
 			},
 		},
-		Config: reqCfg,
+		Config: jobCfg,
 	}
 
 	resp, err := s.SchedulerService.ProcessCloudCSVToMongoWorkflow(ctx, batReq)

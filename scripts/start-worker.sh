@@ -4,7 +4,7 @@ if [ $# -gt 0 ]
     then
         TARGET="$1"
     else
-        echo " - worker target is required"
+        echo " worker target is required"
         exit 2
 fi
 

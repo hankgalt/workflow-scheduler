@@ -1,4 +1,3 @@
-.DS_Store
 vendor
 
 creds
@@ -6,15 +5,16 @@ certs
 logs
 policies
 
-go.sum
-
 data
-*/*/*.env
 env
 
+*/*/*.env
 */*/certs
 */*/creds
 */*/policies
 */*/logs
 
 */*/mongo-keyfile
+go.sum
+
+.DS_Store

@@ -1,0 +1,24 @@
+services:
+  scheduler-server:
+    image: scheduler-server:dev
+    platform: linux/arm64
+    container_name: scheduler-server
+    build:
+      context: ../..
+      dockerfile: cmd/servers/scheduler/Dockerfile
+      args:
+        GO_VERSION: "1.23.6"
+    ports:
+      - 65051:65051
+    env_file:
+      - ../../env/scheduler.env
+    volumes:
+      - ../../cmd/servers/scheduler/certs:/app/certs:ro
+      - ../../cmd/servers/scheduler/policies:/app/policies:ro
+    restart: unless-stopped
+    networks:
+      schenet:
+
+networks:
+  schenet:
+    external: true

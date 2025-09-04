@@ -1,8 +1,9 @@
-
+HEAD := $(shell git rev-parse --short HEAD)
+SCHED_VERSION := v0.0.12
 ######## - Proto - #######
 # build scheduler service proto
 build-proto:
-	@echo "building latest scheduler proto for ${HEAD}"
+	@echo "building latest scheduler proto"
 	scripts/build-proto.sh
 
 # setup proto tools
@@ -107,7 +108,7 @@ run-client:
 # start service from local repo
 start-server:
 	@echo "starting local $(TARGET) service"
-	scripts/start-server.sh TARGET=$(TARGET)
+	scripts/start-server.sh $(TARGET)
 
 test-server:
 	@echo " - testing $(TARGET) server"
@@ -116,12 +117,20 @@ test-server:
 # start scheduler service with docker compose
 start-service:
 	@echo "starting scheduler service"
-	docker-compose -f deploy/scheduler/docker-compose-sch.yml up -d
+	docker-compose -f deploy/scheduler/docker-compose-scheduler.yml up -d
 
 # stop docker composed scheduler service
 stop-service:
 	@echo "stopping scheduler service"
-	docker-compose -f deploy/scheduler/docker-compose-sch.yml down
+	docker-compose -f deploy/scheduler/docker-compose-scheduler.yml down
+
+######## - Infra - #######
+# start infrastructure components
+start-infra: network obs temporal mongo wait-30 register-domain wait-10
+	docker logs scheduler-mongo-setup
+
+# stop infrastructure components
+stop-infra: stop-temporal stop-mongo stop-obs
 
 ######## - Utilities - #######
 # wait for 10 seconds
@@ -132,8 +141,3 @@ wait-10:
 wait-30:
 	@echo "Waiting 30 seconds..."
 	sleep 30
-
-start-infra: network obs temporal mongo wait-30 register-domain wait-10
-	docker logs scheduler-mongo-setup
-
-stop-infra: stop-temporal stop-mongo stop-obs
