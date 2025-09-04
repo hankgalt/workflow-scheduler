@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Mongo environment variables
-ENV_FILE="./deploy/scheduler/mongo.env"
+ENV_FILE="./env/mongo.env"
 
 # Check if the environment file exists and source it
 if [ -f "${ENV_FILE}" ]; then

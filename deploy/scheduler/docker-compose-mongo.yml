@@ -28,7 +28,7 @@ services:
     container_name: scheduler-mongo
     restart: unless-stopped
     env_file:
-      - mongo.env
+      - ../../env/mongo.env
     volumes:
       - scheduler-mongo-data:/data/db
       - ./mongo-keyfile:/opt/keyfile/mongo-keyfile
@@ -47,7 +47,7 @@ services:
     container_name: scheduler-mongo-rep1
     restart: unless-stopped
     env_file:
-      - mongo.env
+      - ../../env/mongo.env
     volumes:
       - scheduler-mongo-rep1-data:/data/db
       - ./mongo-keyfile:/opt/keyfile/mongo-keyfile
@@ -64,7 +64,7 @@ services:
     container_name: scheduler-mongo-rep2
     restart: unless-stopped
     env_file:
-      - mongo.env
+      - ../../env/mongo.env
     volumes:
       - scheduler-mongo-rep2-data:/data/db
       - ./mongo-keyfile:/opt/keyfile/mongo-keyfile
@@ -84,7 +84,7 @@ services:
       - scheduler-mongo-rep1
       - scheduler-mongo-rep2
     env_file:
-      - mongo.env
+      - ../../env/mongo.env
     entrypoint: ["bash", "/scripts/mongo_setup.sh"]
     volumes:
       - ./mongo-setup.sh:/scripts/mongo_setup.sh:ro

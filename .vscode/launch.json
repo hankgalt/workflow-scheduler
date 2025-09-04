@@ -29,7 +29,8 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "cmd/clients/scheduler/client.go"
+            "program": "cmd/clients/scheduler/client.go",
+            "envFile": "${workspaceFolder}/env/client.scheduler.env",
         },
          {
             "name": "Launch Business Client",

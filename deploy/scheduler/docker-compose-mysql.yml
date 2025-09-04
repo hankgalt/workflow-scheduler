@@ -5,7 +5,7 @@ services:
     container_name: scheduler-mysql
     restart: always
     env_file:
-      - mysql.env
+      - ../../env/mysql.env
     ports:
       - '3306:3306'
     command: --default-authentication-plugin=mysql_native_password

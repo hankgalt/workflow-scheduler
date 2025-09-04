@@ -9,11 +9,13 @@
 ### Local setup
 - db
     - mongo:
-        - setup `mongo.env` in `deploy/scheduler` with following env vars:
+        - setup `mongo.env` in `env` with following env vars:
             ```MONGO_HOST, MONGO_REPLICA_SET_NAME,
             MONGO_INITDB_ROOT_USERNAME, MONGO_INITDB_ROOT_PASSWORD,
             MONGO_ADMIN_USER, MONGO_ADMIN_PASS,
             MONGO_APP_DB, MONGO_APP_USER, MONGO_APP_PASS
+        - generate `mongo-keyfile` in `deploy/scheduler`
+            - `openssl rand -base64 756 > mongo-keyfile && chmod 400 mongo-keyfile`
         - `make start-mongo`
     - mysql:
         - setup db scripts
@@ -52,7 +54,7 @@
         - obs.env (observability)
         ```METRICS_PORT, OTEL_ENDPOINT```
     - `make start-worker TARGET=[batch]`
-    - `make start-server TARGET=[scheduler,business]`
+    - `make start-server TARGET=[scheduler,business]` or `make start-service` to start scheduler server from docker image
 
 ### Testing
 - `make run-client TARGET=[scheduler,business]` or `make test-server TARGET=[scheduler,business]`
