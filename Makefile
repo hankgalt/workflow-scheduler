@@ -52,7 +52,7 @@ start-mongo: network mongo
 # stop mongo cluster
 stop-mongo:
 	@echo "Stopping MongoDB cluster..."
-	@set -a; . deploy/scheduler/mongo.env; set +a; docker-compose -f deploy/scheduler/docker-compose-mongo.yml down -v 
+	@set -a; . env/mongo.env; set +a; docker-compose -f deploy/scheduler/docker-compose-mongo.yml down -v 
 
 ######## - Temporal - #######
 # start Temporal server
@@ -77,6 +77,16 @@ register-domain:
 # start Temporal worker
 start-worker:
 	scripts/start-worker.sh ${TARGET}
+
+# start batch worker with docker compose
+start-batch-worker:
+	@echo "starting batch worker"
+	docker-compose -f deploy/scheduler/docker-compose-batch.yml up -d
+
+# stop docker composed batch worker
+stop-batch-worker:
+	@echo "stopping batch worker"
+	docker-compose -f deploy/scheduler/docker-compose-batch.yml down
 
 # start Temporal dev server for local development & testing
 # UI is accessible at http://localhost:8233
@@ -115,12 +125,12 @@ test-server:
 	cd cmd/scheduler/client && grpcurl -key certs/client-key.pem -cert certs/client.pem -cacert certs/ca.pem localhost:65051 list scheduler.v1.Scheduler
 
 # start scheduler service with docker compose
-start-service:
+start-scheduler:
 	@echo "starting scheduler service"
 	docker-compose -f deploy/scheduler/docker-compose-scheduler.yml up -d
 
 # stop docker composed scheduler service
-stop-service:
+stop-scheduler:
 	@echo "stopping scheduler service"
 	docker-compose -f deploy/scheduler/docker-compose-scheduler.yml down
 
