@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"cloud.google.com/go/storage"
@@ -92,18 +91,17 @@ func (s *cloudCSVSource) Next(
 	ctx context.Context,
 	offset uint64,
 	size uint,
-) (*domain.BatchProcess[domain.CSVRow], error) {
+) (*domain.BatchProcess, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("CloudCSVSource:Next - error getting logger from context: %w", err)
+	}
 	// If size is 0 or negative, return an empty batch.
 	if size <= 0 {
 		return nil, ErrLocalCSVSizeInvalid
 	}
 
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("CloudCSVSource:Next - error getting logger from context: %w", err)
-	}
-
-	bp := &domain.BatchProcess[domain.CSVRow]{
+	bp := &domain.BatchProcess{
 		Records:     nil,
 		NextOffset:  offset,
 		StartOffset: offset,
@@ -128,7 +126,7 @@ func (s *cloudCSVSource) Next(
 	}
 	defer func() {
 		if err := rc.Close(); err != nil {
-			log.Printf("cloud csv: error closing reader: %v", err)
+			l.Error("cloud csv: error closing reader", "error", err.Error())
 		}
 	}()
 
@@ -183,15 +181,15 @@ func (s *cloudCSVSource) NextStream(
 	ctx context.Context,
 	offset uint64,
 	size uint,
-) (<-chan *domain.BatchRecord[domain.CSVRow], error) {
-	// If size is 0 or negative, return an empty batch.
-	if size <= 0 {
-		return nil, ErrCloudCSVSizeInvalid
-	}
-
+) (<-chan *domain.BatchRecord, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("CloudCSVSource:NextStream - error getting logger from context: %w", err)
+	}
+
+	// If size is 0 or negative, return an empty batch.
+	if size <= 0 {
+		return nil, ErrCloudCSVSizeInvalid
 	}
 
 	// Ensure client is initialized
@@ -212,7 +210,7 @@ func (s *cloudCSVSource) NextStream(
 	}
 	defer func() {
 		if err := rc.Close(); err != nil {
-			log.Printf("cloud csv: error closing reader: %v", err)
+			l.Error("cloud csv: error closing reader", "error", err.Error())
 		}
 	}()
 
@@ -238,10 +236,10 @@ func (s *cloudCSVSource) NextStream(
 		done = true
 	}
 
-	resStream := make(chan *domain.BatchRecord[domain.CSVRow])
+	resStream := make(chan *domain.BatchRecord)
 
 	if done {
-		resStream <- &domain.BatchRecord[domain.CSVRow]{
+		resStream <- &domain.BatchRecord{
 			Start: offset,
 			End:   offset,
 			Done:  done,
@@ -285,6 +283,10 @@ func (c CloudCSVConfig) Name() string { return CloudCSVSource }
 // BuildSource builds a cloud CSV source from the config.
 func (c CloudCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.CSVRow], error) {
 	// build s3/gcs/azure client from c.Provider, bucket, key
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("CloudCSVConfig:BuildSource - error getting logger from context: %w", err)
+	}
 
 	if c.Path == "" {
 		return nil, ErrCloudCSVObjectPathRequired
@@ -321,7 +323,7 @@ func (c CloudCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.C
 	if _, err = obj.Attrs(ctx); err != nil {
 		//
 		if err := client.Close(); err != nil {
-			log.Printf("cloud csv: error closing client: %v", err)
+			l.Error("cloud csv: error closing client", "error", err.Error())
 		}
 		return nil, fmt.Errorf("cloud csv: object does not exist or error getting attributes: %w", err)
 	}
@@ -332,7 +334,7 @@ func (c CloudCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.C
 	}
 	defer func() {
 		if err := rc.Close(); err != nil {
-			log.Printf("cloud csv: error closing reader: %v", err)
+			l.Error("cloud csv: error closing reader", "error", err.Error())
 		}
 	}()
 

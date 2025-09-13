@@ -15,7 +15,7 @@ type noopSink[T any] struct{}
 func (s *noopSink[T]) Name() string { return NoopSink }
 
 // Write does nothing and returns the count of records as written.
-func (s *noopSink[T]) Write(ctx context.Context, b *domain.BatchProcess[T]) (*domain.BatchProcess[T], error) {
+func (s *noopSink[T]) Write(ctx context.Context, b *domain.BatchProcess) (*domain.BatchProcess, error) {
 	for _, rec := range b.Records {
 		rec.BatchResult.Result = rec.Data // echo the record as result
 	}

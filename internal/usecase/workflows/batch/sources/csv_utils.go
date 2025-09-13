@@ -21,7 +21,7 @@ func ReadCSVBatch(
 	delimiter rune,
 	hasHeader bool,
 	transFunc domain.TransformerFunc,
-) ([]*domain.BatchRecord[domain.CSVRow], uint64, error) {
+) ([]*domain.BatchRecord, uint64, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return nil, 0, err
@@ -55,7 +55,7 @@ func ReadCSVBatch(
 	// Initialize read count and records slice
 	readCount := 0
 
-	records := []*domain.BatchRecord[domain.CSVRow]{}
+	records := []*domain.BatchRecord{}
 
 	// Read records from the CSV reader
 	for {
@@ -75,7 +75,7 @@ func ReadCSVBatch(
 			cleanedStr := strutils.CleanRecord(string(data[nextOffset:csvReader.InputOffset()]))
 			if record, err := strutils.ReadSingleRecord(cleanedStr); err != nil {
 				l.Error("error reading record from csv", "error", err.Error())
-				records = append(records, &domain.BatchRecord[domain.CSVRow]{
+				records = append(records, &domain.BatchRecord{
 					Start: uint64(nextOffset),
 					End:   uint64(csvReader.InputOffset()),
 					BatchResult: domain.BatchResult{
@@ -124,7 +124,7 @@ func ReadCSVBatch(
 		}
 
 		// Create a BatchRecord for the current csv record
-		br := domain.BatchRecord[domain.CSVRow]{
+		br := domain.BatchRecord{
 			Start: uint64(startIndex),
 			End:   uint64(csvReader.InputOffset()),
 			Data:  row,
@@ -155,7 +155,7 @@ func ReadCSVStream(
 	delimiter rune,
 	hasHeader bool,
 	transFunc domain.TransformerFunc,
-	resStream chan<- *domain.BatchRecord[domain.CSVRow],
+	resStream chan<- *domain.BatchRecord,
 ) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
@@ -209,7 +209,7 @@ func ReadCSVStream(
 			record, err := strutils.ReadSingleRecord(cleanedStr)
 			if err != nil {
 				l.Error("error reading record from csv", "start", nextOffset, "end", csvReader.InputOffset(), "error", err.Error())
-				resStream <- &domain.BatchRecord[domain.CSVRow]{
+				resStream <- &domain.BatchRecord{
 					Start: uint64(nextOffset),
 					End:   uint64(csvReader.InputOffset()),
 					BatchResult: domain.BatchResult{
@@ -267,7 +267,7 @@ func ReadCSVStream(
 			row[k] = st
 		}
 
-		resStream <- &domain.BatchRecord[domain.CSVRow]{
+		resStream <- &domain.BatchRecord{
 			Start: uint64(startIndex),
 			End:   uint64(csvReader.InputOffset()),
 			Data:  row,

@@ -20,6 +20,7 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/repo/daud"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
 	bsinks "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sinks"
+	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/snapshotters"
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sources"
 	btchutils "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/utils"
 )
@@ -152,17 +153,24 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 		Collection: req.Config.Collection,
 	}
 
-	batReq := &btchwkfl.CloudCSVMongoBatchRequest{
-		JobID:               fmt.Sprintf("cloud-csv-mongo-%s", runId),
+	// Snapshotter - cloud
+	ssCfg := snapshotters.CloudSnapshotterConfig{
+		Path:   fCfg.Path,
+		Bucket: fCfg.Bucket,
+	}
+
+	batReq := &btchwkfl.CloudCSVMongoCloudBatchRequest{
+		JobID:               fmt.Sprintf("cloud-csv-mongo-cloud-%s", runId),
 		BatchSize:           req.CSVBatchRequest.BatchSize,
 		MaxInProcessBatches: req.CSVBatchRequest.MaxInProcessBatches,
 		MaxBatches:          req.CSVBatchRequest.MaxBatches,
 		Source:              sourceCfg,
 		Sink:                sinkCfg,
+		Snapshotter:         ssCfg,
 	}
 
 	// we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessCloudCSVMongo, &req)
-	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessCloudCSVMongoWorkflowAlias, &batReq)
+	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessCloudCSVMongoNoopWorkflowAlias, &batReq)
 	if err != nil {
 		l.Error("error starting workflow", "error", err.Error())
 		return nil, err
@@ -222,17 +230,54 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 		Collection: req.Config.Collection,
 	}
 
-	batReq := &btchwkfl.LocalCSVMongoBatchRequest{
-		JobID:               fmt.Sprintf("local-csv-mongo-%s", runId),
+	// Snapshotter - local file
+	ssCfg := snapshotters.LocalSnapshotterConfig{
+		Path: fCfg.Path,
+	}
+
+	batReq := &btchwkfl.LocalCSVMongoLocalBatchRequest{
+		JobID:               fmt.Sprintf("local-csv-mongo-local-%s", runId),
 		BatchSize:           req.CSVBatchRequest.BatchSize,
 		MaxBatches:          req.CSVBatchRequest.MaxBatches,
 		MaxInProcessBatches: req.CSVBatchRequest.MaxInProcessBatches,
 		Source:              sourceCfg,
 		Sink:                sinkCfg,
+		Snapshotter:         ssCfg,
+		Policies: map[string]domain.RetryPolicySpec{
+			domain.GetFetchActivityName(sourceCfg): {
+				MaximumAttempts:    3,
+				InitialInterval:    100 * time.Millisecond,
+				BackoffCoefficient: 2.0,
+				MaximumInterval:    5 * time.Second,
+				NonRetryableErrorTypes: []string{
+					sources.ERR_LOCAL_CSV_PATH_REQUIRED,
+					sources.ERR_LOCAL_CSV_FILE_OPEN,
+					sources.ERR_LOCAL_CSV_SIZE_INVALID,
+					sources.ERR_LOCAL_CSV_TRANSFORMER_NIL,
+				},
+			},
+			domain.GetWriteActivityName(sinkCfg): {
+				MaximumAttempts:    3,
+				InitialInterval:    200 * time.Millisecond,
+				BackoffCoefficient: 1.5,
+				MaximumInterval:    10 * time.Second,
+				NonRetryableErrorTypes: []string{
+					bsinks.ERR_MONGO_SINK_DB_PROTOCOL,
+					bsinks.ERR_MONGO_SINK_DB_HOST,
+					bsinks.ERR_MONGO_SINK_DB_NAME,
+					bsinks.ERR_MONGO_SINK_DB_USER,
+					bsinks.ERR_MONGO_SINK_DB_PWD,
+					bsinks.ERR_MONGO_SINK_NIL,
+					bsinks.ERR_MONGO_SINK_NIL_CLIENT,
+					bsinks.ERR_MONGO_SINK_EMPTY_COLL,
+					bsinks.ERR_MONGO_SINK_EMPTY_DATA,
+				},
+			},
+		},
 	}
 
 	// we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessLocalCSVMongo, &req)
-	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessLocalCSVMongoWorkflowAlias, &batReq)
+	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessLocalCSVMongoNoopWorkflowAlias, &batReq)
 	if err != nil {
 		l.Error("SchedulerService:ProcessLocalCSVToMongoWorkflow - error starting workflow", "error", err.Error())
 		return nil, err

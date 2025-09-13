@@ -21,6 +21,7 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/infra/temporal"
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
 	bsinks "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sinks"
+	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/snapshotters"
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sources"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )
@@ -136,15 +137,15 @@ func registerBatchWorkflow(worker worker.Worker) {
 	// register batch task processing workflows
 	// Register the workflow
 	worker.RegisterWorkflowWithOptions(
-		bo.ProcessBatchWorkflow[domain.CSVRow, sources.LocalCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow]],
+		bo.ProcessBatchWorkflow[domain.CSVRow, sources.LocalCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow], snapshotters.LocalSnapshotterConfig],
 		workflow.RegisterOptions{
-			Name: btchwkfl.ProcessLocalCSVMongoWorkflowAlias,
+			Name: btchwkfl.ProcessLocalCSVMongoLocalWorkflowAlias,
 		},
 	)
 	worker.RegisterWorkflowWithOptions(
-		bo.ProcessBatchWorkflow[domain.CSVRow, sources.CloudCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow]],
+		bo.ProcessBatchWorkflow[domain.CSVRow, sources.CloudCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow], snapshotters.CloudSnapshotterConfig],
 		workflow.RegisterOptions{
-			Name: btchwkfl.ProcessCloudCSVMongoWorkflowAlias,
+			Name: btchwkfl.ProcessCloudCSVMongoCloudWorkflowAlias,
 		},
 	)
 
@@ -152,25 +153,37 @@ func registerBatchWorkflow(worker worker.Worker) {
 	worker.RegisterActivityWithOptions(
 		bo.FetchNextActivity[domain.CSVRow, sources.LocalCSVConfig],
 		activity.RegisterOptions{
-			Name: btchwkfl.FetchNextLocalCSVSourceBatchAlias,
+			Name: btchwkfl.FetchNextLocalCSVSourceBatchActivityAlias,
 		},
 	)
 	worker.RegisterActivityWithOptions(
 		bo.FetchNextActivity[domain.CSVRow, sources.CloudCSVConfig],
 		activity.RegisterOptions{
-			Name: btchwkfl.FetchNextCloudCSVSourceBatchAlias,
+			Name: btchwkfl.FetchNextCloudCSVSourceBatchActivityAlias,
 		},
 	)
 	worker.RegisterActivityWithOptions(
 		bo.WriteActivity[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]],
 		activity.RegisterOptions{
-			Name: btchwkfl.WriteNextMongoSinkBatchAlias,
+			Name: btchwkfl.WriteNextMongoSinkBatchActivityAlias,
 		},
 	)
 	worker.RegisterActivityWithOptions(
 		bo.WriteActivity[domain.CSVRow, bsinks.NoopSinkConfig[domain.CSVRow]],
 		activity.RegisterOptions{
-			Name: btchwkfl.WriteNextNoopSinkBatchAlias,
+			Name: btchwkfl.WriteNextNoopSinkBatchActivityAlias,
+		},
+	)
+	worker.RegisterActivityWithOptions(
+		bo.SnapshotActivity[snapshotters.LocalSnapshotterConfig],
+		activity.RegisterOptions{
+			Name: btchwkfl.SnapshotLocalBatchActivityAlias,
+		},
+	)
+	worker.RegisterActivityWithOptions(
+		bo.SnapshotActivity[snapshotters.CloudSnapshotterConfig],
+		activity.RegisterOptions{
+			Name: btchwkfl.SnapshotCloudBatchActivityAlias,
 		},
 	)
 }

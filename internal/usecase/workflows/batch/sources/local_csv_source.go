@@ -27,6 +27,7 @@ var (
 	ErrLocalCSVPathRequired = errors.New(ERR_LOCAL_CSV_PATH_REQUIRED)
 	ErrLocalCSVFileOpen     = errors.New(ERR_LOCAL_CSV_FILE_OPEN)
 	ErrLocalCSVSizeInvalid  = errors.New(ERR_LOCAL_CSV_SIZE_INVALID)
+	ErrNilTransformer       = errors.New(ERR_LOCAL_CSV_TRANSFORMER_NIL)
 )
 
 // Local CSV source.
@@ -48,7 +49,7 @@ func (s *localCSVSource) Close(ctx context.Context) error {
 
 // Next reads the next batch of CSV rows from the local file.
 // It reads from the file at the specified offset and returns a batch of CSVRow.
-func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*domain.BatchProcess[domain.CSVRow], error) {
+func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*domain.BatchProcess, error) {
 	// If size is 0 or negative, return an empty batch.
 	if size <= 0 {
 		return nil, ErrLocalCSVSizeInvalid
@@ -61,10 +62,10 @@ func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*d
 
 	// If headers are enabled but transformer function is not set.
 	if s.hasHeader && s.transFunc == nil {
-		return nil, fmt.Errorf("transformer function is not set for local CSV source with headers")
+		return nil, ErrNilTransformer
 	}
 
-	bp := &domain.BatchProcess[domain.CSVRow]{
+	bp := &domain.BatchProcess{
 		Records:     nil,
 		NextOffset:  offset,
 		StartOffset: offset,
@@ -75,7 +76,7 @@ func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*d
 	f, err := os.Open(s.path)
 	if err != nil {
 		l.Error("error opening local CSV file", "path", s.path, "error", err.Error())
-		return nil, fmt.Errorf("%w: %v", ErrLocalCSVFileOpen, err)
+		return nil, ErrLocalCSVFileOpen
 	}
 	defer f.Close()
 
@@ -123,7 +124,7 @@ func (s *localCSVSource) NextStream(
 	ctx context.Context,
 	offset uint64,
 	size uint,
-) (<-chan *domain.BatchRecord[domain.CSVRow], error) {
+) (<-chan *domain.BatchRecord, error) {
 	// If size is 0 or negative, return an empty batch.
 	if size <= 0 {
 		return nil, ErrLocalCSVSizeInvalid
@@ -159,10 +160,10 @@ func (s *localCSVSource) NextStream(
 		done = true
 	}
 
-	resStream := make(chan *domain.BatchRecord[domain.CSVRow])
+	resStream := make(chan *domain.BatchRecord)
 
 	if done {
-		resStream <- &domain.BatchRecord[domain.CSVRow]{
+		resStream <- &domain.BatchRecord{
 			Start: offset,
 			End:   offset,
 			Done:  done,
@@ -203,6 +204,11 @@ func (c LocalCSVConfig) Name() string { return LocalCSVSource }
 // BuildSource builds a local CSV source from the config.
 // It reads headers if HasHeader is true and caches it.
 func (c LocalCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.CSVRow], error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("LocalCSVConfig:BuildSource - error getting logger from context: %w", err)
+	}
+
 	if c.Path == "" {
 		return nil, ErrLocalCSVPathRequired
 	}
@@ -222,7 +228,8 @@ func (c LocalCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.C
 	if c.HasHeader {
 		f, err := os.Open(c.Path)
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrLocalCSVFileOpen, err)
+			l.Error("error opening local CSV file", "path", c.Path, "error", err.Error())
+			return nil, ErrLocalCSVFileOpen
 		}
 		defer f.Close()
 

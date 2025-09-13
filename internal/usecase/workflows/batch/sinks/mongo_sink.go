@@ -14,29 +14,27 @@ import (
 const MongoSink = "mongo-sink"
 
 const (
-	ERR_MONGO_SINK_NIL           = "mongo sink is nil"
-	ERR_MONGO_SINK_NIL_CLIENT    = "mongo sink: nil client"
-	ERR_MONGO_SINK_EMPTY_COLL    = "mongo sink: empty collection"
-	ERR_MONGO_SINK_EMPTY_DATA    = "mongo sink: empty data, nothing to write"
-	ERR_MONGO_SINK_DB_PROTOCOL   = "mongo sink: DB protocol is required"
-	ERR_MONGO_SINK_DB_HOST       = "mongo sink: DB host is required"
-	ERR_MONGO_SINK_DB_NAME       = "mongo sink: DB name is required"
-	ERR_MONGO_SINK_DB_USER       = "mongo sink: DB user is required"
-	ERR_MONGO_SINK_DB_PWD        = "mongo sink: DB password is required"
-	ERR_MONGO_SINK_COLL_REQUIRED = "mongo sink: collection name is required"
+	ERR_MONGO_SINK_NIL         = "mongo sink is nil"
+	ERR_MONGO_SINK_NIL_CLIENT  = "mongo sink: nil client"
+	ERR_MONGO_SINK_EMPTY_COLL  = "mongo sink: empty collection"
+	ERR_MONGO_SINK_EMPTY_DATA  = "mongo sink: empty data, nothing to write"
+	ERR_MONGO_SINK_DB_PROTOCOL = "mongo sink: DB protocol is required"
+	ERR_MONGO_SINK_DB_HOST     = "mongo sink: DB host is required"
+	ERR_MONGO_SINK_DB_NAME     = "mongo sink: DB name is required"
+	ERR_MONGO_SINK_DB_USER     = "mongo sink: DB user is required"
+	ERR_MONGO_SINK_DB_PWD      = "mongo sink: DB password is required"
 )
 
 var (
-	ErrMongoSinkNil          = errors.New(ERR_MONGO_SINK_NIL)
-	ErrMongoSinkNilClient    = errors.New(ERR_MONGO_SINK_NIL_CLIENT)
-	ErrMongoSinkEmptyColl    = errors.New(ERR_MONGO_SINK_EMPTY_COLL)
-	ErrMongoSinkEmptyData    = errors.New(ERR_MONGO_SINK_EMPTY_DATA)
-	ErrMongoSinkDBProtocol   = errors.New(ERR_MONGO_SINK_DB_PROTOCOL)
-	ErrMongoSinkDBHost       = errors.New(ERR_MONGO_SINK_DB_HOST)
-	ErrMongoSinkDBName       = errors.New(ERR_MONGO_SINK_DB_NAME)
-	ErrMongoSinkDBUser       = errors.New(ERR_MONGO_SINK_DB_USER)
-	ErrMongoSinkDBPwd        = errors.New(ERR_MONGO_SINK_DB_PWD)
-	ErrMongoSinkCollRequired = errors.New(ERR_MONGO_SINK_COLL_REQUIRED)
+	ErrMongoSinkNil        = errors.New(ERR_MONGO_SINK_NIL)
+	ErrMongoSinkNilClient  = errors.New(ERR_MONGO_SINK_NIL_CLIENT)
+	ErrMongoSinkEmptyColl  = errors.New(ERR_MONGO_SINK_EMPTY_COLL)
+	ErrMongoSinkEmptyData  = errors.New(ERR_MONGO_SINK_EMPTY_DATA)
+	ErrMongoSinkDBProtocol = errors.New(ERR_MONGO_SINK_DB_PROTOCOL)
+	ErrMongoSinkDBHost     = errors.New(ERR_MONGO_SINK_DB_HOST)
+	ErrMongoSinkDBName     = errors.New(ERR_MONGO_SINK_DB_NAME)
+	ErrMongoSinkDBUser     = errors.New(ERR_MONGO_SINK_DB_USER)
+	ErrMongoSinkDBPwd      = errors.New(ERR_MONGO_SINK_DB_PWD)
 )
 
 // MongoDocWriter is the tiny capability we need.
@@ -55,7 +53,7 @@ type mongoSink[T any] struct {
 func (s *mongoSink[T]) Name() string { return MongoSink }
 
 // Write writes the batch of records to MongoDB.
-func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess[T]) (*domain.BatchProcess[T], error) {
+func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess) (*domain.BatchProcess, error) {
 	if s == nil {
 		return b, ErrMongoSinkNil
 	}
@@ -185,7 +183,7 @@ func (c MongoSinkConfig[T]) BuildSink(ctx context.Context) (domain.Sink[T], erro
 		return nil, ErrMongoSinkDBPwd
 	}
 	if c.Collection == "" {
-		return nil, ErrMongoSinkCollRequired
+		return nil, ErrMongoSinkEmptyColl
 	}
 
 	mCfg := mongostore.NewMongoDBConfig(
