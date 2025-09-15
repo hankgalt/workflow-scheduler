@@ -1,12 +1,17 @@
 package string_test
 
 import (
+	"context"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 	"unicode"
 
+	"github.com/comfforts/logger"
 	"github.com/stretchr/testify/require"
 
+	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
 
@@ -97,4 +102,28 @@ func TestCleanAlphaNumericsArr(t *testing.T) {
 		require.NotContains(t, str, "$", "Cleaned string should not contain '$'")
 	}
 	t.Log("TestCleanAlphaNumericsArr done.")
+}
+
+func TestReadSingleRecordFromFile(t *testing.T) {
+	l := logger.GetSlogLogger()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	ctx = logger.WithLogger(ctx, l)
+
+	fileName := envutils.BuildFileName()
+	filePath, err := envutils.BuildFilePath()
+	require.NoError(t, err, "error building csv file path for test")
+
+	path := filepath.Join(filePath, fileName)
+
+	offset := int64(1649801)
+
+	record, err := strutils.ReadSingleRecordFromFile(ctx, path, offset)
+	require.NoError(t, err)
+	require.NotNil(t, record)
+	l.Debug("Read record", "record", record)
+
+	// Process the record as needed
+	rec := strutils.CleanAlphaNumericsArr(record, []rune{'.', '-', '_', '#', '&', '@'})
+	l.Debug("Cleaned record", "record", rec)
 }

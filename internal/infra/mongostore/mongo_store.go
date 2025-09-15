@@ -18,13 +18,7 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 )
 
-// type MongoStore interface {
-// 	Store() *mongo.Database
-// 	Close(ctx context.Context) error
-// 	Stats(ctx context.Context, db string)
-// 	EnsureIndexes(ctx context.Context, collectionName string, indexes []mongo.IndexModel) error
-// 	AddCollectionDoc(ctx context.Context, collectionName string, doc map[string]any) (string, error)
-// }
+const DEFAULT_MONGO_POOL_SIZE = 10
 
 type MongoStore struct {
 	client *mongo.Client
@@ -49,8 +43,8 @@ func NewMongoStore(ctx context.Context, cfg infra.StoreConfig) (*MongoStore, err
 	)
 	opts := &MongoStoreOption{
 		ClientOption: infra.DefaultClientOption(),
-		DBName:       cfg.Name(), // Database name is required for MongoDB operations
-		PoolSize:     10,         // Default pool size, can be adjusted based on application needs
+		DBName:       cfg.Name(),              // Database name is required for MongoDB operations
+		PoolSize:     DEFAULT_MONGO_POOL_SIZE, // Default pool size, can be adjusted based on application needs
 	}
 
 	if opts.DBName == "" {

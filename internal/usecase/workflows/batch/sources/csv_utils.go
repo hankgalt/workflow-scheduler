@@ -112,7 +112,35 @@ func ReadCSVBatch(
 		}
 
 		// Clean record & create a CSVRow from the transformed record
-		rec = strutils.CleanAlphaNumericsArr(rec, []rune{'.', '-', '_', '#', '&', '@'})
+		if len(rec) > 0 {
+			rec = strutils.CleanAlphaNumericsArr(rec, []rune{'.', '-', '_', '#', '&', '@'})
+		}
+
+		if len(rec) == 0 {
+			// Create a BatchRecord for the current csv record
+			br := domain.BatchRecord{
+				Start: uint64(startIndex),
+				End:   uint64(csvReader.InputOffset()),
+				BatchResult: domain.BatchResult{
+					Error: "empty record",
+				},
+			}
+
+			// Update records slice & read count
+			records = append(records, &br)
+
+			// Update startIndex to the next record's offset
+			startIndex = nextOffset
+
+			// update nextOffset to the next record's offset
+			nextOffset = csvReader.InputOffset()
+
+			// update row read count
+			readCount++
+
+			continue
+		}
+
 		res := transFunc(rec)
 		row := domain.CSVRow{}
 		for k, v := range res {

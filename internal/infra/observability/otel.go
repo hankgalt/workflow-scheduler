@@ -2,10 +2,10 @@ package observability
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 
+	"github.com/comfforts/logger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -35,9 +35,12 @@ func Init(ctx context.Context, opt InitOptions) (shutdown func(context.Context) 
 		),
 	)
 
+	l := logger.GetSlogMultiLogger("data")
+
 	// --- Metrics: Prometheus exporter (scrape /metrics) ---
 	promExp, err := prometheus.New()
 	if err != nil {
+		l.Error("failed to create Prometheus exporter", "error", err.Error())
 		return nil, err
 	}
 	mp := sdkmetric.NewMeterProvider(
@@ -57,9 +60,9 @@ func Init(ctx context.Context, opt InitOptions) (shutdown func(context.Context) 
 
 	go func() {
 		http.Handle(opt.MetricsHandle, promhttp.Handler())
-		log.Printf("Prometheus metrics on %s%s", opt.MetricsAddr, opt.MetricsHandle)
+		l.Info("Prometheus metrics on %s%s", "address", opt.MetricsAddr, "handle", opt.MetricsHandle)
 		if err := http.ListenAndServe(opt.MetricsAddr, nil); err != nil {
-			log.Printf("metrics server error: %v", err)
+			l.Error("metrics server error", "error", err.Error())
 		}
 	}()
 

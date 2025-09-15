@@ -167,10 +167,46 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 		Source:              sourceCfg,
 		Sink:                sinkCfg,
 		Snapshotter:         ssCfg,
+		Policies: map[string]domain.RetryPolicySpec{
+			domain.GetFetchActivityName(sourceCfg): {
+				MaximumAttempts:    3,
+				InitialInterval:    100 * time.Millisecond,
+				BackoffCoefficient: 2.0,
+				MaximumInterval:    5 * time.Second,
+				NonRetryableErrorTypes: []string{
+					sources.ERR_CLOUD_CSV_READER_NIL,
+					sources.ERR_CLOUD_CSV_CLIENT_NIL,
+					sources.ERR_CLOUD_CSV_OBJECT_PATH_REQUIRED,
+					sources.ERR_CLOUD_CSV_BUCKET_REQUIRED,
+					sources.ERR_CLOUD_CSV_UNSUPPORTED_PROVIDER,
+					sources.ERR_CLOUD_CSV_MISSING_CREDENTIALS,
+					sources.ERR_CLOUD_CSV_SIZE_INVALID,
+				},
+			},
+			domain.GetWriteActivityName(sinkCfg): {
+				MaximumAttempts:    3,
+				InitialInterval:    200 * time.Millisecond,
+				BackoffCoefficient: 1.5,
+				MaximumInterval:    10 * time.Second,
+				NonRetryableErrorTypes: []string{
+					bsinks.ERR_MONGO_SINK_DB_PROTOCOL,
+					bsinks.ERR_MONGO_SINK_DB_HOST,
+					bsinks.ERR_MONGO_SINK_DB_NAME,
+					bsinks.ERR_MONGO_SINK_DB_USER,
+					bsinks.ERR_MONGO_SINK_DB_PWD,
+					bsinks.ERR_MONGO_SINK_NIL,
+					bsinks.ERR_MONGO_SINK_NIL_CLIENT,
+					bsinks.ERR_MONGO_SINK_EMPTY_COLL,
+					bsinks.ERR_MONGO_SINK_EMPTY_DATA,
+					// mongostore.ERR_MONGO_CLIENT_CONN,
+					mongostore.ERR_DECODING_OBJECT_ID,
+				},
+			},
+		},
 	}
 
 	// we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessCloudCSVMongo, &req)
-	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessCloudCSVMongoNoopWorkflowAlias, &batReq)
+	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessCloudCSVMongoCloudWorkflowAlias, &batReq)
 	if err != nil {
 		l.Error("error starting workflow", "error", err.Error())
 		return nil, err
@@ -271,15 +307,16 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 					bsinks.ERR_MONGO_SINK_NIL_CLIENT,
 					bsinks.ERR_MONGO_SINK_EMPTY_COLL,
 					bsinks.ERR_MONGO_SINK_EMPTY_DATA,
+					// mongostore.ERR_MONGO_CLIENT_CONN,
+					mongostore.ERR_DECODING_OBJECT_ID,
 				},
 			},
 		},
 	}
 
-	// we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessLocalCSVMongo, &req)
-	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessLocalCSVMongoNoopWorkflowAlias, &batReq)
+	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessLocalCSVMongoLocalWorkflowAlias, &batReq)
 	if err != nil {
-		l.Error("SchedulerService:ProcessLocalCSVToMongoWorkflow - error starting workflow", "error", err.Error())
+		l.Error("SchedulerService:ProcessLocalCSVMongoLocalWorkflow - error starting workflow", "error", err.Error())
 		return nil, err
 	}
 

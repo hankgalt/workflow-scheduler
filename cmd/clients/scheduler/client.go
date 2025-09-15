@@ -21,7 +21,7 @@ const SERVICE_DOMAIN = "127.0.0.1"
 func main() {
 
 	// initialize app logger instance
-	l := logger.GetSlogLogger()
+	l := logger.GetSlogMultiLogger("data")
 
 	tlsConfig, err := config.SetupTLSConfig(&config.ConfigOpts{Target: config.CLIENT})
 	if err != nil {
@@ -32,7 +32,7 @@ func main() {
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(tlsCreds)}
 
 	servicePort := fmt.Sprintf("%s:%d", SERVICE_DOMAIN, SERVICE_PORT)
-	conn, err := grpc.Dial(servicePort, opts...)
+	conn, err := grpc.NewClient(servicePort, opts...)
 	if err != nil {
 		l.Error("client failed to connect", "error", err.Error())
 		panic(err)
@@ -47,11 +47,11 @@ func main() {
 		return
 	}
 
-	err = testProcessCloudCSVMongoWorkflow(client, l)
-	if err != nil {
-		l.Error("error: process cloud CSV Mongo workflow", "error", err.Error())
-		return
-	}
+	// err = testProcessCloudCSVMongoWorkflow(client, l)
+	// if err != nil {
+	// 	l.Error("error: process cloud CSV Mongo workflow", "error", err.Error())
+	// 	return
+	// }
 
 	err = testProcessLocalCSVMongoWorkflow(client, l)
 	if err != nil {
@@ -103,6 +103,7 @@ func testProcessCloudCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 	resp, err := client.ProcessCloudCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
 		MaxInProcessBatches: 2,
 		BatchSize:           400,
+		MaxBatches:          3,
 		MappingRules:        envutils.BuildBusinessModelTransformRules(),
 		JobConfig: &api.BatchCSVRequest_CloudCsvMongoConfig{
 			CloudCsvMongoConfig: batch.MapProtoFromCloudCSVMongoBatchConfig(jobCfg),
@@ -130,8 +131,9 @@ func testProcessLocalCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 
 	resp, err := client.ProcessLocalCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
 		MaxInProcessBatches: 2,
-		BatchSize:           400,
-		MappingRules:        envutils.BuildBusinessModelTransformRules(),
+		// MaxBatches:          3,
+		BatchSize:    800,
+		MappingRules: envutils.BuildBusinessModelTransformRules(),
 		JobConfig: &api.BatchCSVRequest_LocalCsvMongoConfig{
 			LocalCsvMongoConfig: batch.MapProtoFromLocalCSVMongoBatchConfig(jobCfg),
 		},

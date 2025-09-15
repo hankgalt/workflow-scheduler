@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -11,6 +10,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 
+	"github.com/comfforts/logger"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )
 
@@ -18,13 +18,16 @@ func main() {
 
 	_, otelEndpoint := envutils.BuildMetricsConfig()
 
-	ctx := context.Background()
+	l := logger.GetSlogMultiLogger("data")
+	ctx := logger.WithLogger(context.Background(), l)
+
 	exp, err := otlptracegrpc.New(ctx,
 		otlptracegrpc.WithEndpoint(otelEndpoint), // or otel-collector:4317 if running inside Docker
 		otlptracegrpc.WithInsecure(),
 	)
 	if err != nil {
-		log.Fatal(err)
+		l.Error("failed to create OTLP trace exporter", "error", err.Error())
+		return
 	}
 
 	tp := sdktrace.NewTracerProvider(
@@ -38,13 +41,13 @@ func main() {
 		// Ensure pending spans are flushed before exit
 		err := tp.Shutdown(context.Background())
 		if err != nil {
-			log.Fatal(err)
+			l.Error("Error shutting down tracer provider", "error", err.Error())
 		}
-		log.Println("OTel TracerProvider shutdown successfully")
+		l.Info("OTel TracerProvider shutdown successfully")
 	}()
 
 	_, span := otel.Tracer("smoketest").Start(ctx, "emit-one-span")
 	time.Sleep(200 * time.Millisecond)
 	span.End()
-	log.Println("emitted one span to", otelEndpoint)
+	l.Info("emitted one span to", "endpoint", otelEndpoint)
 }

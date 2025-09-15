@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/comfforts/logger"
 	"github.com/hankgalt/batch-orchestra/pkg/domain"
 
 	"github.com/hankgalt/workflow-scheduler/internal/infra/mongostore"
@@ -54,6 +55,10 @@ func (s *mongoSink[T]) Name() string { return MongoSink }
 
 // Write writes the batch of records to MongoDB.
 func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess) (*domain.BatchProcess, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("mongoSink:Write - error getting logger from context: %w", err)
+	}
 	if s == nil {
 		return b, ErrMongoSinkNil
 	}
@@ -77,6 +82,13 @@ func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess) (*doma
 		}
 
 		if rec.BatchResult.Error != "" {
+			// TODO Differentiate between transient and permanent errors
+			l.Debug(
+				"skipping record with existing error",
+				"batch-id", b.BatchId,
+				"rec-start", rec.Start,
+				"rec-end", rec.End,
+				"error", rec.BatchResult.Error)
 			continue // skip already errored records
 		}
 
@@ -167,6 +179,11 @@ func (c MongoSinkConfig[T]) Name() string { return MongoSink }
 
 // BuildSink builds a MongoDB sink from the config.
 func (c MongoSinkConfig[T]) BuildSink(ctx context.Context) (domain.Sink[T], error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("MongoSinkConfig:BuildSink - error getting logger from context: %w", err)
+	}
+
 	if c.Protocol == "" {
 		return nil, ErrMongoSinkDBProtocol
 	}
@@ -197,7 +214,8 @@ func (c MongoSinkConfig[T]) BuildSink(ctx context.Context) (domain.Sink[T], erro
 
 	mCl, err := mongostore.NewMongoStore(ctx, mCfg)
 	if err != nil {
-		return nil, fmt.Errorf("mongo sink: create store: %w", err)
+		l.Error("error creating mongo store", "error", err.Error())
+		return nil, err
 	}
 
 	// init client/collection; consider pooling in activities

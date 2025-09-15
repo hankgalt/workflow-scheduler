@@ -3,9 +3,11 @@ package snapshotters
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/comfforts/logger"
 	"github.com/hankgalt/batch-orchestra/pkg/domain"
 )
 
@@ -29,15 +31,22 @@ func (s localSnapshotter) Close(ctx context.Context) error {
 }
 
 func (s localSnapshotter) Snapshot(ctx context.Context, key string, snapshot any) error {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		return fmt.Errorf("localSnapshotter:Snapshot - error getting logger from context: %w", err)
+	}
+
 	// get current dir path
 	dir, err := os.Getwd()
 	if err != nil {
+		l.Error("error getting current dir", "error", err.Error())
 		return err
 	}
 
 	fp := filepath.Join(dir, s.path, key+".json")
 	snapshotBytes, ok := snapshot.([]byte)
 	if !ok {
+		l.Error("invalid snapshot format, expected []byte")
 		return ErrInvalidSnapshotFormat
 	}
 
