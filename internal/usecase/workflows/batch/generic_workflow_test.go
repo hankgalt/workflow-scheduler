@@ -190,12 +190,12 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 						"Test_ProcessBatchWorkflow_CloudCSV_Mongo_Local_HappyPath - success",
 						"result-offsets", result.Offsets,
 					)
-					s.EqualValues(10, uint(result.Snapshot.NumProcessed))
+					s.EqualValues(10, result.Snapshot.NumBatches)
 					errorCount := 0
 					for _, errs := range result.Snapshot.Errors {
 						errorCount += len(errs)
 					}
-					s.EqualValues(25, uint(result.Snapshot.NumRecords))
+					s.EqualValues(25, result.Snapshot.NumRecords)
 					s.EqualValues(0, errorCount)
 				}
 			}
@@ -341,7 +341,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 						"Test_ProcessBatchWorkflow_CloudCSV_Mongo_Cloud_HappyPath - success",
 						"result-offsets", result.Offsets,
 					)
-					s.EqualValues(10, uint(result.Snapshot.NumProcessed))
+					s.EqualValues(10, uint(result.Snapshot.NumBatches))
 					errorCount := 0
 					for _, errs := range result.Snapshot.Errors {
 						errorCount += len(errs)
@@ -521,7 +521,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 					"Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath - success",
 					"result-offsets", result.Offsets,
 				)
-				require.EqualValues(t, 11, int(result.Snapshot.NumProcessed))
+				require.EqualValues(t, 11, int(result.Snapshot.NumBatches))
 				errorCount := 0
 				for _, errs := range result.Snapshot.Errors {
 					errorCount += len(errs)
@@ -674,7 +674,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath_Server(t *testing.T) {
 		"workflow-run-id", run.GetRunID(),
 		"offsets", out.Offsets,
 	)
-	require.EqualValues(t, 11, int(out.Snapshot.NumProcessed))
+	require.EqualValues(t, 11, int(out.Snapshot.NumBatches))
 	errorCount := 0
 	for _, errs := range out.Snapshot.Errors {
 		errorCount += len(errs)
@@ -820,9 +820,9 @@ func Test_ProcessBatchWorkflow_CloudCSV_Mongo_HappyPath_Server(t *testing.T) {
 	l.Debug("Test_ProcessBatchWorkflow_CloudCSV_Mongo_HappyPath_Server - workflow completed successfully",
 		"workflow-id", run.GetID(),
 		"workflow-run-id", run.GetRunID(),
-		"num-processed", out.Snapshot.NumProcessed,
+		"num-processed", out.Snapshot.NumBatches,
 	)
-	require.EqualValues(t, 10, int(out.Snapshot.NumProcessed))
+	require.EqualValues(t, 10, int(out.Snapshot.NumBatches))
 	errorCount := 0
 	for _, errs := range out.Snapshot.Errors {
 		errorCount += len(errs)

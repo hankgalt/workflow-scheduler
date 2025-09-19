@@ -120,6 +120,9 @@ func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess) (*doma
 		b.Records[i].BatchResult.Result = res // store the inserted ID or result
 	}
 
+	// Set the error map on the batch
+	b.Error = errs
+
 	if errCount >= len(b.Records) {
 		l.Error("all batch records failed", "batch-id", b.BatchId, "errors", errs)
 		return b, ErrAllBatchRecords
