@@ -75,7 +75,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 	s.Run("valid cloud csv to mongo migration request", func() {
 		// Register the workflow
 		s.env.RegisterWorkflowWithOptions(
-			bo.ProcessBatchWorkflow[domain.CSVRow, sources.CloudCSVConfig, sinks.MongoSinkConfig[domain.CSVRow], snapshotters.LocalSnapshotterConfig],
+			bo.ProcessBatchWorkflow[domain.CSVRow, *sources.CloudCSVConfig, *sinks.MongoSinkConfig[domain.CSVRow], *snapshotters.LocalSnapshotterConfig],
 			workflow.RegisterOptions{
 				Name: btchwkfl.ProcessCloudCSVMongoLocalWorkflowAlias,
 			},
@@ -83,19 +83,19 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 
 		// Register activities.
 		s.env.RegisterActivityWithOptions(
-			bo.FetchNextActivity[domain.CSVRow, sources.CloudCSVConfig],
+			bo.FetchNextActivity[domain.CSVRow, *sources.CloudCSVConfig],
 			activity.RegisterOptions{
 				Name: btchwkfl.FetchNextCloudCSVSourceBatchActivityAlias,
 			},
 		)
 		s.env.RegisterActivityWithOptions(
-			bo.WriteActivity[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]],
+			bo.WriteActivity[domain.CSVRow, *sinks.MongoSinkConfig[domain.CSVRow]],
 			activity.RegisterOptions{
 				Name: btchwkfl.WriteNextMongoSinkBatchActivityAlias,
 			},
 		)
 		s.env.RegisterActivityWithOptions(
-			bo.SnapshotActivity[snapshotters.LocalSnapshotterConfig],
+			bo.SnapshotActivity[*snapshotters.LocalSnapshotterConfig],
 			activity.RegisterOptions{
 				Name: btchwkfl.SnapshotLocalBatchActivityAlias,
 			},
@@ -106,7 +106,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 		envCfg, err := envutils.BuildCloudCSVBatchConfig()
 		s.NoError(err, "error building cloud CSV config for test environment")
 		path := filepath.Join(envCfg.Path, envCfg.Name)
-		sourceCfg := sources.CloudCSVConfig{
+		sourceCfg := &sources.CloudCSVConfig{
 			Path:         path,
 			Bucket:       envCfg.Bucket,
 			Provider:     string(sources.CloudSourceGCS),
@@ -119,7 +119,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 		mCfg := envutils.BuildMongoStoreConfig()
 		s.Require().NotEmpty(mCfg.Name(), "MongoDB name should not be empty")
 		s.Require().NotEmpty(mCfg.Host(), "MongoDB host should not be empty")
-		sinkCfg := sinks.MongoSinkConfig[domain.CSVRow]{
+		sinkCfg := &sinks.MongoSinkConfig[domain.CSVRow]{
 			Protocol:   mCfg.Protocol(),
 			Host:       mCfg.Host(),
 			DBName:     mCfg.Name(),
@@ -131,7 +131,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 
 		filePath, err := envutils.BuildFilePath()
 		s.NoError(err, "error building csv file path for test")
-		ssCfg := snapshotters.LocalSnapshotterConfig{
+		ssCfg := &snapshotters.LocalSnapshotterConfig{
 			Path: filePath,
 		}
 
@@ -139,6 +139,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 			JobID:               "job-cloud-csv-mongo-local-happy",
 			BatchSize:           400,
 			MaxInProcessBatches: 2,
+			StartAt:             "0",
 			Source:              sourceCfg,
 			Sink:                sinkCfg,
 			Snapshotter:         ssCfg,
@@ -225,7 +226,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 	s.Run("valid cloud csv to mongo migration request", func() {
 		// Register the workflow
 		s.env.RegisterWorkflowWithOptions(
-			bo.ProcessBatchWorkflow[domain.CSVRow, sources.CloudCSVConfig, sinks.MongoSinkConfig[domain.CSVRow], snapshotters.CloudSnapshotterConfig],
+			bo.ProcessBatchWorkflow[domain.CSVRow, *sources.CloudCSVConfig, *sinks.MongoSinkConfig[domain.CSVRow], *snapshotters.CloudSnapshotterConfig],
 			workflow.RegisterOptions{
 				Name: btchwkfl.ProcessCloudCSVMongoCloudWorkflowAlias,
 			},
@@ -233,19 +234,19 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 
 		// Register activities.
 		s.env.RegisterActivityWithOptions(
-			bo.FetchNextActivity[domain.CSVRow, sources.CloudCSVConfig],
+			bo.FetchNextActivity[domain.CSVRow, *sources.CloudCSVConfig],
 			activity.RegisterOptions{
 				Name: btchwkfl.FetchNextCloudCSVSourceBatchActivityAlias,
 			},
 		)
 		s.env.RegisterActivityWithOptions(
-			bo.WriteActivity[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]],
+			bo.WriteActivity[domain.CSVRow, *sinks.MongoSinkConfig[domain.CSVRow]],
 			activity.RegisterOptions{
 				Name: btchwkfl.WriteNextMongoSinkBatchActivityAlias,
 			},
 		)
 		s.env.RegisterActivityWithOptions(
-			bo.SnapshotActivity[snapshotters.CloudSnapshotterConfig],
+			bo.SnapshotActivity[*snapshotters.CloudSnapshotterConfig],
 			activity.RegisterOptions{
 				Name: btchwkfl.SnapshotCloudBatchActivityAlias,
 			},
@@ -256,7 +257,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 		envCfg, err := envutils.BuildCloudCSVBatchConfig()
 		s.NoError(err, "error building cloud CSV config for test environment")
 		path := filepath.Join(envCfg.Path, envCfg.Name)
-		sourceCfg := sources.CloudCSVConfig{
+		sourceCfg := &sources.CloudCSVConfig{
 			Path:         path,
 			Bucket:       envCfg.Bucket,
 			Provider:     string(sources.CloudSourceGCS),
@@ -269,7 +270,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 		mCfg := envutils.BuildMongoStoreConfig()
 		s.Require().NotEmpty(mCfg.Name(), "MongoDB name should not be empty")
 		s.Require().NotEmpty(mCfg.Host(), "MongoDB host should not be empty")
-		sinkCfg := sinks.MongoSinkConfig[domain.CSVRow]{
+		sinkCfg := &sinks.MongoSinkConfig[domain.CSVRow]{
 			Protocol:   mCfg.Protocol(),
 			Host:       mCfg.Host(),
 			DBName:     mCfg.Name(),
@@ -280,7 +281,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 		}
 
 		// Snapshotter - Cloud
-		ssCfg := snapshotters.CloudSnapshotterConfig{
+		ssCfg := &snapshotters.CloudSnapshotterConfig{
 			Path:   envCfg.Path,
 			Bucket: envCfg.Bucket,
 		}
@@ -289,6 +290,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 			JobID:               "job-cloud-csv-mongo-cloud-happy",
 			BatchSize:           400,
 			MaxInProcessBatches: 2,
+			StartAt:             "0",
 			Source:              sourceCfg,
 			Sink:                sinkCfg,
 			Snapshotter:         ssCfg,
@@ -407,7 +409,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 
 	// Register the workflow
 	env.RegisterWorkflowWithOptions(
-		bo.ProcessBatchWorkflow[domain.CSVRow, sources.LocalCSVConfig, sinks.MongoSinkConfig[domain.CSVRow], snapshotters.LocalSnapshotterConfig],
+		bo.ProcessBatchWorkflow[domain.CSVRow, *sources.LocalCSVConfig, *sinks.MongoSinkConfig[domain.CSVRow], *snapshotters.LocalSnapshotterConfig],
 		workflow.RegisterOptions{
 			Name: btchwkfl.ProcessLocalCSVMongoLocalWorkflowAlias,
 		},
@@ -415,19 +417,19 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 
 	// Register activities.
 	env.RegisterActivityWithOptions(
-		bo.FetchNextActivity[domain.CSVRow, sources.LocalCSVConfig],
+		bo.FetchNextActivity[domain.CSVRow, *sources.LocalCSVConfig],
 		activity.RegisterOptions{
 			Name: btchwkfl.FetchNextLocalCSVSourceBatchActivityAlias,
 		},
 	)
 	env.RegisterActivityWithOptions(
-		bo.WriteActivity[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]],
+		bo.WriteActivity[domain.CSVRow, *sinks.MongoSinkConfig[domain.CSVRow]],
 		activity.RegisterOptions{
 			Name: btchwkfl.WriteNextMongoSinkBatchActivityAlias,
 		},
 	)
 	env.RegisterActivityWithOptions(
-		bo.SnapshotActivity[snapshotters.LocalSnapshotterConfig],
+		bo.SnapshotActivity[*snapshotters.LocalSnapshotterConfig],
 		activity.RegisterOptions{
 			Name: btchwkfl.SnapshotLocalBatchActivityAlias,
 		},
@@ -439,7 +441,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 	filePath, err := envutils.BuildFilePath()
 	require.NoError(t, err, "error building csv file path for test")
 	path := filepath.Join(filePath, fileName)
-	sourceCfg := sources.LocalCSVConfig{
+	sourceCfg := &sources.LocalCSVConfig{
 		Path:         path,
 		Delimiter:    '|',
 		HasHeader:    true,
@@ -450,7 +452,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 	mCfg := envutils.BuildMongoStoreConfig()
 	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
-	sinkCfg := sinks.MongoSinkConfig[domain.CSVRow]{
+	sinkCfg := &sinks.MongoSinkConfig[domain.CSVRow]{
 		Protocol:   mCfg.Protocol(),
 		Host:       mCfg.Host(),
 		DBName:     mCfg.Name(),
@@ -460,7 +462,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 		Collection: "vypar.agents",
 	}
 
-	ssCfg := snapshotters.LocalSnapshotterConfig{
+	ssCfg := &snapshotters.LocalSnapshotterConfig{
 		Path: filePath,
 	}
 
@@ -468,6 +470,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 		JobID:               "job-local-csv-mongo-happy",
 		BatchSize:           400,
 		MaxInProcessBatches: 2,
+		StartAt:             "0",
 		Source:              sourceCfg,
 		Sink:                sinkCfg,
 		Snapshotter:         ssCfg,
@@ -569,7 +572,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath_Server(t *testing.T) {
 
 	// Register the workflow function
 	w.RegisterWorkflowWithOptions(
-		bo.ProcessBatchWorkflow[domain.CSVRow, sources.LocalCSVConfig, sinks.MongoSinkConfig[domain.CSVRow], snapshotters.LocalSnapshotterConfig],
+		bo.ProcessBatchWorkflow[domain.CSVRow, *sources.LocalCSVConfig, *sinks.MongoSinkConfig[domain.CSVRow], *snapshotters.LocalSnapshotterConfig],
 		workflow.RegisterOptions{
 			Name: btchwkfl.ProcessLocalCSVMongoLocalWorkflowAlias,
 		},
@@ -577,19 +580,19 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath_Server(t *testing.T) {
 
 	// Register activities.
 	w.RegisterActivityWithOptions(
-		bo.FetchNextActivity[domain.CSVRow, sources.LocalCSVConfig],
+		bo.FetchNextActivity[domain.CSVRow, *sources.LocalCSVConfig],
 		activity.RegisterOptions{
 			Name: btchwkfl.FetchNextLocalCSVSourceBatchActivityAlias,
 		},
 	)
 	w.RegisterActivityWithOptions(
-		bo.WriteActivity[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]],
+		bo.WriteActivity[domain.CSVRow, *sinks.MongoSinkConfig[domain.CSVRow]],
 		activity.RegisterOptions{
 			Name: btchwkfl.WriteNextMongoSinkBatchActivityAlias,
 		},
 	)
 	w.RegisterActivityWithOptions(
-		bo.SnapshotActivity[snapshotters.LocalSnapshotterConfig],
+		bo.SnapshotActivity[*snapshotters.LocalSnapshotterConfig],
 		activity.RegisterOptions{
 			Name: btchwkfl.SnapshotLocalBatchActivityAlias,
 		},
@@ -609,7 +612,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath_Server(t *testing.T) {
 	filePath, err := envutils.BuildFilePath()
 	require.NoError(t, err, "error building csv file path for test")
 	path := filepath.Join(filePath, fileName)
-	sourceCfg := sources.LocalCSVConfig{
+	sourceCfg := &sources.LocalCSVConfig{
 		Path:         path,
 		Delimiter:    '|',
 		HasHeader:    true,
@@ -620,7 +623,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath_Server(t *testing.T) {
 	mCfg := envutils.BuildMongoStoreConfig()
 	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
-	sinkCfg := sinks.MongoSinkConfig[domain.CSVRow]{
+	sinkCfg := &sinks.MongoSinkConfig[domain.CSVRow]{
 		Protocol:   mCfg.Protocol(),
 		Host:       mCfg.Host(),
 		DBName:     mCfg.Name(),
@@ -630,7 +633,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath_Server(t *testing.T) {
 		Collection: "vypar.agents",
 	}
 
-	ssCfg := snapshotters.LocalSnapshotterConfig{
+	ssCfg := &snapshotters.LocalSnapshotterConfig{
 		Path: filePath,
 	}
 
@@ -639,6 +642,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath_Server(t *testing.T) {
 		BatchSize:           400,
 		MaxInProcessBatches: 2,
 		MaxBatches:          3,
+		StartAt:             "0",
 		Source:              sourceCfg,
 		Sink:                sinkCfg,
 		Snapshotter:         ssCfg,
@@ -713,7 +717,7 @@ func Test_ProcessBatchWorkflow_CloudCSV_Mongo_HappyPath_Server(t *testing.T) {
 
 	// Register the workflow function
 	w.RegisterWorkflowWithOptions(
-		bo.ProcessBatchWorkflow[domain.CSVRow, sources.CloudCSVConfig, sinks.MongoSinkConfig[domain.CSVRow], snapshotters.CloudSnapshotterConfig],
+		bo.ProcessBatchWorkflow[domain.CSVRow, *sources.CloudCSVConfig, *sinks.MongoSinkConfig[domain.CSVRow], *snapshotters.CloudSnapshotterConfig],
 		workflow.RegisterOptions{
 			Name: btchwkfl.ProcessCloudCSVMongoCloudWorkflowAlias,
 		},
@@ -721,19 +725,19 @@ func Test_ProcessBatchWorkflow_CloudCSV_Mongo_HappyPath_Server(t *testing.T) {
 
 	// Register activities.
 	w.RegisterActivityWithOptions(
-		bo.FetchNextActivity[domain.CSVRow, sources.CloudCSVConfig],
+		bo.FetchNextActivity[domain.CSVRow, *sources.CloudCSVConfig],
 		activity.RegisterOptions{
 			Name: btchwkfl.FetchNextCloudCSVSourceBatchActivityAlias,
 		},
 	)
 	w.RegisterActivityWithOptions(
-		bo.WriteActivity[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]],
+		bo.WriteActivity[domain.CSVRow, *sinks.MongoSinkConfig[domain.CSVRow]],
 		activity.RegisterOptions{
 			Name: btchwkfl.WriteNextMongoSinkBatchActivityAlias,
 		},
 	)
 	w.RegisterActivityWithOptions(
-		bo.SnapshotActivity[snapshotters.CloudSnapshotterConfig],
+		bo.SnapshotActivity[*snapshotters.CloudSnapshotterConfig],
 		activity.RegisterOptions{
 			Name: btchwkfl.SnapshotCloudBatchActivityAlias,
 		},
@@ -752,7 +756,7 @@ func Test_ProcessBatchWorkflow_CloudCSV_Mongo_HappyPath_Server(t *testing.T) {
 	envCfg, err := envutils.BuildCloudCSVBatchConfig()
 	require.NoError(t, err, "error building cloud CSV config for test environment")
 	path := filepath.Join(envCfg.Path, envCfg.Name)
-	sourceCfg := sources.CloudCSVConfig{
+	sourceCfg := &sources.CloudCSVConfig{
 		Path:         path,
 		Bucket:       envCfg.Bucket,
 		Provider:     string(sources.CloudSourceGCS),
@@ -765,7 +769,7 @@ func Test_ProcessBatchWorkflow_CloudCSV_Mongo_HappyPath_Server(t *testing.T) {
 	mCfg := envutils.BuildMongoStoreConfig()
 	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
-	sinkCfg := sinks.MongoSinkConfig[domain.CSVRow]{
+	sinkCfg := &sinks.MongoSinkConfig[domain.CSVRow]{
 		Protocol:   mCfg.Protocol(),
 		Host:       mCfg.Host(),
 		DBName:     mCfg.Name(),
@@ -776,7 +780,7 @@ func Test_ProcessBatchWorkflow_CloudCSV_Mongo_HappyPath_Server(t *testing.T) {
 	}
 
 	// Snapshotter - Cloud
-	ssCfg := snapshotters.CloudSnapshotterConfig{
+	ssCfg := &snapshotters.CloudSnapshotterConfig{
 		Path:   envCfg.Path,
 		Bucket: envCfg.Bucket,
 	}
@@ -786,6 +790,7 @@ func Test_ProcessBatchWorkflow_CloudCSV_Mongo_HappyPath_Server(t *testing.T) {
 		BatchSize:           400,
 		MaxInProcessBatches: 2,
 		MaxBatches:          3,
+		StartAt:             "0",
 		Source:              sourceCfg,
 		Sink:                sinkCfg,
 		Snapshotter:         ssCfg,
@@ -874,7 +879,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_ContinueAsNewError(t *testing.T) {
 
 	// Register the workflow
 	env.RegisterWorkflowWithOptions(
-		bo.ProcessBatchWorkflow[domain.CSVRow, sources.LocalCSVConfig, sinks.MongoSinkConfig[domain.CSVRow], snapshotters.LocalSnapshotterConfig],
+		bo.ProcessBatchWorkflow[domain.CSVRow, *sources.LocalCSVConfig, *sinks.MongoSinkConfig[domain.CSVRow], *snapshotters.LocalSnapshotterConfig],
 		workflow.RegisterOptions{
 			Name: btchwkfl.ProcessLocalCSVMongoLocalWorkflowAlias,
 		},
@@ -882,19 +887,19 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_ContinueAsNewError(t *testing.T) {
 
 	// Register activities.
 	env.RegisterActivityWithOptions(
-		bo.FetchNextActivity[domain.CSVRow, sources.LocalCSVConfig],
+		bo.FetchNextActivity[domain.CSVRow, *sources.LocalCSVConfig],
 		activity.RegisterOptions{
 			Name: btchwkfl.FetchNextLocalCSVSourceBatchActivityAlias,
 		},
 	)
 	env.RegisterActivityWithOptions(
-		bo.WriteActivity[domain.CSVRow, sinks.MongoSinkConfig[domain.CSVRow]],
+		bo.WriteActivity[domain.CSVRow, *sinks.MongoSinkConfig[domain.CSVRow]],
 		activity.RegisterOptions{
 			Name: btchwkfl.WriteNextMongoSinkBatchActivityAlias,
 		},
 	)
 	env.RegisterActivityWithOptions(
-		bo.SnapshotActivity[snapshotters.LocalSnapshotterConfig],
+		bo.SnapshotActivity[*snapshotters.LocalSnapshotterConfig],
 		activity.RegisterOptions{
 			Name: btchwkfl.SnapshotLocalBatchActivityAlias,
 		},
@@ -906,7 +911,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_ContinueAsNewError(t *testing.T) {
 	filePath, err := envutils.BuildFilePath()
 	require.NoError(t, err, "error building csv file path for test")
 	path := filepath.Join(filePath, fileName)
-	sourceCfg := sources.LocalCSVConfig{
+	sourceCfg := &sources.LocalCSVConfig{
 		Path:         path,
 		Delimiter:    '|',
 		HasHeader:    true,
@@ -917,7 +922,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_ContinueAsNewError(t *testing.T) {
 	mCfg := envutils.BuildMongoStoreConfig()
 	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
-	sinkCfg := sinks.MongoSinkConfig[domain.CSVRow]{
+	sinkCfg := &sinks.MongoSinkConfig[domain.CSVRow]{
 		Protocol:   mCfg.Protocol(),
 		Host:       mCfg.Host(),
 		DBName:     mCfg.Name(),
@@ -927,7 +932,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_ContinueAsNewError(t *testing.T) {
 		Collection: "vypar.agents",
 	}
 
-	ssCfg := snapshotters.LocalSnapshotterConfig{
+	ssCfg := &snapshotters.LocalSnapshotterConfig{
 		Path: filePath,
 	}
 
@@ -936,7 +941,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_ContinueAsNewError(t *testing.T) {
 		BatchSize:           400,
 		MaxInProcessBatches: 2,
 		MaxBatches:          6,
-		StartAt:             0,
+		StartAt:             "0",
 		Source:              sourceCfg,
 		Sink:                sinkCfg,
 		Snapshotter:         ssCfg,

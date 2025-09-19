@@ -20,6 +20,10 @@ import (
 
 const DEFAULT_MONGO_POOL_SIZE = 10
 
+const ERR_DUPLICATE_RECORD = "mongostore: error duplicate record"
+
+var ErrDuplicateRecord = errors.New(ERR_DUPLICATE_RECORD)
+
 type MongoStore struct {
 	client *mongo.Client
 	store  *mongo.Database
@@ -41,8 +45,14 @@ func NewMongoStore(ctx context.Context, cfg infra.StoreConfig) (*MongoStore, err
 	).WithConnectionParams(
 		cfg.Params(),
 	)
+
+	clOpts := infra.DefaultClientOption()
+	clOpts.DialTimeout = 5 * time.Minute
+	clOpts.KeepAlive = 5 * time.Minute
+	clOpts.KeepAliveTimeout = 2 * time.Minute
+
 	opts := &MongoStoreOption{
-		ClientOption: infra.DefaultClientOption(),
+		ClientOption: clOpts,
 		DBName:       cfg.Name(),              // Database name is required for MongoDB operations
 		PoolSize:     DEFAULT_MONGO_POOL_SIZE, // Default pool size, can be adjusted based on application needs
 	}
@@ -68,6 +78,14 @@ func NewMongoStore(ctx context.Context, cfg infra.StoreConfig) (*MongoStore, err
 
 	cl, err := mongo.Connect(ctx, mOpts)
 	if err != nil {
+
+		var we mongo.CommandError
+		if errors.As(err, &we) {
+			if we.Code == 10107 || we.Code == 13435 { // NotMaster / NotWritablePrimary codes
+				l.Warn("MongoDB is not the primary", "error", we)
+			}
+		}
+
 		l.Error("error connecting to MongoDB", "error", err.Error())
 		return nil, ErrMongoClientConn
 	}
@@ -120,7 +138,7 @@ func (ms *MongoStore) EnsureIndexes(
 	collection := ms.store.Collection(collectionName)
 	_, err := collection.Indexes().CreateMany(ctx, indexes)
 	if err != nil {
-		return fmt.Errorf("failed to create indexes on collection %q: %w", collectionName, err)
+		return err
 	}
 	return nil
 }
@@ -146,8 +164,20 @@ func (ms *MongoStore) AddCollectionDoc(
 	coll := ms.store.Collection(collectionName)
 	res, err := coll.InsertOne(ctx, doc)
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return "", ErrDuplicateRecord
+		}
+
+		var we mongo.CommandError
+		if errors.As(err, &we) {
+			if we.Code == 10107 || we.Code == 13435 { // NotMaster / NotWritablePrimary codes
+				l.Error("error inserting document", "error", err.Error(), "collection", collectionName)
+				return "", ErrMongoClientConn
+			}
+		}
+
 		l.Error("error inserting document", "error", err.Error(), "collection", collectionName)
-		return "", fmt.Errorf("error inserting document into collection %s: %w", collectionName, err)
+		return "", err
 	}
 
 	id, ok := res.InsertedID.(primitive.ObjectID)

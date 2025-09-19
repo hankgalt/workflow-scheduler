@@ -30,4 +30,6 @@ func TestMongoStore(t *testing.T) {
 		err := cl.Close(ctx)
 		require.NoError(t, err)
 	}()
+
+	cl.Stats(ctx, nmCfg.Name())
 }

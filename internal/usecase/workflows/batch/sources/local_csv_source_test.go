@@ -40,7 +40,7 @@ func Test_LocalCSVConfig_BuildSource_FetxhNextBatch(t *testing.T) {
 		require.NoError(t, source.Close(ctx), "error closing local csv source")
 	}()
 
-	bp, err := source.Next(ctx, 0, 400)
+	bp, err := source.Next(ctx, "0", 400)
 	require.NoError(t, err, "error getting next batch from local csv source")
 	require.True(t, len(bp.Records) > 0, "no records found in the batch")
 

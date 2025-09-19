@@ -102,3 +102,39 @@ func TestProcessCloudCSVToMongoWorkflow(t *testing.T) {
 
 	l.Info("SchedulerService - TestProcessCloudCSVToMongoWorkflow started workflow successfully", "workflow-run", we)
 }
+
+func TestQueryWorkflowState(t *testing.T) {
+	// Initialize logger
+	l := logger.GetSlogLogger()
+	l.Info("SchedulerService - TestQueryWorkflowState initialized logger")
+
+	mCfg := envutils.BuildMongoStoreConfig()
+	require.NotEmpty(t, mCfg.Host, "MongoDB host should not be empty")
+
+	tCfg := envutils.BuildTemporalConfig("TestQueryWorkflowState")
+	require.NotEmpty(t, tCfg.Host, "Temporal host should not be empty")
+
+	svcCfg := scheduler.NewSchedulerServiceConfig(tCfg, mCfg)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	ctx = logger.WithLogger(ctx, l)
+
+	ss, err := scheduler.NewSchedulerService(ctx, svcCfg)
+	require.NoError(t, err)
+	defer func() {
+		err := ss.Close(ctx)
+		require.NoError(t, err)
+	}()
+
+	// Simulate querying a workflow state
+	workflowID := "local-csv-mongo-data-scheduler-Agents.csv-"
+	state, err := ss.QueryWorkflowState(ctx, &batch.WorkflowQueryParams{
+		WorkflowId: workflowID,
+		RunId:      "1b8add02-1831-4a47-9fa2-621d8f212ccb",
+	})
+	require.NoError(t, err)
+	st, ok := state.(map[string]any)
+	require.True(t, ok, "expected state to be of type map[string]any")
+	l.Info("SchedulerService - TestQueryWorkflowState retrieved workflow state", "workflow-id", workflowID, "state", st["Snapshot"])
+}

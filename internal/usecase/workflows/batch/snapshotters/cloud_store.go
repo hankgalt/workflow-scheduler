@@ -17,9 +17,19 @@ import (
 
 const CloudSnapshotter = "cloud-snapshotter"
 
-const ERR_MISSING_CLOUD_CREDENTIALS = "cloud csv: missing credentials path"
+const (
+	ERR_MISSING_CLOUD_CREDENTIALS = "cloud csv: missing credentials path"
+	ERR_MISSING_BUCKET_NAME       = "cloud csv: missing bucket name"
+	ERR_MISSING_OBJECT_PATH       = "cloud csv: missing object path"
+	ERR_MISSING_KEY               = "cloud csv: missing key"
+	ERR_MISSING_CLOUD_CLIENT      = "cloud csv: missing cloud client"
+)
 
 var ErrMissingCloudCredentials = errors.New(ERR_MISSING_CLOUD_CREDENTIALS)
+var ErrMissingBucketName = errors.New(ERR_MISSING_BUCKET_NAME)
+var ErrMissingObjectPath = errors.New(ERR_MISSING_OBJECT_PATH)
+var ErrMissingKey = errors.New(ERR_MISSING_KEY)
+var ErrMissingCloudClient = errors.New(ERR_MISSING_CLOUD_CLIENT)
 
 type cloudSnapshotter struct {
 	bucket string
@@ -28,17 +38,29 @@ type cloudSnapshotter struct {
 }
 
 // Name of the snapshotter.
-func (s cloudSnapshotter) Name() string { return CloudSnapshotter }
+func (s *cloudSnapshotter) Name() string { return CloudSnapshotter }
 
 // Close closes the cloud snapshotter.
-func (s cloudSnapshotter) Close(ctx context.Context) error {
+func (s *cloudSnapshotter) Close(ctx context.Context) error {
 	return s.client.Close()
 }
 
-func (s cloudSnapshotter) Snapshot(ctx context.Context, key string, snapshot any) error {
+func (s *cloudSnapshotter) Snapshot(ctx context.Context, key string, snapshot any) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("cloudSnapshotter:Snapshot - error getting logger from context: %w", err)
+	}
+	if s.bucket == "" {
+		return ErrMissingBucketName
+	}
+	if s.path == "" {
+		return ErrMissingObjectPath
+	}
+	if key == "" {
+		return ErrMissingKey
+	}
+	if s.client == nil {
+		return ErrMissingCloudClient
 	}
 
 	fPath := filepath.Join(s.path, key+".json")
@@ -81,9 +103,9 @@ type CloudSnapshotterConfig struct {
 }
 
 // Name of the snapshotter.
-func (s CloudSnapshotterConfig) Name() string { return CloudSnapshotter }
+func (s *CloudSnapshotterConfig) Name() string { return CloudSnapshotter }
 
-func (s CloudSnapshotterConfig) BuildSnapshotter(ctx context.Context) (domain.Snapshotter, error) {
+func (s *CloudSnapshotterConfig) BuildSnapshotter(ctx context.Context) (domain.Snapshotter, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("CloudSnapshotterConfig:BuildSnapshotter - error getting logger from context: %w", err)
@@ -93,6 +115,12 @@ func (s CloudSnapshotterConfig) BuildSnapshotter(ctx context.Context) (domain.Sn
 	cPath := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 	if cPath == "" {
 		return nil, ErrMissingCloudCredentials
+	}
+	if s.Bucket == "" {
+		return nil, ErrMissingBucketName
+	}
+	if s.Path == "" {
+		return nil, ErrMissingObjectPath
 	}
 
 	client, err := storage.NewClient(ctx)

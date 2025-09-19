@@ -133,7 +133,7 @@ func AlNumEnd(s string, exclude []rune) int {
 
 	runes := []rune(s)
 	// Find the last alphanumeric character
-	end := len(s) - 1
+	end := len(runes) - 1
 
 	defer func() {
 		if r := recover(); r != nil {

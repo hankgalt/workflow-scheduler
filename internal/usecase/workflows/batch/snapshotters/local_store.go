@@ -22,18 +22,24 @@ type localSnapshotter struct {
 }
 
 // Name of the snapshotter.
-func (s localSnapshotter) Name() string { return LocalSnapshotter }
+func (s *localSnapshotter) Name() string { return LocalSnapshotter }
 
 // Close closes the local file snapshotter.
-func (s localSnapshotter) Close(ctx context.Context) error {
+func (s *localSnapshotter) Close(ctx context.Context) error {
 	// No resources to close for local file snapshotter
 	return nil
 }
 
-func (s localSnapshotter) Snapshot(ctx context.Context, key string, snapshot any) error {
+func (s *localSnapshotter) Snapshot(ctx context.Context, key string, snapshot any) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return fmt.Errorf("localSnapshotter:Snapshot - error getting logger from context: %w", err)
+	}
+	if s.path == "" {
+		return ErrMissingObjectPath
+	}
+	if key == "" {
+		return ErrMissingKey
 	}
 
 	// get current dir path
@@ -58,9 +64,13 @@ type LocalSnapshotterConfig struct {
 }
 
 // Name of the snapshotter.
-func (s LocalSnapshotterConfig) Name() string { return LocalSnapshotter }
+func (s *LocalSnapshotterConfig) Name() string { return LocalSnapshotter }
 
-func (s LocalSnapshotterConfig) BuildSnapshotter(ctx context.Context) (domain.Snapshotter, error) {
+func (s *LocalSnapshotterConfig) BuildSnapshotter(ctx context.Context) (domain.Snapshotter, error) {
+	if s.Path == "" {
+		return nil, ErrMissingObjectPath
+	}
+
 	return &localSnapshotter{
 		path: s.Path,
 	}, nil

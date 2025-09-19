@@ -17,6 +17,12 @@ services:
       - ../../cmd/servers/scheduler/policies:/app/policies:ro
       - ../../cmd/servers/scheduler/data:/app/data:rw
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
     networks:
       schenet:
 

@@ -12,15 +12,15 @@ const NoopSnapshotter = "noop-snapshotter"
 type noopSnapshotter struct{}
 
 // Name of the snapshotter.
-func (s noopSnapshotter) Name() string { return NoopSnapshotter }
+func (s *noopSnapshotter) Name() string { return NoopSnapshotter }
 
 // Close closes the noop snapshotter.
-func (s noopSnapshotter) Close(ctx context.Context) error {
+func (s *noopSnapshotter) Close(ctx context.Context) error {
 	// No resources to close for noop snapshotter
 	return nil
 }
 
-func (s noopSnapshotter) Snapshot(ctx context.Context, key string, snapshot any) error {
+func (s *noopSnapshotter) Snapshot(ctx context.Context, key string, snapshot any) error {
 	// No-op snapshotter does not create snapshots
 	return errors.New("noop snapshotter does not support snapshotting")
 }
@@ -28,8 +28,8 @@ func (s noopSnapshotter) Snapshot(ctx context.Context, key string, snapshot any)
 type NoopSnapshotterConfig struct{}
 
 // Name of the snapshotter.
-func (s NoopSnapshotterConfig) Name() string { return NoopSnapshotter }
+func (s *NoopSnapshotterConfig) Name() string { return NoopSnapshotter }
 
-func (s NoopSnapshotterConfig) BuildSnapshotter(ctx context.Context) (domain.Snapshotter, error) {
+func (s *NoopSnapshotterConfig) BuildSnapshotter(ctx context.Context) (domain.Snapshotter, error) {
 	return &noopSnapshotter{}, nil
 }

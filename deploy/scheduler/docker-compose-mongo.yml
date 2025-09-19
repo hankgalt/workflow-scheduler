@@ -39,6 +39,12 @@ services:
       interval: 10s
       start_period: 30s
     command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip", "localhost,scheduler-mongo", "--auth",  "--keyFile", "/opt/keyfile/mongo-keyfile"]
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 512m
     networks:
       schenet:
     
@@ -56,6 +62,12 @@ services:
       interval: 10s
       start_period: 30s
     command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip", "localhost,scheduler-mongo-rep1", "--auth",  "--keyFile", "/opt/keyfile/mongo-keyfile"]
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
     networks:
       schenet:
 
@@ -73,6 +85,12 @@ services:
       interval: 10s
       start_period: 30s
     command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip", "localhost,scheduler-mongo-rep2", "--auth",  "--keyFile", "/opt/keyfile/mongo-keyfile"]
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
     networks:
       schenet:
 
@@ -88,6 +106,12 @@ services:
     entrypoint: ["bash", "/scripts/mongo_setup.sh"]
     volumes:
       - ./mongo-setup.sh:/scripts/mongo_setup.sh:ro
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
     networks:
       schenet:
 

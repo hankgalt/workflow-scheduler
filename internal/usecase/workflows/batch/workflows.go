@@ -38,17 +38,17 @@ func init() {
 
 var HostID = host + "_" + ApplicationName
 
-type LocalCSVMongoNoopBatchRequest domain.BatchProcessingRequest[domain.CSVRow, sources.LocalCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow], snapshotters.NoopSnapshotterConfig]
-type LocalCSVNoopNoopBatchRequest domain.BatchProcessingRequest[domain.CSVRow, sources.LocalCSVConfig, bsinks.NoopSinkConfig[domain.CSVRow], snapshotters.NoopSnapshotterConfig]
-type CloudCSVMongoNoopBatchRequest domain.BatchProcessingRequest[domain.CSVRow, sources.CloudCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow], snapshotters.NoopSnapshotterConfig]
-type CloudCSVNoopNoopBatchRequest domain.BatchProcessingRequest[domain.CSVRow, sources.CloudCSVConfig, bsinks.NoopSinkConfig[domain.CSVRow], snapshotters.NoopSnapshotterConfig]
+type LocalCSVMongoNoopBatchRequest domain.BatchProcessingRequest[domain.CSVRow, *sources.LocalCSVConfig, *bsinks.MongoSinkConfig[domain.CSVRow], *snapshotters.NoopSnapshotterConfig]
+type LocalCSVNoopNoopBatchRequest domain.BatchProcessingRequest[domain.CSVRow, *sources.LocalCSVConfig, *bsinks.NoopSinkConfig[domain.CSVRow], *snapshotters.NoopSnapshotterConfig]
+type CloudCSVMongoNoopBatchRequest domain.BatchProcessingRequest[domain.CSVRow, *sources.CloudCSVConfig, *bsinks.MongoSinkConfig[domain.CSVRow], *snapshotters.NoopSnapshotterConfig]
+type CloudCSVNoopNoopBatchRequest domain.BatchProcessingRequest[domain.CSVRow, *sources.CloudCSVConfig, *bsinks.NoopSinkConfig[domain.CSVRow], *snapshotters.NoopSnapshotterConfig]
 
-type LocalCSVMongoLocalBatchRequest domain.BatchProcessingRequest[domain.CSVRow, sources.LocalCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow], snapshotters.LocalSnapshotterConfig]
-type LocalCSVNoopLocalBatchRequest domain.BatchProcessingRequest[domain.CSVRow, sources.LocalCSVConfig, bsinks.NoopSinkConfig[domain.CSVRow], snapshotters.LocalSnapshotterConfig]
-type CloudCSVMongoLocalBatchRequest domain.BatchProcessingRequest[domain.CSVRow, sources.CloudCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow], snapshotters.LocalSnapshotterConfig]
-type CloudCSVNoopLocalBatchRequest domain.BatchProcessingRequest[domain.CSVRow, sources.CloudCSVConfig, bsinks.NoopSinkConfig[domain.CSVRow], snapshotters.LocalSnapshotterConfig]
+type LocalCSVMongoLocalBatchRequest domain.BatchProcessingRequest[domain.CSVRow, *sources.LocalCSVConfig, *bsinks.MongoSinkConfig[domain.CSVRow], *snapshotters.LocalSnapshotterConfig]
+type LocalCSVNoopLocalBatchRequest domain.BatchProcessingRequest[domain.CSVRow, *sources.LocalCSVConfig, *bsinks.NoopSinkConfig[domain.CSVRow], *snapshotters.LocalSnapshotterConfig]
+type CloudCSVMongoLocalBatchRequest domain.BatchProcessingRequest[domain.CSVRow, *sources.CloudCSVConfig, *bsinks.MongoSinkConfig[domain.CSVRow], *snapshotters.LocalSnapshotterConfig]
+type CloudCSVNoopLocalBatchRequest domain.BatchProcessingRequest[domain.CSVRow, *sources.CloudCSVConfig, *bsinks.NoopSinkConfig[domain.CSVRow], *snapshotters.LocalSnapshotterConfig]
 
-type LocalCSVMongoCloudBatchRequest domain.BatchProcessingRequest[domain.CSVRow, sources.LocalCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow], snapshotters.CloudSnapshotterConfig]
-type LocalCSVNoopCloudBatchRequest domain.BatchProcessingRequest[domain.CSVRow, sources.LocalCSVConfig, bsinks.NoopSinkConfig[domain.CSVRow], snapshotters.CloudSnapshotterConfig]
-type CloudCSVMongoCloudBatchRequest domain.BatchProcessingRequest[domain.CSVRow, sources.CloudCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow], snapshotters.CloudSnapshotterConfig]
-type CloudCSVNoopCloudBatchRequest domain.BatchProcessingRequest[domain.CSVRow, sources.CloudCSVConfig, bsinks.NoopSinkConfig[domain.CSVRow], snapshotters.CloudSnapshotterConfig]
+type LocalCSVMongoCloudBatchRequest domain.BatchProcessingRequest[domain.CSVRow, *sources.LocalCSVConfig, *bsinks.MongoSinkConfig[domain.CSVRow], *snapshotters.CloudSnapshotterConfig]
+type LocalCSVNoopCloudBatchRequest domain.BatchProcessingRequest[domain.CSVRow, *sources.LocalCSVConfig, *bsinks.NoopSinkConfig[domain.CSVRow], *snapshotters.CloudSnapshotterConfig]
+type CloudCSVMongoCloudBatchRequest domain.BatchProcessingRequest[domain.CSVRow, *sources.CloudCSVConfig, *bsinks.MongoSinkConfig[domain.CSVRow], *snapshotters.CloudSnapshotterConfig]
+type CloudCSVNoopCloudBatchRequest domain.BatchProcessingRequest[domain.CSVRow, *sources.CloudCSVConfig, *bsinks.NoopSinkConfig[domain.CSVRow], *snapshotters.CloudSnapshotterConfig]

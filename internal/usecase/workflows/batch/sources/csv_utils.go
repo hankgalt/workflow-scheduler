@@ -10,8 +10,14 @@ import (
 
 	"github.com/comfforts/logger"
 	"github.com/hankgalt/batch-orchestra/pkg/domain"
+	"github.com/hankgalt/batch-orchestra/pkg/utils"
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
+
+const ERR_EMPTY_RECORD = "empty record"
+const ERR_ALL_BATCH_RECORDS = "all batch records failed"
+
+var ErrAllBatchRecords = errors.New(ERR_ALL_BATCH_RECORDS)
 
 func ReadCSVBatch(
 	ctx context.Context,
@@ -21,14 +27,14 @@ func ReadCSVBatch(
 	delimiter rune,
 	hasHeader bool,
 	transFunc domain.TransformerFunc,
-) ([]*domain.BatchRecord, uint64, error) {
+) ([]*domain.BatchRecord, int64, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	if len(data) == 0 || numBytesRead == 0 {
-		return nil, uint64(offset), nil
+		return nil, offset, nil
 	}
 
 	// Set start index to the specified offset.
@@ -57,12 +63,15 @@ func ReadCSVBatch(
 
 	records := []*domain.BatchRecord{}
 
+	var errCount int
+	var errs map[string]int
+
 	// Read records from the CSV reader
 	for {
 		// allow cancellation
 		select {
 		case <-ctx.Done():
-			return records, uint64(offset) + uint64(nextOffset), ctx.Err()
+			return records, offset + nextOffset, ctx.Err()
 		default:
 		}
 
@@ -74,12 +83,23 @@ func ReadCSVBatch(
 			// Attempt record cleanup if error occurs
 			cleanedStr := strutils.CleanRecord(string(data[nextOffset:csvReader.InputOffset()]))
 			if record, err := strutils.ReadSingleRecord(cleanedStr); err != nil {
-				l.Error("error reading record from csv", "error", err.Error())
+				l.Error(
+					"error reading record from csv",
+					"start", nextOffset,
+					"end", csvReader.InputOffset(),
+					"error", err.Error(),
+				)
+				if errs == nil {
+					errs = make(map[string]int)
+				}
+				errs[err.Error()]++
+				errCount++
+
 				records = append(records, &domain.BatchRecord{
-					Start: uint64(nextOffset),
-					End:   uint64(csvReader.InputOffset()),
+					Start: utils.Int64ToString(nextOffset),
+					End:   utils.Int64ToString(csvReader.InputOffset()),
 					BatchResult: domain.BatchResult{
-						Error: fmt.Sprintf("read data row: %v", err),
+						Error: err.Error(),
 					},
 				})
 
@@ -119,12 +139,18 @@ func ReadCSVBatch(
 		if len(rec) == 0 {
 			// Create a BatchRecord for the current csv record
 			br := domain.BatchRecord{
-				Start: uint64(startIndex),
-				End:   uint64(csvReader.InputOffset()),
+				Start: utils.Int64ToString(startIndex),
+				End:   utils.Int64ToString(csvReader.InputOffset()),
 				BatchResult: domain.BatchResult{
-					Error: "empty record",
+					Error: ERR_EMPTY_RECORD,
 				},
 			}
+
+			if errs == nil {
+				errs = make(map[string]int)
+			}
+			errs[ERR_EMPTY_RECORD]++
+			errCount++
 
 			// Update records slice & read count
 			records = append(records, &br)
@@ -153,8 +179,8 @@ func ReadCSVBatch(
 
 		// Create a BatchRecord for the current csv record
 		br := domain.BatchRecord{
-			Start: uint64(startIndex),
-			End:   uint64(csvReader.InputOffset()),
+			Start: utils.Int64ToString(startIndex),
+			End:   utils.Int64ToString(csvReader.InputOffset()),
 			Data:  row,
 		}
 
@@ -172,7 +198,12 @@ func ReadCSVBatch(
 
 	}
 
-	return records, uint64(offset) + uint64(nextOffset), nil
+	if errCount >= len(records) {
+		l.Error("all batch records failed", "errors", errs)
+		return records, offset + nextOffset, ErrAllBatchRecords
+	}
+
+	return records, offset + nextOffset, nil
 }
 
 func ReadCSVStream(
@@ -238,8 +269,8 @@ func ReadCSVStream(
 			if err != nil {
 				l.Error("error reading record from csv", "start", nextOffset, "end", csvReader.InputOffset(), "error", err.Error())
 				resStream <- &domain.BatchRecord{
-					Start: uint64(nextOffset),
-					End:   uint64(csvReader.InputOffset()),
+					Start: utils.Int64ToString(nextOffset),
+					End:   utils.Int64ToString(csvReader.InputOffset()),
 					BatchResult: domain.BatchResult{
 						Error: fmt.Sprintf("read data row: %v", err),
 					},
@@ -296,8 +327,8 @@ func ReadCSVStream(
 		}
 
 		resStream <- &domain.BatchRecord{
-			Start: uint64(startIndex),
-			End:   uint64(csvReader.InputOffset()),
+			Start: utils.Int64ToString(startIndex),
+			End:   utils.Int64ToString(csvReader.InputOffset()),
 			Data:  row,
 		}
 	}

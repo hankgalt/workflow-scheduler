@@ -15,15 +15,16 @@ import (
 const MongoSink = "mongo-sink"
 
 const (
-	ERR_MONGO_SINK_NIL         = "mongo sink is nil"
-	ERR_MONGO_SINK_NIL_CLIENT  = "mongo sink: nil client"
-	ERR_MONGO_SINK_EMPTY_COLL  = "mongo sink: empty collection"
-	ERR_MONGO_SINK_EMPTY_DATA  = "mongo sink: empty data, nothing to write"
-	ERR_MONGO_SINK_DB_PROTOCOL = "mongo sink: DB protocol is required"
-	ERR_MONGO_SINK_DB_HOST     = "mongo sink: DB host is required"
-	ERR_MONGO_SINK_DB_NAME     = "mongo sink: DB name is required"
-	ERR_MONGO_SINK_DB_USER     = "mongo sink: DB user is required"
-	ERR_MONGO_SINK_DB_PWD      = "mongo sink: DB password is required"
+	ERR_MONGO_SINK_NIL               = "mongo sink is nil"
+	ERR_MONGO_SINK_NIL_CLIENT        = "mongo sink: nil client"
+	ERR_MONGO_SINK_EMPTY_COLL        = "mongo sink: empty collection"
+	ERR_MONGO_SINK_EMPTY_DATA        = "mongo sink: empty data, nothing to write"
+	ERR_MONGO_SINK_DB_PROTOCOL       = "mongo sink: DB protocol is required"
+	ERR_MONGO_SINK_DB_HOST           = "mongo sink: DB host is required"
+	ERR_MONGO_SINK_DB_NAME           = "mongo sink: DB name is required"
+	ERR_MONGO_SINK_DB_USER           = "mongo sink: DB user is required"
+	ERR_MONGO_SINK_DB_PWD            = "mongo sink: DB password is required"
+	ERR_MONGO_SINK_ALL_BATCH_RECORDS = "mongo sink: all batch records failed"
 )
 
 var (
@@ -36,6 +37,7 @@ var (
 	ErrMongoSinkDBName     = errors.New(ERR_MONGO_SINK_DB_NAME)
 	ErrMongoSinkDBUser     = errors.New(ERR_MONGO_SINK_DB_USER)
 	ErrMongoSinkDBPwd      = errors.New(ERR_MONGO_SINK_DB_PWD)
+	ErrAllBatchRecords     = errors.New(ERR_MONGO_SINK_ALL_BATCH_RECORDS)
 )
 
 // MongoDocWriter is the tiny capability we need.
@@ -73,6 +75,8 @@ func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess) (*doma
 		return b, ErrMongoSinkEmptyData
 	}
 
+	var errCount int
+	var errs map[string]int
 	for i, rec := range b.Records {
 		// allow cancellation
 		select {
@@ -94,16 +98,31 @@ func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess) (*doma
 
 		doc, err := toMapAny(rec.Data)
 		if err != nil {
-			b.Records[i].BatchResult.Error = fmt.Sprintf("record %d convert: %s", i, err.Error())
+			b.Records[i].BatchResult.Error = err.Error()
+			if errs == nil {
+				errs = make(map[string]int)
+			}
+			errs[err.Error()]++
+			errCount++
 			continue
 		}
 
 		res, err := s.client.AddCollectionDoc(ctx, s.collection, doc)
 		if err != nil {
-			b.Records[i].BatchResult.Error = fmt.Sprintf("record %d insert: %s", i, err.Error())
+			b.Records[i].BatchResult.Error = err.Error()
+			if errs == nil {
+				errs = make(map[string]int)
+			}
+			errs[err.Error()]++
+			errCount++
 			continue
 		}
 		b.Records[i].BatchResult.Result = res // store the inserted ID or result
+	}
+
+	if errCount >= len(b.Records) {
+		l.Error("all batch records failed", "batch-id", b.BatchId, "errors", errs)
+		return b, ErrAllBatchRecords
 	}
 	return b, nil
 }
@@ -175,10 +194,10 @@ type MongoSinkConfig[T any] struct {
 }
 
 // Name of the sink.
-func (c MongoSinkConfig[T]) Name() string { return MongoSink }
+func (c *MongoSinkConfig[T]) Name() string { return MongoSink }
 
 // BuildSink builds a MongoDB sink from the config.
-func (c MongoSinkConfig[T]) BuildSink(ctx context.Context) (domain.Sink[T], error) {
+func (c *MongoSinkConfig[T]) BuildSink(ctx context.Context) (domain.Sink[T], error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("MongoSinkConfig:BuildSink - error getting logger from context: %w", err)
@@ -245,11 +264,11 @@ func toMapAny[T any](rec T) (map[string]any, error) {
 	// Fallback: JSON round-trip (covers structs, slices, etc.)
 	b, err := json.Marshal(rec)
 	if err != nil {
-		return nil, fmt.Errorf("marshal: %w", err)
+		return nil, err
 	}
 	var out map[string]any
 	if err := json.Unmarshal(b, &out); err != nil {
-		return nil, fmt.Errorf("unmarshal: %w", err)
+		return nil, err
 	}
 	return out, nil
 }

@@ -42,7 +42,7 @@ type RequestConfig struct {
 	MaxBatches          uint                   `json:"maxBatches"`          // Maximum number of batches to process
 	MaxInProcessBatches uint                   `json:"maxInProcessBatches"` // Maximum number of batches to process concurrently
 	BatchSize           uint                   `json:"batchSize"`           // Size of each batch
-	Start               uint64                 `json:"start"`               // Start position for processing
+	Start               string                 `json:"start"`               // Start position for processing
 	MappingRules        map[string]domain.Rule `json:"mappingRules"`        // Optional mappings for CSV headers to MongoDB fields
 }
 

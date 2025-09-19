@@ -10,6 +10,7 @@ import (
 
 	"github.com/comfforts/logger"
 	"github.com/hankgalt/batch-orchestra/pkg/domain"
+	"github.com/hankgalt/batch-orchestra/pkg/utils"
 
 	strutils "github.com/hankgalt/workflow-scheduler/pkg/utils/string"
 )
@@ -33,6 +34,7 @@ var (
 // Local CSV source.
 type localCSVSource struct {
 	path      string
+	size      int64
 	delimiter rune
 	hasHeader bool
 	transFunc domain.TransformerFunc // transformer function to apply to each row
@@ -47,9 +49,14 @@ func (s *localCSVSource) Close(ctx context.Context) error {
 	return nil
 }
 
+// Size returns the size of the local CSV file.
+func (s *localCSVSource) Size(ctx context.Context) int64 {
+	return s.size
+}
+
 // Next reads the next batch of CSV rows from the local file.
 // It reads from the file at the specified offset and returns a batch of CSVRow.
-func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*domain.BatchProcess, error) {
+func (s *localCSVSource) Next(ctx context.Context, offset string, size uint) (*domain.BatchProcess, error) {
 	// If size is 0 or negative, return an empty batch.
 	if size <= 0 {
 		return nil, ErrLocalCSVSizeInvalid
@@ -80,12 +87,17 @@ func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*d
 	}
 	defer f.Close()
 
+	offsetInt64, err := utils.ParseInt64(offset)
+	if err != nil {
+		return bp, fmt.Errorf("local csv: invalid offset %s: %w", offset, err)
+	}
+
 	// Read data bytes from the file at the specified offset
 	data := make([]byte, size)
-	numBytesRead, err := f.ReadAt(data, int64(offset))
+	numBytesRead, err := f.ReadAt(data, offsetInt64)
 	if err != nil && err != io.EOF {
 		l.Error("error reading local CSV file", "path", s.path, "offset", offset, "error", err.Error())
-		return nil, fmt.Errorf("error reading file %s at offset %d: %w", s.path, offset, err)
+		return nil, fmt.Errorf("error reading file %s at offset %s: %w", s.path, offset, err)
 	}
 
 	// If read data is less than requested, it means we reached EOF, set Done
@@ -98,7 +110,7 @@ func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*d
 		ctx,
 		data,
 		numBytesRead,
-		int64(offset),
+		offsetInt64,
 		s.delimiter,
 		s.hasHeader,
 		s.transFunc,
@@ -107,14 +119,14 @@ func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*d
 		l.Error("error reading CSV data", "path", s.path, "offset", offset, "error", err.Error())
 
 		bp.Records = records
-		bp.NextOffset = nextOffset
+		bp.NextOffset = utils.Int64ToString(nextOffset)
 		bp.Done = done
 
 		return bp, err
 	}
 
 	bp.Records = records
-	bp.NextOffset = nextOffset
+	bp.NextOffset = utils.Int64ToString(nextOffset)
 	bp.Done = done
 
 	return bp, nil
@@ -122,7 +134,7 @@ func (s *localCSVSource) Next(ctx context.Context, offset uint64, size uint) (*d
 
 func (s *localCSVSource) NextStream(
 	ctx context.Context,
-	offset uint64,
+	offset string,
 	size uint,
 ) (<-chan *domain.BatchRecord, error) {
 	// If size is 0 or negative, return an empty batch.
@@ -143,8 +155,13 @@ func (s *localCSVSource) NextStream(
 	}
 	defer f.Close()
 
+	offsetInt64, err := utils.ParseInt64(offset)
+	if err != nil {
+		return nil, fmt.Errorf("local csv: invalid offset %s: %w", offset, err)
+	}
+
 	// Set start index to the specified offset.
-	startIndex := int64(offset)
+	startIndex := offsetInt64
 
 	// Read data bytes from the file at the specified offset
 	data := make([]byte, size)
@@ -176,7 +193,7 @@ func (s *localCSVSource) NextStream(
 			ctx,
 			data,
 			numBytesRead,
-			int64(offset),
+			offsetInt64,
 			s.delimiter,
 			s.hasHeader,
 			s.transFunc,
@@ -199,11 +216,11 @@ type LocalCSVConfig struct {
 }
 
 // Name of the source.
-func (c LocalCSVConfig) Name() string { return LocalCSVSource }
+func (c *LocalCSVConfig) Name() string { return LocalCSVSource }
 
 // BuildSource builds a local CSV source from the config.
 // It reads headers if HasHeader is true and caches it.
-func (c LocalCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.CSVRow], error) {
+func (c *LocalCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.CSVRow], error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("LocalCSVConfig:BuildSource - error getting logger from context: %w", err)
@@ -232,6 +249,12 @@ func (c LocalCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.C
 			return nil, ErrLocalCSVFileOpen
 		}
 		defer f.Close()
+
+		if fileInfo, err := os.Stat(c.Path); err != nil {
+			fmt.Printf("Error getting file info: %v\n", err)
+		} else {
+			src.size = fileInfo.Size()
+		}
 
 		r := csv.NewReader(f)
 		r.Comma = delim

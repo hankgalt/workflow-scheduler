@@ -31,9 +31,6 @@ const DEFAULT_WORKER_HOST = "batch-worker"
 func main() {
 	fmt.Println("Starting batch worker - setting up logger instance")
 	l := logger.GetSlogMultiLogger("data")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
-	ctx = logger.WithLogger(ctx, l)
 
 	// setup host identity for worker
 	host, err := os.Hostname()
@@ -56,6 +53,10 @@ func main() {
 		tCfg.MetricsAddr(),
 		tCfg.OtelEndpoint(),
 	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctx = logger.WithLogger(ctx, l)
 
 	// setup startup context with timeout
 	startupCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -126,7 +127,7 @@ func main() {
 	<-quit
 
 	// setup shutdown context with timeout
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	<-shutdownCtx.Done()
@@ -137,13 +138,13 @@ func registerBatchWorkflow(worker worker.Worker) {
 	// register batch task processing workflows
 	// Register the workflow
 	worker.RegisterWorkflowWithOptions(
-		bo.ProcessBatchWorkflow[domain.CSVRow, sources.LocalCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow], snapshotters.LocalSnapshotterConfig],
+		bo.ProcessBatchWorkflow[domain.CSVRow, *sources.LocalCSVConfig, *bsinks.MongoSinkConfig[domain.CSVRow], *snapshotters.LocalSnapshotterConfig],
 		workflow.RegisterOptions{
 			Name: btchwkfl.ProcessLocalCSVMongoLocalWorkflowAlias,
 		},
 	)
 	worker.RegisterWorkflowWithOptions(
-		bo.ProcessBatchWorkflow[domain.CSVRow, sources.CloudCSVConfig, bsinks.MongoSinkConfig[domain.CSVRow], snapshotters.CloudSnapshotterConfig],
+		bo.ProcessBatchWorkflow[domain.CSVRow, *sources.CloudCSVConfig, *bsinks.MongoSinkConfig[domain.CSVRow], *snapshotters.CloudSnapshotterConfig],
 		workflow.RegisterOptions{
 			Name: btchwkfl.ProcessCloudCSVMongoCloudWorkflowAlias,
 		},
@@ -151,37 +152,37 @@ func registerBatchWorkflow(worker worker.Worker) {
 
 	// register batch task processing activities
 	worker.RegisterActivityWithOptions(
-		bo.FetchNextActivity[domain.CSVRow, sources.LocalCSVConfig],
+		bo.FetchNextActivity[domain.CSVRow, *sources.LocalCSVConfig],
 		activity.RegisterOptions{
 			Name: btchwkfl.FetchNextLocalCSVSourceBatchActivityAlias,
 		},
 	)
 	worker.RegisterActivityWithOptions(
-		bo.FetchNextActivity[domain.CSVRow, sources.CloudCSVConfig],
+		bo.FetchNextActivity[domain.CSVRow, *sources.CloudCSVConfig],
 		activity.RegisterOptions{
 			Name: btchwkfl.FetchNextCloudCSVSourceBatchActivityAlias,
 		},
 	)
 	worker.RegisterActivityWithOptions(
-		bo.WriteActivity[domain.CSVRow, bsinks.MongoSinkConfig[domain.CSVRow]],
+		bo.WriteActivity[domain.CSVRow, *bsinks.MongoSinkConfig[domain.CSVRow]],
 		activity.RegisterOptions{
 			Name: btchwkfl.WriteNextMongoSinkBatchActivityAlias,
 		},
 	)
 	worker.RegisterActivityWithOptions(
-		bo.WriteActivity[domain.CSVRow, bsinks.NoopSinkConfig[domain.CSVRow]],
+		bo.WriteActivity[domain.CSVRow, *bsinks.NoopSinkConfig[domain.CSVRow]],
 		activity.RegisterOptions{
 			Name: btchwkfl.WriteNextNoopSinkBatchActivityAlias,
 		},
 	)
 	worker.RegisterActivityWithOptions(
-		bo.SnapshotActivity[snapshotters.LocalSnapshotterConfig],
+		bo.SnapshotActivity[*snapshotters.LocalSnapshotterConfig],
 		activity.RegisterOptions{
 			Name: btchwkfl.SnapshotLocalBatchActivityAlias,
 		},
 	)
 	worker.RegisterActivityWithOptions(
-		bo.SnapshotActivity[snapshotters.CloudSnapshotterConfig],
+		bo.SnapshotActivity[*snapshotters.CloudSnapshotterConfig],
 		activity.RegisterOptions{
 			Name: btchwkfl.SnapshotCloudBatchActivityAlias,
 		},

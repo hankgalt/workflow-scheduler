@@ -77,10 +77,11 @@ message BatchCSVRequest {
     uint32 max_batches = 1;
     uint64 batch_size = 2;
     uint32 max_in_process_batches = 3;
-    map<string, Rule> mapping_rules = 4;
+    string start = 4;
+    map<string, Rule> mapping_rules = 5;
     oneof job_config {
-        CloudCSVMongoConfig cloud_csv_mongo_config = 5;
-        LocalCSVMongoConfig local_csv_mongo_config = 6;
+        CloudCSVMongoConfig cloud_csv_mongo_config = 6;
+        LocalCSVMongoConfig local_csv_mongo_config = 7;
     }
 }
 

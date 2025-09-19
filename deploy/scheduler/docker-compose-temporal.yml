@@ -6,6 +6,12 @@ services:
     image: cassandra:3.11.9
     ports:
       - "9042:9042"
+    deploy:
+      resources:
+        limits:
+          memory: 8g
+        reservations:
+          memory: 4g
     networks:
       - schenet
   
@@ -24,6 +30,12 @@ services:
       - "9200:9200"
     volumes:
       - ./elastic/:/var/lib/elasticsearch/data
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+        reservations:
+          memory: 1g
     networks:
       - schenet
   
@@ -48,6 +60,12 @@ services:
     depends_on:
       - cassandra
       - elasticsearch
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
     networks:
       - schenet
   
@@ -59,6 +77,12 @@ services:
       - TEMPORAL_CLI_ADDRESS=temporal:7233
     stdin_open: true
     tty: true
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+        reservations:
+          memory: 128m
     depends_on:
       - temporal
     networks:
@@ -74,6 +98,12 @@ services:
       - 8080:8080
     depends_on:
       - temporal
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 256m
     networks:
       - schenet
 

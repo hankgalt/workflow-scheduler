@@ -120,10 +120,10 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 	}
 
 	workflowOptions := client.StartWorkflowOptions{
-		ID:                       fmt.Sprintf("cloud-csv-mongo-cloud-%s", runId),
+		ID:                       fmt.Sprintf("cloud-csv-mongo-cloud-%s-%s", runId, req.Start),
 		TaskQueue:                btchwkfl.ApplicationName,
-		WorkflowExecutionTimeout: time.Duration(24 * time.Hour),
-		WorkflowTaskTimeout:      time.Minute * 5, // set to max, as there are decision tasks that'll take as long as max
+		WorkflowExecutionTimeout: time.Duration(6 * time.Hour),
+		WorkflowTaskTimeout:      time.Minute * 60, // set to max, as there are decision tasks that'll take as long as max
 		WorkflowIDReusePolicy:    2,
 		WorkflowIDConflictPolicy: 1,
 	}
@@ -132,7 +132,7 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 	// Source - local CSV
 	fCfg := req.Config.CloudCSVBatchConfig
 	path := filepath.Join(fCfg.Path, fCfg.Name)
-	sourceCfg := sources.CloudCSVConfig{
+	sourceCfg := &sources.CloudCSVConfig{
 		Path:         path,
 		Bucket:       fCfg.Bucket,
 		Provider:     string(sources.CloudSourceGCS),
@@ -143,7 +143,7 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 
 	// Sink - MongoDB
 	mdbCfg := req.Config.MongoBatchConfig
-	sinkCfg := bsinks.MongoSinkConfig[domain.CSVRow]{
+	sinkCfg := &bsinks.MongoSinkConfig[domain.CSVRow]{
 		Protocol:   mdbCfg.Protocol,
 		Host:       mdbCfg.Host,
 		DBName:     mdbCfg.Name,
@@ -154,9 +154,14 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 	}
 
 	// Snapshotter - cloud
-	ssCfg := snapshotters.CloudSnapshotterConfig{
+	ssCfg := &snapshotters.CloudSnapshotterConfig{
 		Path:   fCfg.Path,
 		Bucket: fCfg.Bucket,
+	}
+
+	startAt := "0"
+	if req.Start != "" {
+		startAt = req.Start
 	}
 
 	batReq := &btchwkfl.CloudCSVMongoCloudBatchRequest{
@@ -164,15 +169,18 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 		BatchSize:           req.CSVBatchRequest.BatchSize,
 		MaxInProcessBatches: req.CSVBatchRequest.MaxInProcessBatches,
 		MaxBatches:          req.CSVBatchRequest.MaxBatches,
+		PauseDuration:       45 * time.Second,
+		PauseRecordCount:    800,
+		StartAt:             startAt,
 		Source:              sourceCfg,
 		Sink:                sinkCfg,
 		Snapshotter:         ssCfg,
 		Policies: map[string]domain.RetryPolicySpec{
 			domain.GetFetchActivityName(sourceCfg): {
 				MaximumAttempts:    3,
-				InitialInterval:    100 * time.Millisecond,
+				InitialInterval:    150 * time.Millisecond,
 				BackoffCoefficient: 2.0,
-				MaximumInterval:    5 * time.Second,
+				MaximumInterval:    10 * time.Minute,
 				NonRetryableErrorTypes: []string{
 					sources.ERR_CLOUD_CSV_READER_NIL,
 					sources.ERR_CLOUD_CSV_CLIENT_NIL,
@@ -186,8 +194,8 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 			domain.GetWriteActivityName(sinkCfg): {
 				MaximumAttempts:    3,
 				InitialInterval:    200 * time.Millisecond,
-				BackoffCoefficient: 1.5,
-				MaximumInterval:    10 * time.Second,
+				BackoffCoefficient: 2.0,
+				MaximumInterval:    10 * time.Minute,
 				NonRetryableErrorTypes: []string{
 					bsinks.ERR_MONGO_SINK_DB_PROTOCOL,
 					bsinks.ERR_MONGO_SINK_DB_HOST,
@@ -198,8 +206,22 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 					bsinks.ERR_MONGO_SINK_NIL_CLIENT,
 					bsinks.ERR_MONGO_SINK_EMPTY_COLL,
 					bsinks.ERR_MONGO_SINK_EMPTY_DATA,
-					// mongostore.ERR_MONGO_CLIENT_CONN,
+					mongostore.ERR_MONGO_CLIENT_CONN,
 					mongostore.ERR_DECODING_OBJECT_ID,
+					mongostore.ERR_DUPLICATE_RECORD,
+				},
+			},
+			domain.GetSnapshotActivityName(ssCfg): {
+				MaximumAttempts:    3,
+				InitialInterval:    100 * time.Millisecond,
+				BackoffCoefficient: 2.0,
+				MaximumInterval:    15 * time.Minute,
+				NonRetryableErrorTypes: []string{
+					snapshotters.ERR_MISSING_CLOUD_CREDENTIALS,
+					snapshotters.ERR_MISSING_BUCKET_NAME,
+					snapshotters.ERR_MISSING_OBJECT_PATH,
+					snapshotters.ERR_MISSING_KEY,
+					snapshotters.ERR_MISSING_CLOUD_CLIENT,
 				},
 			},
 		},
@@ -236,10 +258,10 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 	}
 
 	workflowOptions := client.StartWorkflowOptions{
-		ID:                       fmt.Sprintf("local-csv-mongo-%s", runId),
+		ID:                       fmt.Sprintf("local-csv-mongo-%s-%s", runId, req.Start),
 		TaskQueue:                btchwkfl.ApplicationName,
 		WorkflowExecutionTimeout: time.Duration(24 * time.Hour),
-		WorkflowTaskTimeout:      time.Minute * 5, // set to max, as there are decision tasks that'll take as long as max
+		WorkflowTaskTimeout:      time.Minute * 60, // set to max, as there are decision tasks that'll take as long as max
 		WorkflowIDReusePolicy:    2,
 		WorkflowIDConflictPolicy: 1,
 	}
@@ -248,7 +270,7 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 	// Source - local CSV
 	fCfg := req.Config.LocalCSVBatchConfig
 	path := filepath.Join(fCfg.Path, fCfg.Name)
-	sourceCfg := sources.LocalCSVConfig{
+	sourceCfg := &sources.LocalCSVConfig{
 		Path:         path,
 		Delimiter:    '|',
 		HasHeader:    true,
@@ -256,7 +278,7 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 	}
 	// Sink - MongoDB
 	mdbCfg := req.Config.MongoBatchConfig
-	sinkCfg := bsinks.MongoSinkConfig[domain.CSVRow]{
+	sinkCfg := &bsinks.MongoSinkConfig[domain.CSVRow]{
 		Protocol:   mdbCfg.Protocol,
 		Host:       mdbCfg.Host,
 		DBName:     mdbCfg.Name,
@@ -267,8 +289,13 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 	}
 
 	// Snapshotter - local file
-	ssCfg := snapshotters.LocalSnapshotterConfig{
+	ssCfg := &snapshotters.LocalSnapshotterConfig{
 		Path: fCfg.Path,
+	}
+
+	startAt := "0"
+	if req.Start != "" {
+		startAt = req.Start
 	}
 
 	batReq := &btchwkfl.LocalCSVMongoLocalBatchRequest{
@@ -276,6 +303,9 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 		BatchSize:           req.CSVBatchRequest.BatchSize,
 		MaxBatches:          req.CSVBatchRequest.MaxBatches,
 		MaxInProcessBatches: req.CSVBatchRequest.MaxInProcessBatches,
+		PauseDuration:       45 * time.Second,
+		PauseRecordCount:    800,
+		StartAt:             startAt,
 		Source:              sourceCfg,
 		Sink:                sinkCfg,
 		Snapshotter:         ssCfg,
@@ -284,19 +314,20 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 				MaximumAttempts:    3,
 				InitialInterval:    100 * time.Millisecond,
 				BackoffCoefficient: 2.0,
-				MaximumInterval:    5 * time.Second,
+				MaximumInterval:    10 * time.Minute,
 				NonRetryableErrorTypes: []string{
 					sources.ERR_LOCAL_CSV_PATH_REQUIRED,
 					sources.ERR_LOCAL_CSV_FILE_OPEN,
 					sources.ERR_LOCAL_CSV_SIZE_INVALID,
 					sources.ERR_LOCAL_CSV_TRANSFORMER_NIL,
+					sources.ERR_ALL_BATCH_RECORDS,
 				},
 			},
 			domain.GetWriteActivityName(sinkCfg): {
 				MaximumAttempts:    3,
-				InitialInterval:    200 * time.Millisecond,
-				BackoffCoefficient: 1.5,
-				MaximumInterval:    10 * time.Second,
+				InitialInterval:    100 * time.Millisecond,
+				BackoffCoefficient: 2.0,
+				MaximumInterval:    20 * time.Minute,
 				NonRetryableErrorTypes: []string{
 					bsinks.ERR_MONGO_SINK_DB_PROTOCOL,
 					bsinks.ERR_MONGO_SINK_DB_HOST,
@@ -307,12 +338,26 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 					bsinks.ERR_MONGO_SINK_NIL_CLIENT,
 					bsinks.ERR_MONGO_SINK_EMPTY_COLL,
 					bsinks.ERR_MONGO_SINK_EMPTY_DATA,
-					// mongostore.ERR_MONGO_CLIENT_CONN,
+					mongostore.ERR_MONGO_CLIENT_CONN,
 					mongostore.ERR_DECODING_OBJECT_ID,
+					mongostore.ERR_DUPLICATE_RECORD,
+					bsinks.ERR_MONGO_SINK_ALL_BATCH_RECORDS,
+				},
+			},
+			domain.GetSnapshotActivityName(ssCfg): {
+				MaximumAttempts:    3,
+				InitialInterval:    100 * time.Millisecond,
+				BackoffCoefficient: 2.0,
+				MaximumInterval:    20 * time.Minute,
+				NonRetryableErrorTypes: []string{
+					snapshotters.ERR_MISSING_OBJECT_PATH,
+					snapshotters.ERR_MISSING_KEY,
 				},
 			},
 		},
 	}
+
+	// get workflow state
 
 	we, err := bs.temporal.StartWorkflowWithCtx(ctx, workflowOptions, btchwkfl.ProcessLocalCSVMongoLocalWorkflowAlias, &batReq)
 	if err != nil {
