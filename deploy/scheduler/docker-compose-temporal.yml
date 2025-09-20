@@ -6,10 +6,11 @@ services:
     image: cassandra:3.11.9
     ports:
       - "9042:9042"
+    restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 8g
+          memory: 5g
         reservations:
           memory: 4g
     networks:
@@ -28,6 +29,7 @@ services:
       - xpack.security.enabled=false
     ports:
       - "9200:9200"
+    restart: unless-stopped
     volumes:
       - ./elastic/:/var/lib/elasticsearch/data
     deploy:
@@ -53,6 +55,7 @@ services:
     ports:
       - "7233:7233"  # Temporal gRPC API
       - "8000:8000"  # <— publish metrics to host for Prometheus scrape
+    restart: unless-stopped
     volumes:
       - ./dynamicconfig:/etc/temporal/config/dynamicconfig
     labels:
@@ -80,9 +83,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256m
-        reservations:
           memory: 128m
+        reservations:
+          memory: 64m
     depends_on:
       - temporal
     networks:
@@ -101,9 +104,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
-        reservations:
           memory: 256m
+        reservations:
+          memory: 128m
     networks:
       - schenet
 

@@ -52,7 +52,7 @@ start-mongo: network mongo
 # stop mongo cluster
 stop-mongo:
 	@echo "Stopping MongoDB cluster..."
-	@set -a; . env/mongo.env; set +a; docker-compose -f deploy/scheduler/docker-compose-mongo.yml down -v 
+	@set -a; . env/mongo.env; set +a; docker-compose -f deploy/scheduler/docker-compose-mongo.yml down
 
 ######## - Temporal - #######
 # start Temporal server

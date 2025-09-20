@@ -102,8 +102,8 @@ func testProcessCloudCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 
 	resp, err := client.ProcessCloudCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
 		MaxInProcessBatches: 2,
-		BatchSize:           400,
-		MaxBatches:          3,
+		BatchSize:           1000,
+		Start:               "0",
 		MappingRules:        envutils.BuildBusinessModelTransformRules(),
 		JobConfig: &api.BatchCSVRequest_CloudCsvMongoConfig{
 			CloudCsvMongoConfig: batch.MapProtoFromCloudCSVMongoBatchConfig(jobCfg),
@@ -131,9 +131,9 @@ func testProcessLocalCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 
 	resp, err := client.ProcessLocalCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
 		MaxInProcessBatches: 2,
-		// MaxBatches:          3,
-		BatchSize:    1000,
-		MappingRules: envutils.BuildBusinessModelTransformRules(),
+		BatchSize:           1000,
+		Start:               "0",
+		MappingRules:        envutils.BuildBusinessModelTransformRules(),
 		JobConfig: &api.BatchCSVRequest_LocalCsvMongoConfig{
 			LocalCsvMongoConfig: batch.MapProtoFromLocalCSVMongoBatchConfig(jobCfg),
 		},

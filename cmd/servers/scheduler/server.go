@@ -27,7 +27,7 @@ const DEFAULT_SERVICE_HOST = "scheduler-service"
 
 func main() {
 	// Initialize logger
-	l := logger.GetSlogMultiLogger("data")
+	l := logger.GetSlogLogger()
 
 	host, err := os.Hostname()
 	if err != nil {

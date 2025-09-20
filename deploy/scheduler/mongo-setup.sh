@@ -53,27 +53,31 @@ mongosh -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --host
         print("Error creating admin user: " + e);
     }
 
-    print("Creating app database & admin user...");
     appDb = process.env.MONGO_APP_DB;
     try {
         db = db.getSiblingDB(appDb);
-        db.createUser({
-            user: process.env.MONGO_APP_USER,
-            pwd: process.env.MONGO_APP_PASS,
-            roles: [{ role: "readWrite", db: appDb }]
-        });
+        if (!db.getUser(process.env.MONGO_APP_USER)) {
+            print("Creating app database & admin user...");
+            db.createUser({
+                user: process.env.MONGO_APP_USER,
+                pwd: process.env.MONGO_APP_PASS,
+                roles: [{ role: "readWrite", db: appDb }]
+            });
+        }
     } catch (e) {
         print("Error creating app admin user & db: " + e);
     }
 
-    print("Creating test database & test user...");
     try {
         db = db.getSiblingDB(appDb);
-        db.createUser({
-            user: "testuser",
-            pwd: "testpassword",
-            roles: [{ role: "readWrite", db: `${appDb}_test` }]
-        });
+        if (!db.getUser("testuser")) {
+            print("Creating test database & test user...");
+            db.createUser({
+                user: "testuser",
+                pwd: "testpassword",
+                roles: [{ role: "readWrite", db: `${appDb}_test` }]
+            });
+        }
     } catch (e) {
         print("Error creating test user & db: " + e);
     }

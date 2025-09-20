@@ -76,5 +76,7 @@
 - grpcurl
     - `go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest`
 - ReadAt reads len(b) bytes from the File starting at byte offset off. It returns the number of bytes read and the error, if any. ReadAt always returns a non-nil error when n < len(b). At end of file, that error is io.EOF. n < len(b) when line ends earlier.
+- `docker stats --no-stream --format "table {{.Name}}\t{{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}" | sort -k 4 -h -r`
+    - 
 
 

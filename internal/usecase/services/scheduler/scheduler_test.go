@@ -128,13 +128,13 @@ func TestQueryWorkflowState(t *testing.T) {
 	}()
 
 	// Simulate querying a workflow state
-	workflowID := "local-csv-mongo-data-scheduler-Agents.csv-"
+	workflowID := "local-csv-mongo-data-scheduler-Agents.csv-0"
 	state, err := ss.QueryWorkflowState(ctx, &batch.WorkflowQueryParams{
 		WorkflowId: workflowID,
-		RunId:      "1b8add02-1831-4a47-9fa2-621d8f212ccb",
+		RunId:      "eebc25ad-5760-4048-a1dc-20631bc61788",
 	})
 	require.NoError(t, err)
 	st, ok := state.(map[string]any)
 	require.True(t, ok, "expected state to be of type map[string]any")
-	l.Info("SchedulerService - TestQueryWorkflowState retrieved workflow state", "workflow-id", workflowID, "state", st["Snapshot"])
+	l.Info("SchedulerService - TestQueryWorkflowState retrieved workflow state", "workflow-id", workflowID, "state", st)
 }

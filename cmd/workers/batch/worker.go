@@ -30,7 +30,7 @@ const DEFAULT_WORKER_HOST = "batch-worker"
 
 func main() {
 	fmt.Println("Starting batch worker - setting up logger instance")
-	l := logger.GetSlogMultiLogger("data")
+	l := logger.GetSlogLogger()
 
 	// setup host identity for worker
 	host, err := os.Hostname()

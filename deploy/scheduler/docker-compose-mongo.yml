@@ -31,6 +31,7 @@ services:
       - ../../env/mongo.env
     volumes:
       - scheduler-mongo-data:/data/db
+      # - ./data/mongo/leader:/data/db
       - ./mongo-keyfile:/opt/keyfile/mongo-keyfile
     ports:
       - "27017:27017"
@@ -56,6 +57,7 @@ services:
       - ../../env/mongo.env
     volumes:
       - scheduler-mongo-rep1-data:/data/db
+      # - ./data/mongo/rep1:/data/db
       - ./mongo-keyfile:/opt/keyfile/mongo-keyfile
     healthcheck:
       test: ["CMD-SHELL", "mongosh --quiet -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --eval 'rs.status().ok' | grep 1"]
@@ -79,6 +81,7 @@ services:
       - ../../env/mongo.env
     volumes:
       - scheduler-mongo-rep2-data:/data/db
+      # - ./data/mongo/rep2:/data/db
       - ./mongo-keyfile:/opt/keyfile/mongo-keyfile
     healthcheck:
       test: ["CMD-SHELL", "mongosh --quiet -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --eval 'rs.status().ok' | grep 1"]
