@@ -1,6 +1,6 @@
 services:
   scheduler-server:
-    image: scheduler-server:dev-latest
+    image: scheduler-server:dev-${IMG_TAG}
     platform: linux/arm64
     container_name: scheduler-server
     build:

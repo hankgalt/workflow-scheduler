@@ -67,9 +67,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 768m
         reservations:
-          memory: 256m
+          memory: 512m
     networks:
       schenet:
 
@@ -91,9 +91,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 768m
         reservations:
-          memory: 256m
+          memory: 512m
     networks:
       schenet:
 
@@ -112,9 +112,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 768m
         reservations:
-          memory: 256m
+          memory: 512m
     networks:
       schenet:
 

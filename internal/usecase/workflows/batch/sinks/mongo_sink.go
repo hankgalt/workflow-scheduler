@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/comfforts/logger"
 	"github.com/hankgalt/batch-orchestra/pkg/domain"
@@ -43,6 +44,7 @@ var (
 // MongoDocWriter is the tiny capability we need.
 type MongoDocWriter interface {
 	AddCollectionDoc(ctx context.Context, collectionName string, doc map[string]any) (string, error)
+	Stats(ctx context.Context, db string)
 	Close(ctx context.Context) error
 }
 
@@ -50,6 +52,7 @@ type MongoDocWriter interface {
 type mongoSink[T any] struct {
 	client     MongoDocWriter // MongoDB client
 	collection string         // collection name
+	dbName     string         // database name
 }
 
 // Name returns the name of the mongo sink.
@@ -110,11 +113,14 @@ func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess) (*doma
 		res, err := s.client.AddCollectionDoc(ctx, s.collection, doc)
 		if err != nil {
 			b.Records[i].BatchResult.Error = err.Error()
-			if errs == nil {
-				errs = make(map[string]int)
+			// skip duplicate record errors
+			if err != mongostore.ErrDuplicateRecord {
+				if errs == nil {
+					errs = make(map[string]int)
+				}
+				errs[err.Error()]++
+				errCount++
 			}
-			errs[err.Error()]++
-			errCount++
 			continue
 		}
 		b.Records[i].BatchResult.Result = res // store the inserted ID or result
@@ -122,6 +128,10 @@ func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess) (*doma
 
 	// Set the error map on the batch
 	b.Error = errs
+
+	if time.Now().Unix()%10 == 0 {
+		s.client.Stats(ctx, s.dbName)
+	}
 
 	if errCount >= len(b.Records) {
 		l.Error("all batch records failed", "batch-id", b.BatchId, "errors", errs)
@@ -250,6 +260,7 @@ func (c *MongoSinkConfig[T]) BuildSink(ctx context.Context) (domain.Sink[T], err
 	return &mongoSink[T]{
 		client:     mCl,
 		collection: c.Collection,
+		dbName:     c.DBName,
 	}, nil
 }
 

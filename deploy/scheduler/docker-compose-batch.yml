@@ -1,6 +1,6 @@
 services:
   batch-worker:
-    image: batch-worker:dev-latest
+    image: batch-worker:dev-${IMG_TAG}
     platform: linux/arm64
     container_name: batch-worker
     build:

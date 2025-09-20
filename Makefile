@@ -1,9 +1,28 @@
-HEAD := $(shell git rev-parse --short HEAD)
-SCHED_VERSION := v0.0.12
+# Collect Git info
+CURRENT_TAG   := $(shell git describe --tags --abbrev=0 2>/dev/null || echo "none")
+CURRENT_DESC  := $(shell git describe --tags --always 2>/dev/null || echo "none")
+HEAD_SHA      := $(shell git rev-parse HEAD)
+SHORT_SHA     := $(shell git rev-parse --short HEAD)
+BRANCH        := $(shell git rev-parse --abbrev-ref HEAD)
+
+IMG_TAG := $(CURRENT_TAG)-$(SHORT_SHA)
+
+# Export so that subcommands (like docker-compose) see them
+export IMG_TAG
+
+# current git repo info
+git-info:
+	@echo "CURRENT_TAG   = $(CURRENT_TAG)"
+	@echo "CURRENT_DESC  = $(CURRENT_DESC)"
+	@echo "HEAD_SHA      = $(HEAD_SHA)"
+	@echo "SHORT_SHA     = $(SHORT_SHA)"
+	@echo "BRANCH        = $(BRANCH)"
+	@echo "IMG_TAG      = $(IMG_TAG)"
+
 ######## - Proto - #######
-# build scheduler service proto
+# build service protos
 build-proto:
-	@echo "building latest scheduler proto"
+	@echo "building latest service protos"
 	scripts/build-proto.sh
 
 # setup proto tools
@@ -80,7 +99,7 @@ start-worker:
 
 # start batch worker with docker compose
 start-batch-worker:
-	@echo "starting batch worker"
+	@echo "starting batch worker with IMG_TAG=$(IMG_TAG) on BRANCH=$(BRANCH)"
 	docker-compose -f deploy/scheduler/docker-compose-batch.yml up -d
 
 # stop docker composed batch worker
@@ -126,7 +145,7 @@ test-server:
 
 # start scheduler service with docker compose
 start-scheduler:
-	@echo "starting scheduler service"
+	@echo "starting scheduler service with IMG_TAG=$(IMG_TAG) on BRANCH=$(BRANCH)"
 	docker-compose -f deploy/scheduler/docker-compose-scheduler.yml up -d
 
 # stop docker composed scheduler service

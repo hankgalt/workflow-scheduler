@@ -10,7 +10,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 5g
+          memory: 6g
         reservations:
           memory: 4g
     networks:
