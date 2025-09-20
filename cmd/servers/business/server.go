@@ -27,7 +27,7 @@ const DEFAULT_SERVICE_HOST = "business-service"
 
 func main() {
 	// Initialize logger
-	l := logger.GetSlogMultiLogger("data")
+	l := logger.GetSlogLogger()
 
 	// Set up server port from environment variable or use default
 	serverPort, err := strconv.Atoi(os.Getenv("SERVER_PORT"))

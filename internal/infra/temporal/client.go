@@ -26,7 +26,7 @@ type TemporalClient struct {
 func NewTemporalClient(ctx context.Context, cfg TemporalConfig) (*TemporalClient, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("temporalClient:NewTemporalClient - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	connBuilder := NewTemporalClientConnectionBuilder(cfg.Namespace(), cfg.Host()).WithMetrics(cfg.ClientName(), cfg.MetricsAddr(), cfg.OtelEndpoint())
@@ -120,7 +120,7 @@ func (cc *TemporalClient) StartWorkflowWithCtx(
 ) (client.WorkflowRun, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("TemporalClient:StartWorkflowWithCtx - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	we, err := cc.client.ExecuteWorkflow(ctx, options, workflow, args...)
@@ -136,7 +136,7 @@ func (cc *TemporalClient) StartWorkflowWithCtx(
 func (cc *TemporalClient) SignalWorkflow(ctx context.Context, workflowID, signal string, data any) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return fmt.Errorf("TemporalClient:SignalWorkflow - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	err = cc.client.SignalWorkflow(context.Background(), workflowID, "", signal, data)
@@ -159,7 +159,7 @@ func (cc *TemporalClient) SignalWithStartWorkflowWithCtx(
 ) (client.WorkflowRun, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("temporalClient:SignalWithStartWorkflowWithCtx - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	we, err := cc.client.SignalWithStartWorkflow(ctx, workflowID, signalName, signalArg, options, workflow, workflowArgs...)
@@ -175,7 +175,7 @@ func (cc *TemporalClient) SignalWithStartWorkflowWithCtx(
 func (cc *TemporalClient) CancelWorkflow(ctx context.Context, workflowID string) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return fmt.Errorf("TemporalClient:CancelWorkflow - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	err = cc.client.CancelWorkflow(ctx, workflowID, "")
@@ -193,7 +193,7 @@ func (cc *TemporalClient) QueryWorkflow(
 ) (any, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("TemporalClient:QueryWorkflow - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	resp, err := cc.client.QueryWorkflow(ctx, workflowID, runID, queryType, args...)
@@ -214,7 +214,7 @@ func (cc *TemporalClient) QueryWorkflow(
 func (tc *TemporalClient) Close(ctx context.Context) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return fmt.Errorf("temporalClient:NewTemporalClient - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	tc.client.Close()

@@ -30,7 +30,7 @@ func ReadCSVBatch(
 ) ([]*domain.BatchRecord, int64, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, 0, err
+		l = logger.GetSlogLogger()
 	}
 
 	if len(data) == 0 || numBytesRead == 0 {
@@ -218,7 +218,7 @@ func ReadCSVStream(
 ) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return err
+		l = logger.GetSlogLogger()
 	}
 
 	if len(data) == 0 || numBytesRead == 0 {

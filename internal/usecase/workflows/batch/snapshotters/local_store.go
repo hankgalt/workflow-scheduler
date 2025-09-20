@@ -3,7 +3,6 @@ package snapshotters
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -33,7 +32,7 @@ func (s *localSnapshotter) Close(ctx context.Context) error {
 func (s *localSnapshotter) Snapshot(ctx context.Context, key string, snapshot any) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return fmt.Errorf("localSnapshotter:Snapshot - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 	if s.path == "" {
 		return ErrMissingObjectPath

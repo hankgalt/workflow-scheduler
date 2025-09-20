@@ -35,7 +35,10 @@ func Init(ctx context.Context, opt InitOptions) (shutdown func(context.Context) 
 		),
 	)
 
-	l := logger.GetSlogMultiLogger("data")
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		l = logger.GetSlogLogger()
+	}
 
 	// --- Metrics: Prometheus exporter (scrape /metrics) ---
 	promExp, err := prometheus.New()

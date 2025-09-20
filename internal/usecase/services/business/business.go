@@ -41,7 +41,7 @@ type businessService struct {
 func NewBusinessService(ctx context.Context, cfg businessServiceConfig) (*businessService, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("BusinessService:NewBusinessService - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	// Initialize MongoDB store for daud repository
@@ -75,7 +75,7 @@ func NewBusinessService(ctx context.Context, cfg businessServiceConfig) (*busine
 func (bs *businessService) AddAgent(ctx context.Context, agent stores.Agent) (string, *stores.Agent, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return "", nil, fmt.Errorf("BusinessService:AddAgent - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	agId, err := bs.vypar.AddAgent(ctx, agent)
@@ -96,7 +96,7 @@ func (bs *businessService) AddAgent(ctx context.Context, agent stores.Agent) (st
 func (bs *businessService) GetAgent(ctx context.Context, id string) (*stores.Agent, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("BusinessService:GetAgent - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	agent, err := bs.vypar.GetAgentById(ctx, id)
@@ -111,7 +111,7 @@ func (bs *businessService) GetAgent(ctx context.Context, id string) (*stores.Age
 func (bs *businessService) AddFiling(ctx context.Context, filing stores.Filing) (string, *stores.Filing, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return "", nil, fmt.Errorf("BusinessService:AddFiling - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 	fId, err := bs.vypar.AddFiling(ctx, filing)
 	if err != nil {
@@ -129,7 +129,7 @@ func (bs *businessService) AddFiling(ctx context.Context, filing stores.Filing) 
 func (bs *businessService) GetFiling(ctx context.Context, id string) (*stores.Filing, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("BusinessService:GetFiling - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	filing, err := bs.vypar.GetFilingById(ctx, id)
@@ -144,7 +144,7 @@ func (bs *businessService) GetFiling(ctx context.Context, id string) (*stores.Fi
 func (bs *businessService) DeleteEntity(ctx context.Context, entityType stores.BusinessEntityType, id string) (bool, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return false, fmt.Errorf("BusinessService:DeleteEntity - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	switch entityType {
@@ -162,7 +162,7 @@ func (bs *businessService) DeleteEntity(ctx context.Context, entityType stores.B
 func (bs *businessService) Close(ctx context.Context) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return fmt.Errorf("BusinessService:Close - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if err := bs.vypar.Close(ctx); err != nil {

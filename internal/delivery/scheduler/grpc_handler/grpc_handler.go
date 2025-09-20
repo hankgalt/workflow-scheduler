@@ -120,7 +120,7 @@ func NewGRPCServer(config *Config, opts ...grpc.ServerOption) (*grpc.Server, err
 func (s *grpcServer) ProcessLocalCSVMongoWorkflow(ctx context.Context, req *api.BatchCSVRequest) (*api.RunResponse, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("SchedulerServer:ProcessLocalCSVMongoWorkflow - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if err := s.Authorizer.Authorize(
@@ -165,7 +165,7 @@ func (s *grpcServer) ProcessLocalCSVMongoWorkflow(ctx context.Context, req *api.
 func (s *grpcServer) ProcessCloudCSVMongoWorkflow(ctx context.Context, req *api.BatchCSVRequest) (*api.RunResponse, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("SchedulerServer:ProcessCloudCSVMongoWorkflow - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if err := s.Authorizer.Authorize(
@@ -212,7 +212,7 @@ func (s *grpcServer) ProcessCloudCSVMongoWorkflow(ctx context.Context, req *api.
 func (s *grpcServer) CreateRun(ctx context.Context, req *api.RunRequest) (*api.RunResponse, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("SchedulerServer:CreateRun - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if err := s.Authorizer.Authorize(
@@ -247,7 +247,7 @@ func (s *grpcServer) CreateRun(ctx context.Context, req *api.RunRequest) (*api.R
 func (s *grpcServer) GetRun(ctx context.Context, req *api.RunRequest) (*api.RunResponse, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("SchedulerServer:GetRun - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if err := s.Authorizer.Authorize(
@@ -279,7 +279,7 @@ func (s *grpcServer) GetRun(ctx context.Context, req *api.RunRequest) (*api.RunR
 func (s *grpcServer) DeleteRun(ctx context.Context, req *api.DeleteRunRequest) (*api.DeleteResponse, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("SchedulerServer:DeleteRun - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if err := s.Authorizer.Authorize(

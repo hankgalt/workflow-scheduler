@@ -3,7 +3,6 @@ package mongostore
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -32,7 +31,7 @@ type MongoStore struct {
 func NewMongoStore(ctx context.Context, cfg infra.StoreConfig) (*MongoStore, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("NewMongoStore - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	builder := NewMongoConnectionBuilder(
@@ -118,7 +117,7 @@ func (ms *MongoStore) Close(ctx context.Context) error {
 func (ms *MongoStore) Stats(ctx context.Context, db string) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return
+		l = logger.GetSlogLogger()
 	}
 
 	var stats infra.ConnPoolStats
@@ -150,7 +149,7 @@ func (ms *MongoStore) AddCollectionDoc(
 ) (string, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return "", fmt.Errorf("AddCollectionDoc - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if collectionName == "" || doc == nil {

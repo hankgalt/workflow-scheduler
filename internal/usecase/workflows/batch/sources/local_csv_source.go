@@ -57,14 +57,14 @@ func (s *localCSVSource) Size(ctx context.Context) int64 {
 // Next reads the next batch of CSV rows from the local file.
 // It reads from the file at the specified offset and returns a batch of CSVRow.
 func (s *localCSVSource) Next(ctx context.Context, offset string, size uint) (*domain.BatchProcess, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		l = logger.GetSlogLogger()
+	}
+
 	// If size is 0 or negative, return an empty batch.
 	if size <= 0 {
 		return nil, ErrLocalCSVSizeInvalid
-	}
-
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("localCSVSource:Next - error getting logger from context: %w", err)
 	}
 
 	// If headers are enabled but transformer function is not set.
@@ -137,14 +137,14 @@ func (s *localCSVSource) NextStream(
 	offset string,
 	size uint,
 ) (<-chan *domain.BatchRecord, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		l = logger.GetSlogLogger()
+	}
+
 	// If size is 0 or negative, return an empty batch.
 	if size <= 0 {
 		return nil, ErrLocalCSVSizeInvalid
-	}
-
-	l, err := logger.LoggerFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("localCSVSource:NextStream - error getting logger from context: %w", err)
 	}
 
 	// Open the local CSV file.
@@ -223,7 +223,7 @@ func (c *LocalCSVConfig) Name() string { return LocalCSVSource }
 func (c *LocalCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.CSVRow], error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("LocalCSVConfig:BuildSource - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if c.Path == "" {

@@ -118,7 +118,7 @@ func (s *grpcServer) AddBusinessEntities(stream api.Business_AddBusinessEntities
 
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return fmt.Errorf("SchedulerServer:AddBusinessEntities - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if err := s.Authorizer.Authorize(
@@ -170,7 +170,7 @@ func (s *grpcServer) AddBusinessEntities(stream api.Business_AddBusinessEntities
 func (s *grpcServer) AddEntity(ctx context.Context, req *api.AddEntityRequest) (*api.EntityResponse, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("SchedulerServer:GetEntity - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if err := s.Authorizer.Authorize(
@@ -217,7 +217,7 @@ func (s *grpcServer) AddEntity(ctx context.Context, req *api.AddEntityRequest) (
 func (s *grpcServer) GetEntity(ctx context.Context, req *api.EntityRequest) (*api.EntityResponse, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("SchedulerServer:GetEntity - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if err := s.Authorizer.Authorize(
@@ -264,7 +264,7 @@ func (s *grpcServer) GetEntity(ctx context.Context, req *api.EntityRequest) (*ap
 func (s *grpcServer) DeleteEntity(ctx context.Context, req *api.EntityRequest) (*api.DeleteResponse, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("SchedulerServer:DeleteEntity - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if err := s.Authorizer.Authorize(

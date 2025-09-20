@@ -59,7 +59,7 @@ func NewDaudRepo(ctx context.Context, rc infra.DBStore) (*daudRepo, error) {
 func (dr *daudRepo) CreateRun(ctx context.Context, wkflRun *stores.WorkflowRun) (string, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return "", fmt.Errorf("DaudRepo:CreateRun - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if wkflRun.WorkflowId == "" {
@@ -97,7 +97,7 @@ func (dr *daudRepo) CreateRun(ctx context.Context, wkflRun *stores.WorkflowRun) 
 func (dr *daudRepo) GetRun(ctx context.Context, runId string) (*stores.WorkflowRun, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("DaudRepo:GetRun - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if runId == "" {
@@ -124,7 +124,7 @@ func (dr *daudRepo) GetRun(ctx context.Context, runId string) (*stores.WorkflowR
 func (dr *daudRepo) GetRunById(ctx context.Context, idHex string) (*stores.WorkflowRun, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("DaudRepo:GetRunById - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if idHex == "" {
@@ -156,7 +156,7 @@ func (dr *daudRepo) GetRunById(ctx context.Context, idHex string) (*stores.Workf
 func (dr *daudRepo) DeleteRun(ctx context.Context, runId string) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return fmt.Errorf("DaudRepo:DeleteRun - %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if runId == "" {

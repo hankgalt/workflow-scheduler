@@ -21,7 +21,7 @@ const SERVICE_DOMAIN = "127.0.0.1"
 func main() {
 
 	// initialize app logger instance
-	l := logger.GetSlogMultiLogger("data")
+	l := logger.GetSlogLogger()
 
 	tlsConfig, err := config.SetupTLSConfig(&config.ConfigOpts{Target: config.CLIENT})
 	if err != nil {

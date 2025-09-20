@@ -104,7 +104,7 @@ func (s *cloudCSVSource) Next(
 ) (*domain.BatchProcess, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("CloudCSVSource:Next - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 	// If size is 0 or negative, return an empty batch.
 	if size <= 0 {
@@ -199,7 +199,7 @@ func (s *cloudCSVSource) NextStream(
 ) (<-chan *domain.BatchRecord, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("CloudCSVSource:NextStream - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	// If size is 0 or negative, return an empty batch.
@@ -305,7 +305,7 @@ func (c *CloudCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.
 	// build s3/gcs/azure client from c.Provider, bucket, key
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("CloudCSVConfig:BuildSource - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if c.Path == "" {

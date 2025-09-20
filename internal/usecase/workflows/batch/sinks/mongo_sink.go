@@ -59,7 +59,7 @@ func (s *mongoSink[T]) Name() string { return MongoSink }
 func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess) (*domain.BatchProcess, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("mongoSink:Write - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 	if s == nil {
 		return b, ErrMongoSinkNil
@@ -131,6 +131,11 @@ func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess) (*doma
 }
 
 func (s *mongoSink[T]) WriteStream(ctx context.Context, start uint64, data []T) (<-chan domain.BatchResult, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		l = logger.GetSlogLogger()
+	}
+
 	if s == nil {
 		return nil, ErrMongoSinkNil
 	}
@@ -168,6 +173,7 @@ func (s *mongoSink[T]) WriteStream(ctx context.Context, start uint64, data []T) 
 
 			res, err := s.client.AddCollectionDoc(ctx, s.collection, doc)
 			if err != nil {
+				l.Error("mongoSink:WriteStream - error adding document to collection", "error", err.Error())
 				resStream <- domain.BatchResult{Error: fmt.Sprintf("record %d insert: %s", i, err.Error())}
 				continue
 			}
@@ -203,7 +209,7 @@ func (c *MongoSinkConfig[T]) Name() string { return MongoSink }
 func (c *MongoSinkConfig[T]) BuildSink(ctx context.Context) (domain.Sink[T], error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("MongoSinkConfig:BuildSink - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if c.Protocol == "" {

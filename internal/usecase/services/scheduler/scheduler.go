@@ -55,7 +55,7 @@ type schedulerService struct {
 func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*schedulerService, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("SchedulerService:NewSchedulerService - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	// Create a new Temporal client
@@ -110,7 +110,7 @@ func NewSchedulerService(ctx context.Context, cfg schedulerServiceConfig) (*sche
 func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, req batch.CloudCSVMongoBatchRequest) (*stores.WorkflowRun, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("SchedulerService:ProcessCloudCSVToMongoWorkflow - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	runId, err := btchutils.GenerateRunID(req.Config)
@@ -251,7 +251,7 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, req batch.LocalCSVMongoBatchRequest) (*stores.WorkflowRun, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("SchedulerService:ProcessLocalCSVToMongoWorkflow - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	runId, err := btchutils.GenerateRunID(req.Config)
@@ -382,11 +382,17 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 }
 
 func (ss *schedulerService) QueryWorkflowState(ctx context.Context, params *batch.WorkflowQueryParams) (any, error) {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		l = logger.GetSlogLogger()
+	}
+
 	if params.WorkflowId == "" || params.RunId == "" {
 		return nil, errors.New("missing required workflowId or runId")
 	}
 
 	if state, err := ss.temporal.QueryWorkflow(ctx, params.WorkflowId, params.RunId, "state"); err != nil {
+		l.Error("SchedulerService:QueryWorkflowState - error querying workflow state", "error", err.Error())
 		return nil, err
 	} else {
 		return state, nil
@@ -398,7 +404,7 @@ func (ss *schedulerService) QueryWorkflowState(ctx context.Context, params *batc
 func (bs *schedulerService) CreateRun(ctx context.Context, params *stores.WorkflowRun) (*stores.WorkflowRun, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("SchedulerService:CreateRun - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	runId, err := bs.daud.CreateRun(ctx, params)
@@ -419,7 +425,7 @@ func (bs *schedulerService) CreateRun(ctx context.Context, params *stores.Workfl
 func (bs *schedulerService) GetRun(ctx context.Context, runId string) (*stores.WorkflowRun, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("SchedulerService:GetRun - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	wkflRun, err := bs.daud.GetRun(ctx, runId)
@@ -434,7 +440,7 @@ func (bs *schedulerService) GetRun(ctx context.Context, runId string) (*stores.W
 func (bs *schedulerService) DeleteRun(ctx context.Context, runId string) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return fmt.Errorf("SchedulerService:DeleteRun - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if err := bs.daud.DeleteRun(ctx, runId); err != nil {
@@ -449,7 +455,7 @@ func (bs *schedulerService) DeleteRun(ctx context.Context, runId string) error {
 func (bs *schedulerService) Close(ctx context.Context) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return fmt.Errorf("SchedulerService:Close - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	err = bs.temporal.Close(ctx)

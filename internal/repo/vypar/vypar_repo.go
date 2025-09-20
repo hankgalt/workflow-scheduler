@@ -92,7 +92,7 @@ func NewVyparRepo(ctx context.Context, rc infra.DBStore) (*vyparRepo, error) {
 func (vr *vyparRepo) AddAgent(ctx context.Context, ag stores.Agent) (string, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return "", fmt.Errorf("error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 	l.Debug("AddAgent", "agent", ag)
 	if ag.EntityID == "" {
@@ -125,7 +125,7 @@ func (vr *vyparRepo) AddAgent(ctx context.Context, ag stores.Agent) (string, err
 func (vr *vyparRepo) GetAgent(ctx context.Context, entityId string) (*stores.Agent, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if entityId == "" {
@@ -150,7 +150,7 @@ func (vr *vyparRepo) GetAgent(ctx context.Context, entityId string) (*stores.Age
 func (vr *vyparRepo) GetAgentById(ctx context.Context, idHex string) (*stores.Agent, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if idHex == "" {
@@ -180,7 +180,7 @@ func (vr *vyparRepo) GetAgentById(ctx context.Context, idHex string) (*stores.Ag
 func (vr *vyparRepo) DeleteAgent(ctx context.Context, entityId string) (bool, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return false, fmt.Errorf("error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if entityId == "" {
@@ -200,7 +200,7 @@ func (vr *vyparRepo) DeleteAgent(ctx context.Context, entityId string) (bool, er
 func (vr *vyparRepo) DeleteAgentById(ctx context.Context, id string) (bool, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return false, fmt.Errorf("error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if id == "" {
@@ -226,7 +226,7 @@ func (vr *vyparRepo) DeleteAgentById(ctx context.Context, id string) (bool, erro
 func (vr *vyparRepo) AddFiling(ctx context.Context, bf stores.Filing) (string, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return "", fmt.Errorf("error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	l.Debug("AddFiling", "filing", bf)
@@ -257,7 +257,7 @@ func (vr *vyparRepo) AddFiling(ctx context.Context, bf stores.Filing) (string, e
 func (vr *vyparRepo) GetFiling(ctx context.Context, entityId string) (*stores.Filing, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if entityId == "" {
@@ -282,7 +282,7 @@ func (vr *vyparRepo) GetFiling(ctx context.Context, entityId string) (*stores.Fi
 func (vr *vyparRepo) GetFilingById(ctx context.Context, idHex string) (*stores.Filing, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if idHex == "" {
@@ -312,7 +312,7 @@ func (vr *vyparRepo) GetFilingById(ctx context.Context, idHex string) (*stores.F
 func (vr *vyparRepo) DeleteFiling(ctx context.Context, entityId string) (bool, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return false, fmt.Errorf("error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if entityId == "" {
@@ -332,7 +332,7 @@ func (vr *vyparRepo) DeleteFiling(ctx context.Context, entityId string) (bool, e
 func (vr *vyparRepo) DeleteFilingById(ctx context.Context, idHex string) (bool, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return false, fmt.Errorf("error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	if idHex == "" {
@@ -365,12 +365,12 @@ func (vr *vyparRepo) DeleteFilingById(ctx context.Context, idHex string) (bool, 
 }
 
 func (vr *vyparRepo) GetItemCount(ctx context.Context, collection string) (int64, error) {
-	logger, err := logger.LoggerFromContext(ctx)
+	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
-	logger.Debug("GetItemCount", "collection", collection)
+	l.Debug("GetItemCount", "collection", collection)
 	if collection == "" {
 		return 0, ErrMissingCollectionName
 	}
@@ -380,7 +380,7 @@ func (vr *vyparRepo) GetItemCount(ctx context.Context, collection string) (int64
 	filter := bson.M{}
 	totalCount, err := coll.CountDocuments(ctx, filter)
 	if err != nil {
-		logger.Error("GetItemCount error", "collection", collection, "error", err.Error())
+		l.Error("GetItemCount error", "collection", collection, "error", err.Error())
 		return 0, fmt.Errorf("error fetching item count: %w", err)
 	}
 	return totalCount, nil

@@ -18,7 +18,7 @@ func main() {
 
 	_, otelEndpoint := envutils.BuildMetricsConfig()
 
-	l := logger.GetSlogMultiLogger("data")
+	l := logger.GetSlogLogger()
 	ctx := logger.WithLogger(context.Background(), l)
 
 	exp, err := otlptracegrpc.New(ctx,

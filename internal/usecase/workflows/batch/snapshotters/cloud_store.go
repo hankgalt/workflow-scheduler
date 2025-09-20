@@ -48,7 +48,7 @@ func (s *cloudSnapshotter) Close(ctx context.Context) error {
 func (s *cloudSnapshotter) Snapshot(ctx context.Context, key string, snapshot any) error {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return fmt.Errorf("cloudSnapshotter:Snapshot - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 	if s.bucket == "" {
 		return ErrMissingBucketName
@@ -108,7 +108,7 @@ func (s *CloudSnapshotterConfig) Name() string { return CloudSnapshotter }
 func (s *CloudSnapshotterConfig) BuildSnapshotter(ctx context.Context) (domain.Snapshotter, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("CloudSnapshotterConfig:BuildSnapshotter - error getting logger from context: %w", err)
+		l = logger.GetSlogLogger()
 	}
 
 	// Ensure the environment variable is set for GCP credentials
