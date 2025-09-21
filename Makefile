@@ -73,6 +73,23 @@ stop-mongo:
 	@echo "Stopping MongoDB cluster..."
 	@set -a; . env/mongo.env; set +a; docker-compose -f deploy/scheduler/docker-compose-mongo.yml down
 
+# show mongo cluster status
+mongo-stat:
+	docker logs scheduler-mongo-setup
+
+# start neo4j cluster
+neo4j:
+	@echo "Starting Neo4j cluster..."
+	scripts/start-neo4j.sh
+
+# start neo4j cluster with network check
+start-neo4j: network neo4j
+
+# stop neo4j cluster
+stop-neo4j:
+	@echo "Stopping Neo4j cluster..."
+	@set -a; . env/neo4j.env; set +a; docker-compose -f deploy/scheduler/docker-compose-neo4j.yml down -v
+
 ######## - Temporal - #######
 # start Temporal server
 temporal:
@@ -164,9 +181,7 @@ stop-infra: stop-temporal stop-mongo stop-obs
 ######## - Utilities - #######
 # wait for 10 seconds
 wait-10:
-	@echo "Waiting 10 seconds..."
 	sleep 10
 
 wait-30:
-	@echo "Waiting 30 seconds..."
 	sleep 30

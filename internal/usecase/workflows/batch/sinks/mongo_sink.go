@@ -129,8 +129,9 @@ func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess) (*doma
 	// Set the error map on the batch
 	b.Error = errs
 
-	if time.Now().Unix()%10 == 0 {
-		s.client.Stats(ctx, s.dbName)
+	if time.Now().Unix()%109 == 0 {
+		// check for mongo cluster status
+		// s.client.Stats(ctx, s.dbName)
 	}
 
 	if errCount >= len(b.Records) {

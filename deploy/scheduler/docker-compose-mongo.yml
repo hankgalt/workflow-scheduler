@@ -22,6 +22,16 @@
 #   scheduler-mongo_config:
 
 # MongoDB Replica Set with 3 nodes and admin users
+
+networks:
+  schenet:
+    external: true
+
+volumes:
+  scheduler-mongo-data:
+  scheduler-mongo-rep1-data:
+  scheduler-mongo-rep2-data:
+
 services:
   scheduler-mongo:
     image: mongo:8.0
@@ -117,13 +127,4 @@ services:
           memory: 512m
     networks:
       schenet:
-
-networks:
-  schenet:
-    external: true
-
-volumes:
-  scheduler-mongo-data:
-  scheduler-mongo-rep1-data:
-  scheduler-mongo-rep2-data:
 

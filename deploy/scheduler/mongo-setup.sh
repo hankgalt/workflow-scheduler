@@ -36,7 +36,7 @@ sleep 5
 echo 'Waiting for primary...'
 until mongosh --quiet -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --host ${MONGO_HOST} --eval 'rs.isMaster().ismaster' | grep -q true; do
     echo 'Primary not elected yet, retrying...'
-    sleep 2
+    sleep 3
 done
 
 echo 'Primary elected, creating admin user...'
