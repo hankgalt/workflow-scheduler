@@ -381,7 +381,7 @@ func Test_Write_MongoSink(t *testing.T) {
 		Done:       false,
 	}
 
-	nmCfg := envutils.BuildMongoStoreConfig()
+	nmCfg := envutils.BuildMongoStoreConfig(true)
 	require.NotEmpty(t, nmCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, nmCfg.Host(), "MongoDB host should not be empty")
 
@@ -454,7 +454,7 @@ func Test_FetchAndWrite_LocalCSVSource_MongoSink_Queue(t *testing.T) {
 	}
 
 	// Sink - MongoDB
-	mCfg := envutils.BuildMongoStoreConfig()
+	mCfg := envutils.BuildMongoStoreConfig(true)
 	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
 	sinkCfg := &sinks.MongoSinkConfig[domain.CSVRow]{
@@ -613,7 +613,7 @@ func Test_FetchAndWrite_CloudCSVSource_MongoSink_Queue(t *testing.T) {
 		MappingRules: domain.BuildBusinessModelTransformRules(),
 	}
 
-	mCfg := envutils.BuildMongoStoreConfig()
+	mCfg := envutils.BuildMongoStoreConfig(true)
 	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
 

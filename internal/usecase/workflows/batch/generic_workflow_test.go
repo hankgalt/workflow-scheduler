@@ -116,7 +116,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 		}
 
 		// Sink - MongoDB
-		mCfg := envutils.BuildMongoStoreConfig()
+		mCfg := envutils.BuildMongoStoreConfig(true)
 		s.Require().NotEmpty(mCfg.Name(), "MongoDB name should not be empty")
 		s.Require().NotEmpty(mCfg.Host(), "MongoDB host should not be empty")
 		sinkCfg := &sinks.MongoSinkConfig[domain.CSVRow]{
@@ -267,7 +267,7 @@ func (s *ProcessBatchWorkflowTestSuite) Test_ProcessBatchWorkflow_CloudCSV_Mongo
 		}
 
 		// Sink - MongoDB
-		mCfg := envutils.BuildMongoStoreConfig()
+		mCfg := envutils.BuildMongoStoreConfig(true)
 		s.Require().NotEmpty(mCfg.Name(), "MongoDB name should not be empty")
 		s.Require().NotEmpty(mCfg.Host(), "MongoDB host should not be empty")
 		sinkCfg := &sinks.MongoSinkConfig[domain.CSVRow]{
@@ -449,7 +449,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath(t *testing.T) {
 	}
 
 	// Sink - MongoDB
-	mCfg := envutils.BuildMongoStoreConfig()
+	mCfg := envutils.BuildMongoStoreConfig(true)
 	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
 	sinkCfg := &sinks.MongoSinkConfig[domain.CSVRow]{
@@ -620,7 +620,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_HappyPath_Server(t *testing.T) {
 	}
 
 	// Sink - MongoDB
-	mCfg := envutils.BuildMongoStoreConfig()
+	mCfg := envutils.BuildMongoStoreConfig(true)
 	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
 	sinkCfg := &sinks.MongoSinkConfig[domain.CSVRow]{
@@ -766,7 +766,7 @@ func Test_ProcessBatchWorkflow_CloudCSV_Mongo_HappyPath_Server(t *testing.T) {
 	}
 
 	// Sink - MongoDB
-	mCfg := envutils.BuildMongoStoreConfig()
+	mCfg := envutils.BuildMongoStoreConfig(true)
 	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
 	sinkCfg := &sinks.MongoSinkConfig[domain.CSVRow]{
@@ -919,7 +919,7 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_ContinueAsNewError(t *testing.T) {
 	}
 
 	// Sink - MongoDB
-	mCfg := envutils.BuildMongoStoreConfig()
+	mCfg := envutils.BuildMongoStoreConfig(true)
 	require.NotEmpty(t, mCfg.Name(), "MongoDB name should not be empty")
 	require.NotEmpty(t, mCfg.Host(), "MongoDB host should not be empty")
 	sinkCfg := &sinks.MongoSinkConfig[domain.CSVRow]{

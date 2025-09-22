@@ -375,7 +375,7 @@ func setupTest(t *testing.T, fn func(*grpchandler.Config)) (
 	cc, client, _ := newClient(config.CLIENT)
 	nbcc, nbClient, _ := newClient(config.NOBODY_CLIENT)
 
-	mCfg := envutils.BuildMongoStoreConfig()
+	mCfg := envutils.BuildMongoStoreConfig(true)
 	require.NotEmpty(t, mCfg.Host, "MongoDB host should not be empty")
 
 	svcCfg := business.NewBusinessServiceConfig(mCfg)

@@ -18,7 +18,7 @@ func TestBusinessEntitiesCRUD(t *testing.T) {
 	l := logger.GetSlogLogger()
 	l.Info("BusinessService - TestBusinessEntitiesCRUD initialized logger")
 
-	mCfg := envutils.BuildMongoStoreConfig()
+	mCfg := envutils.BuildMongoStoreConfig(false)
 	require.NotEmpty(t, mCfg.Host, "MongoDB host should not be empty")
 
 	svcCfg := business.NewBusinessServiceConfig(mCfg)

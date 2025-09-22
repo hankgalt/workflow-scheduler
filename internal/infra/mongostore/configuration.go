@@ -65,6 +65,8 @@ type ConnectionBuilder interface {
 	WithUser(u string) ConnectionBuilder
 	// WithPassword sets the password for the connection string.
 	WithPassword(p string) ConnectionBuilder
+	// WithDatabase sets the database for the connection string.
+	WithDatabase(db string) ConnectionBuilder
 	// WithConnectionParams sets the connection parameters for the connection string.
 	WithConnectionParams(p string) ConnectionBuilder
 }
@@ -75,6 +77,7 @@ type mongoConnectionBuilder struct {
 	host     string
 	user     string
 	pwd      string
+	database string
 	params   string
 }
 
@@ -97,6 +100,11 @@ func (b mongoConnectionBuilder) WithPassword(p string) ConnectionBuilder {
 	return b
 }
 
+func (b mongoConnectionBuilder) WithDatabase(db string) ConnectionBuilder {
+	b.database = db
+	return b
+}
+
 func (b mongoConnectionBuilder) WithConnectionParams(p string) ConnectionBuilder {
 	b.params = p
 	return b
@@ -111,7 +119,7 @@ func (b mongoConnectionBuilder) Build() (string, error) {
 		return "", ErrRequiredParams
 	}
 
-	if b.protocol == "mongodb" && b.params == "" {
+	if b.protocol == "mongodb" && (b.params == "" || b.database == "") {
 		return "", ErrRequiredConnParams
 	}
 
@@ -129,7 +137,8 @@ func (b mongoConnectionBuilder) Build() (string, error) {
 	sb.WriteString(b.host)
 
 	if b.protocol == "mongodb" {
-		sb.WriteString("/" + b.params)
+		sb.WriteString("/" + b.database)
+		sb.WriteString(b.params)
 	}
 
 	return sb.String(), nil

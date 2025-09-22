@@ -1,4 +1,9 @@
 # MongoDB Replica Set with 3 nodes and admin users
+x-healthcheck: &hc
+  test: ["CMD-SHELL", "mongosh --quiet --eval 'db.hello().ok' || exit 1"]
+  interval: 5s
+  timeout: 3s
+  retries: 30
 
 networks:
   schenet:
@@ -21,11 +26,15 @@ services:
       - ./mongo-keyfile:/opt/keyfile/mongo-keyfile
     ports:
       - "27017:27017"
-    healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --eval 'rs.status().ok' | grep 1"]
-      interval: 10s
-      start_period: 30s
-    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip", "localhost,scheduler-mongo", "--auth",  "--keyFile", "/opt/keyfile/mongo-keyfile"]
+    healthcheck: *hc
+    command:
+      [
+        "mongod",
+        "--replSet", "${MONGO_REPLICA_SET_NAME}",
+        "--bind_ip", "localhost,scheduler-mongo",
+        "--auth",
+        "--keyFile", "/opt/keyfile/mongo-keyfile"
+      ]
     deploy:
       resources:
         limits:
@@ -44,11 +53,15 @@ services:
     volumes:
       - scheduler-mongo-rep1-data:/data/db
       - ./mongo-keyfile:/opt/keyfile/mongo-keyfile
-    healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --eval 'rs.status().ok' | grep 1"]
-      interval: 10s
-      start_period: 30s
-    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip", "localhost,scheduler-mongo-rep1", "--auth",  "--keyFile", "/opt/keyfile/mongo-keyfile"]
+    healthcheck: *hc
+    command: 
+      [
+        "mongod",
+        "--replSet", "${MONGO_REPLICA_SET_NAME}",
+        "--bind_ip", "localhost,scheduler-mongo-rep1",
+        "--auth",
+        "--keyFile", "/opt/keyfile/mongo-keyfile"
+      ]
     deploy:
       resources:
         limits:
@@ -67,11 +80,15 @@ services:
     volumes:
       - scheduler-mongo-rep2-data:/data/db
       - ./mongo-keyfile:/opt/keyfile/mongo-keyfile
-    healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --eval 'rs.status().ok' | grep 1"]
-      interval: 10s
-      start_period: 30s
-    command: ["mongod", "--replSet", "${MONGO_REPLICA_SET_NAME}", "--bind_ip", "localhost,scheduler-mongo-rep2", "--auth",  "--keyFile", "/opt/keyfile/mongo-keyfile"]
+    healthcheck: *hc
+    command: 
+      [
+        "mongod",
+        "--replSet", "${MONGO_REPLICA_SET_NAME}",
+        "--bind_ip", "localhost,scheduler-mongo-rep2",
+        "--auth",
+        "--keyFile", "/opt/keyfile/mongo-keyfile"
+      ]
     deploy:
       resources:
         limits:
@@ -85,9 +102,12 @@ services:
     image: mongo:8.0
     container_name: scheduler-mongo-setup
     depends_on:
-      - scheduler-mongo
-      - scheduler-mongo-rep1
-      - scheduler-mongo-rep2
+      scheduler-mongo:
+        condition: service_healthy
+      scheduler-mongo-rep1:
+        condition: service_healthy
+      scheduler-mongo-rep2:
+        condition: service_healthy
     env_file:
       - ../../env/mongo.env
     entrypoint: ["bash", "/scripts/mongo_setup.sh"]

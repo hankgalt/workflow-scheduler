@@ -20,7 +20,7 @@ func TestProcessLocalCSVToMongoWorkflow(t *testing.T) {
 	l := logger.GetSlogLogger()
 	l.Info("SchedulerService - TestProcessLocalCSVToMongoWorkflow initialized logger")
 
-	mCfg := envutils.BuildMongoStoreConfig()
+	mCfg := envutils.BuildMongoStoreConfig(true)
 	require.NotEmpty(t, mCfg.Host, "MongoDB host should not be empty")
 
 	tCfg := envutils.BuildTemporalConfig("TestProcessLocalCSVToMongoWorkflow")
@@ -39,7 +39,7 @@ func TestProcessLocalCSVToMongoWorkflow(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	reqCfg, err := envutils.BuildLocalCSVMongoBatchConfig()
+	reqCfg, err := envutils.BuildLocalCSVMongoBatchConfig(false)
 	require.NoError(t, err)
 
 	req := batch.LocalCSVMongoBatchRequest{
@@ -64,7 +64,7 @@ func TestProcessCloudCSVToMongoWorkflow(t *testing.T) {
 	l := logger.GetSlogLogger()
 	l.Info("SchedulerService - TestProcessCloudCSVToMongoWorkflow initialized logger")
 
-	mCfg := envutils.BuildMongoStoreConfig()
+	mCfg := envutils.BuildMongoStoreConfig(true)
 	require.NotEmpty(t, mCfg.Host, "MongoDB host should not be empty")
 
 	tCfg := envutils.BuildTemporalConfig("TestProcessCloudCSVToMongoWorkflow")
@@ -83,7 +83,7 @@ func TestProcessCloudCSVToMongoWorkflow(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	reqCfg, err := envutils.BuildCloudCSVMongoBatchConfig()
+	reqCfg, err := envutils.BuildCloudCSVMongoBatchConfig(false)
 	require.NoError(t, err)
 
 	req := batch.CloudCSVMongoBatchRequest{
@@ -108,7 +108,7 @@ func TestQueryWorkflowState(t *testing.T) {
 	l := logger.GetSlogLogger()
 	l.Info("SchedulerService - TestQueryWorkflowState initialized logger")
 
-	mCfg := envutils.BuildMongoStoreConfig()
+	mCfg := envutils.BuildMongoStoreConfig(true)
 	require.NotEmpty(t, mCfg.Host, "MongoDB host should not be empty")
 
 	tCfg := envutils.BuildTemporalConfig("TestQueryWorkflowState")

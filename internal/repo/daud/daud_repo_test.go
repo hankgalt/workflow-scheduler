@@ -25,7 +25,7 @@ func TestDaudRepoWorkflowCRUD(t *testing.T) {
 	ctx = logger.WithLogger(ctx, l)
 
 	// Get MongoDB configuration
-	nmCfg := envutils.BuildMongoStoreConfig()
+	nmCfg := envutils.BuildMongoStoreConfig(true)
 	ms, err := mongostore.NewMongoStore(ctx, nmCfg)
 	require.NoError(t, err)
 

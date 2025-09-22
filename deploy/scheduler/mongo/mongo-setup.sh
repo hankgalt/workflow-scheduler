@@ -59,9 +59,9 @@ mongosh -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --host
     const adminUser = process.env.MONGO_ADMIN_USER;
     db = db.getSiblingDB("admin");
     try {
-        if (!db.getUser(process.env.MONGO_ADMIN_USER)) {
+        if (!db.getUser(adminUser)) {
             print("Creating admin user: " + adminUser);
-            db.createUser({user: process.env.MONGO_ADMIN_USER, pwd: process.env.MONGO_ADMIN_PASS, roles: [ { role: "root", db: "admin" } ]});
+            db.createUser({user: adminUser, pwd: process.env.MONGO_ADMIN_PASS, roles: [ { role: "root", db: "admin" } ]});
             print("Admin user created successfully");
         }
     } catch (e) {
@@ -70,11 +70,12 @@ mongosh -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --host
 
     appDb = process.env.MONGO_APP_DB;
     try {
+        const appUser = process.env.MONGO_APP_USER;
         db = db.getSiblingDB(appDb);
-        if (!db.getUser(process.env.MONGO_APP_USER)) {
+        if (!db.getUser(appUser)) {
             print("Creating app database & admin user...");
             db.createUser({
-                user: process.env.MONGO_APP_USER,
+                user: appUser,
                 pwd: process.env.MONGO_APP_PASS,
                 roles: [{ role: "readWrite", db: appDb }]
             });

@@ -14,7 +14,7 @@ env
 */*/policies
 */*/logs
 
-*/*/mongo-keyfile
+mongo-keyfile
 go.sum
 
 .DS_Store

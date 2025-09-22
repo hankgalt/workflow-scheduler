@@ -22,7 +22,7 @@ func TestMongoStore(t *testing.T) {
 	defer cancel()
 	ctx = logger.WithLogger(ctx, l)
 
-	nmCfg := envutils.BuildMongoStoreConfig()
+	nmCfg := envutils.BuildMongoStoreConfig(false)
 	cl, err := mongostore.NewMongoStore(ctx, nmCfg)
 	require.NoError(t, err)
 
@@ -30,6 +30,31 @@ func TestMongoStore(t *testing.T) {
 		err := cl.Close(ctx)
 		require.NoError(t, err)
 	}()
+}
 
-	cl.Stats(ctx, nmCfg.Name())
+func TestConnectionBuilder(t *testing.T) {
+	// Initialize logger
+	l := logger.GetSlogLogger()
+	t.Log("TestConnectionBuilder Logger initialized")
+
+	cfg := envutils.BuildMongoStoreConfig(false)
+	builder := mongostore.NewMongoConnectionBuilder(
+		cfg.Protocol(),
+		cfg.Host(),
+	).WithUser(
+		cfg.User(),
+	).WithPassword(
+		cfg.Pwd(),
+	).WithPassword(
+		cfg.Pwd(),
+	).WithDatabase(
+		cfg.Name(),
+	).WithConnectionParams(
+		cfg.Params(),
+	)
+
+	connStr, err := builder.Build()
+	require.NoError(t, err)
+
+	l.Debug("MongoDB Connection String", "conn-string", connStr)
 }

@@ -59,8 +59,8 @@ func BuildCloudCSVBatchRequest(max, size uint) (*batch.CloudCSVBatchRequest, err
 }
 
 // BuildLocalCSVMongoBatchRequest constructs a LocalCSVMongoBatchRequest with the specified max batches, batch size & relevant environment variables.
-func BuildLocalCSVMongoBatchRequest(max, size uint, mappingRules map[string]domain.Rule) (*batch.LocalCSVMongoBatchRequest, error) {
-	reqCfg, err := BuildLocalCSVMongoBatchConfig()
+func BuildLocalCSVMongoBatchRequest(max, size uint, mappingRules map[string]domain.Rule, direct bool) (*batch.LocalCSVMongoBatchRequest, error) {
+	reqCfg, err := BuildLocalCSVMongoBatchConfig(direct)
 	if err != nil {
 		return nil, err
 	}
@@ -80,8 +80,8 @@ func BuildLocalCSVMongoBatchRequest(max, size uint, mappingRules map[string]doma
 }
 
 // BuildCloudCSVMongoBatchRequest constructs a CloudCSVMongoBatchRequest with the specified max batches, batch size & relevant environment variables.
-func BuildCloudCSVMongoBatchRequest(max, size uint, mappingRules map[string]domain.Rule) (*batch.CloudCSVMongoBatchRequest, error) {
-	reqCfg, err := BuildCloudCSVMongoBatchConfig()
+func BuildCloudCSVMongoBatchRequest(max, size uint, mappingRules map[string]domain.Rule, direct bool) (*batch.CloudCSVMongoBatchRequest, error) {
+	reqCfg, err := BuildCloudCSVMongoBatchConfig(direct)
 	if err != nil {
 		return nil, err
 	}
@@ -127,12 +127,12 @@ func BuildCloudCSVBatchConfig() (batch.CloudCSVBatchConfig, error) {
 	}, nil
 }
 
-func BuildLocalCSVMongoBatchConfig() (batch.LocalCSVMongoBatchConfig, error) {
+func BuildLocalCSVMongoBatchConfig(direct bool) (batch.LocalCSVMongoBatchConfig, error) {
 	filePath, err := BuildFilePath()
 	if err != nil {
 		return batch.LocalCSVMongoBatchConfig{}, err
 	}
-	fileName, mCfg := BuildFileName(), BuildMongoConfig()
+	fileName, mCfg := BuildFileName(), BuildMongoConfig(direct)
 	collection, err := BuildMongoCollection()
 	if err != nil {
 		return batch.LocalCSVMongoBatchConfig{}, err
@@ -152,9 +152,9 @@ func BuildLocalCSVMongoBatchConfig() (batch.LocalCSVMongoBatchConfig, error) {
 	}, nil
 }
 
-func BuildCloudCSVMongoBatchConfig() (batch.CloudCSVMongoBatchConfig, error) {
+func BuildCloudCSVMongoBatchConfig(direct bool) (batch.CloudCSVMongoBatchConfig, error) {
 	filePath, fileName := DEFAULT_DATA_PATH, BuildFileName()
-	mCfg := BuildMongoConfig()
+	mCfg := BuildMongoConfig(direct)
 
 	bucket := os.Getenv("BUCKET")
 	if bucket == "" {
@@ -210,13 +210,18 @@ func BuildMongoCollection() (string, error) {
 	return collection, nil
 }
 
-func BuildMongoConfig() batch.MongoBatchConfig {
+func BuildMongoConfig(direct bool) batch.MongoBatchConfig {
 	dbProtocol := os.Getenv("MONGO_PROTOCOL")
-	dbHost := os.Getenv("MONGO_HOSTNAME")
 	dbUser := os.Getenv("MONGO_USERNAME")
 	dbPwd := os.Getenv("MONGO_PASSWORD")
-	dbParams := os.Getenv("MONGO_CONN_PARAMS")
 	dbName := os.Getenv("MONGO_DBNAME")
+
+	dbHost := os.Getenv("MONGO_HOST_LIST")
+	dbParams := os.Getenv("MONGO_CLUS_CONN_PARAMS")
+	if direct {
+		dbParams = os.Getenv("MONGO_DIR_CONN_PARAMS")
+		dbHost = os.Getenv("MONGO_HOST_NAME")
+	}
 	return batch.MongoBatchConfig{
 		Protocol: dbProtocol,
 		Host:     dbHost,
@@ -227,13 +232,18 @@ func BuildMongoConfig() batch.MongoBatchConfig {
 	}
 }
 
-func BuildMongoStoreConfig() infra.StoreConfig {
+func BuildMongoStoreConfig(direct bool) infra.StoreConfig {
 	dbProtocol := os.Getenv("MONGO_PROTOCOL")
-	dbHost := os.Getenv("MONGO_HOSTNAME")
 	dbUser := os.Getenv("MONGO_USERNAME")
 	dbPwd := os.Getenv("MONGO_PASSWORD")
-	dbParams := os.Getenv("MONGO_CONN_PARAMS")
 	dbName := os.Getenv("MONGO_DBNAME")
+
+	dbHost := os.Getenv("MONGO_HOST_LIST")
+	dbParams := os.Getenv("MONGO_CLUS_CONN_PARAMS")
+	if direct {
+		dbParams = os.Getenv("MONGO_DIR_CONN_PARAMS")
+		dbHost = os.Getenv("MONGO_HOST_NAME")
+	}
 	return mongostore.NewMongoDBConfig(dbProtocol, dbHost, dbUser, dbPwd, dbParams, dbName)
 }
 

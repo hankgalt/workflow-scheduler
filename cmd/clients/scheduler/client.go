@@ -94,7 +94,7 @@ func testProcessCloudCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 	ctx := context.Background()
 
 	// build cloud csv to mongo job config
-	jobCfg, err := envutils.BuildCloudCSVMongoBatchConfig()
+	jobCfg, err := envutils.BuildCloudCSVMongoBatchConfig(false)
 	if err != nil {
 		l.Error("error building cloud CSV to mongo job config", "error", err.Error())
 		return err
@@ -123,7 +123,7 @@ func testProcessLocalCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 	ctx := context.Background()
 
 	// build local csv to mongo job config
-	jobCfg, err := envutils.BuildLocalCSVMongoBatchConfig()
+	jobCfg, err := envutils.BuildLocalCSVMongoBatchConfig(false)
 	if err != nil {
 		l.Error("error building local CSV to mongo job config", "error", err.Error())
 		return err
@@ -132,7 +132,7 @@ func testProcessLocalCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 	resp, err := client.ProcessLocalCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
 		MaxInProcessBatches: 3,
 		BatchSize:           1000,
-		Start:               "134904048",
+		Start:               "205853034",
 		MappingRules:        envutils.BuildBusinessModelTransformRules(),
 		JobConfig: &api.BatchCSVRequest_LocalCsvMongoConfig{
 			LocalCsvMongoConfig: batch.MapProtoFromLocalCSVMongoBatchConfig(jobCfg),

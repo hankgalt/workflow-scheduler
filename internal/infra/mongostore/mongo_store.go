@@ -41,6 +41,8 @@ func NewMongoStore(ctx context.Context, cfg infra.StoreConfig) (*MongoStore, err
 		cfg.User(),
 	).WithPassword(
 		cfg.Pwd(),
+	).WithDatabase(
+		cfg.Name(),
 	).WithConnectionParams(
 		cfg.Params(),
 	)
@@ -68,7 +70,7 @@ func NewMongoStore(ctx context.Context, cfg infra.StoreConfig) (*MongoStore, err
 	mOpts := options.Client().ApplyURI(
 		dbConnStr,
 	).SetReadPreference(
-		readpref.Primary(),
+		readpref.Nearest(),
 	).SetAppName(
 		opts.Caller,
 	).SetMaxPoolSize(

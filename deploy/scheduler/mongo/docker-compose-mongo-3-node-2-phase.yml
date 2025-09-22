@@ -1,0 +1,158 @@
+x-healthcheck: &hc
+  test: ["CMD-SHELL", "mongosh --quiet --eval 'db.hello().ok' || exit 1"]
+  interval: 5s
+  timeout: 3s
+  retries: 30
+
+networks:
+  schenet:
+    external: true
+
+volumes:
+  scheduler-mongo-data:
+  scheduler-mongo-rep1-data:
+  scheduler-mongo-rep2-data:
+
+# ------------------------------
+# PHASE 1: BOOTSTRAP (no auth)
+# ------------------------------
+services:
+  mongo1-bootstrap:
+    image: mongo:8.0
+    container_name: scheduler-mongo
+    profiles: ["bootstrap"]
+    volumes:
+      - scheduler-mongo-data:/data/db
+    ports:
+      - "27017:27017"
+    healthcheck: *hc
+    command: ["mongod", "--replSet=${MONGO_REPLICA_SET_NAME}", "--bind_ip_all"]
+    networks:
+      schenet:
+
+  mongo2-bootstrap:
+    profiles: ["bootstrap"]
+    image: mongo:8.0
+    container_name: scheduler-mongo-rep1
+    volumes:
+      - scheduler-mongo-rep1-data:/data/db
+    healthcheck: *hc
+    command: ["mongod", "--replSet=${MONGO_REPLICA_SET_NAME}", "--bind_ip_all"]
+    networks:
+      schenet:
+
+  mongo3-bootstrap:
+    profiles: ["bootstrap"]
+    image: mongo:8.0
+    container_name: scheduler-mongo-rep2
+    volumes:
+      - scheduler-mongo-rep2-data:/data/db
+    healthcheck: *hc
+    command: ["mongod", "--replSet=${MONGO_REPLICA_SET_NAME}", "--bind_ip_all"]
+    networks:
+      schenet:
+
+  mongo-setup:
+    profiles: ["bootstrap"]
+    image: mongo:8.0
+    container_name: scheduler-mongo-setup
+    env_file:
+      - ../../../env/mongo3n2.env
+    volumes:
+      - ./mongo3n2-setup.sh:/docker-entrypoint-initdb.d/mongo-setup.sh:ro
+    entrypoint: ["bash", "/docker-entrypoint-initdb.d/mongo-setup.sh"]
+    depends_on:
+      mongo1-bootstrap: { condition: service_healthy }
+      mongo2-bootstrap: { condition: service_healthy }
+      mongo3-bootstrap: { condition: service_healthy }
+    networks:
+      schenet:
+
+# ------------------------------
+# PHASE 2: SECURE (auth + keyFile)
+# ------------------------------
+  mongo1-secure:
+    profiles: ["secure"]
+    image: mongo:8.0
+    container_name: scheduler-mongo
+    env_file:
+      - ../../../env/mongo3n2.env
+    volumes:
+      # - scheduler-mongo-data:/data/db
+      - ./mongo-keyfile:/etc/mongo-keyfile:ro
+      - ./data/mongo/leader:/data/db
+    ports:
+      - "27017:27017"
+    healthcheck: *hc
+    command:
+      [
+        "mongod",
+        "--replSet=${MONGO_REPLICA_SET_NAME}",
+        "--bind_ip_all",
+        "--auth",
+        "--keyFile=/etc/mongo-keyfile"
+      ]
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 768m
+    networks:
+      schenet:
+
+  mongo2-secure:
+    profiles: ["secure"]
+    image: mongo:8.0
+    container_name: scheduler-mongo-rep1
+    env_file:
+      - ../../../env/mongo3n2.env
+    volumes:
+      # - scheduler-mongo-rep1-data:/data/db
+      - ./mongo-keyfile:/etc/mongo-keyfile:ro
+      - ./data/mongo/rep1:/data/db
+    healthcheck: *hc
+    command:
+      [
+        "mongod",
+        "--replSet=${MONGO_REPLICA_SET_NAME}",
+        "--bind_ip_all",
+        "--auth",
+        "--keyFile=/etc/mongo-keyfile"
+      ]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+        reservations:
+          memory: 512m
+    networks:
+      schenet:
+
+  mongo3-secure:
+    profiles: ["secure"]
+    image: mongo:8.0
+    container_name: scheduler-mongo-rep2
+    env_file:
+      - ../../../env/mongo3n2.env
+    volumes:
+      # - scheduler-mongo-rep2-data:/data/db
+      - ./mongo-keyfile:/etc/mongo-keyfile:ro
+      - ./data/mongo/rep2:/data/db
+    healthcheck: *hc
+    command:
+      [
+        "mongod",
+        "--replSet=${MONGO_REPLICA_SET_NAME}",
+        "--bind_ip_all",
+        "--auth",
+        "--keyFile=/etc/mongo-keyfile"
+      ]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+        reservations:
+          memory: 512m
+    networks:
+      schenet:

@@ -94,7 +94,7 @@ func testProcessCloudCSVMongoWorkflow(t *testing.T, client, nbClient api.Schedul
 	ctx = logger.WithLogger(ctx, l)
 
 	// build cloud csv to mongo job config
-	jobCfg, err := envutils.BuildCloudCSVMongoBatchConfig()
+	jobCfg, err := envutils.BuildCloudCSVMongoBatchConfig(false)
 	require.NoError(t, err)
 
 	// Process cloud CSV to mongo workflow
@@ -121,7 +121,7 @@ func testProcessLocalCSVMongoWorkflow(t *testing.T, client, nbClient api.Schedul
 	ctx = logger.WithLogger(ctx, l)
 
 	// build local csv to mongo job config
-	jobCfg, err := envutils.BuildLocalCSVMongoBatchConfig()
+	jobCfg, err := envutils.BuildLocalCSVMongoBatchConfig(false)
 	require.NoError(t, err)
 
 	// Process local CSV to mongo workflow
@@ -218,7 +218,7 @@ func setupTest(t *testing.T, fn func(*grpchandler.Config)) (
 	cc, client, _ := newClient(config.CLIENT)
 	nbcc, nbClient, _ := newClient(config.NOBODY_CLIENT)
 
-	mCfg := envutils.BuildMongoStoreConfig()
+	mCfg := envutils.BuildMongoStoreConfig(true)
 	require.NotEmpty(t, mCfg.Host, "MongoDB host should not be empty")
 
 	tCfg := envutils.BuildTemporalConfig("GRPCHandlerTest")

@@ -51,7 +51,7 @@ func main() {
 
 	// Build MongoDB for business service, using env vars
 	l.Info("setting up business server config")
-	mCfg := envutils.BuildMongoStoreConfig()
+	mCfg := envutils.BuildMongoStoreConfig(false)
 	svcCfg := business.NewBusinessServiceConfig(mCfg)
 
 	// Initialize the authorizer for the business service

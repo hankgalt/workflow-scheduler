@@ -60,6 +60,16 @@ stop-mysql:
 	@echo "stopping mysql db"
 	scripts/stop-mysql.sh
 
+# start custom mongo
+start-custom-mongo: network
+	@echo "Starting custom MongoDB..."
+	scripts/start-mongo-custom.sh ${START}
+
+# stop custom mongo
+stop-custom-mongo:
+	@echo "Stopping MongoDB cluster..."
+	@set -a; . env/mongo3n2.env; set +a; docker-compose -f deploy/scheduler/mongo/docker-compose-mongo-3-node-2-phase.yml --profile secure down -v
+
 # start mongo cluster
 mongo:
 	@echo "Starting MongoDB cluster..."
