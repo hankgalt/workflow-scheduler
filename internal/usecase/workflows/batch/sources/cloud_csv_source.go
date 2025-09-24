@@ -29,6 +29,7 @@ const (
 	ERR_CLOUD_CSV_UNSUPPORTED_PROVIDER = "cloud csv: unsupported provider, only 'gcs' is supported"
 	ERR_CLOUD_CSV_MISSING_CREDENTIALS  = "cloud csv: missing credentials path"
 	ERR_CLOUD_CSV_SIZE_INVALID         = "cloud csv: size must be greater than 0"
+	ERR_CLOUD_INVALID_OFFSET           = "cloud csv: invalid offset, must be string"
 )
 
 var (
@@ -40,6 +41,7 @@ var (
 	ErrCloudCSVUnsupportedProvider = errors.New(ERR_CLOUD_CSV_UNSUPPORTED_PROVIDER)
 	ErrCloudCSVMissingCredentials  = errors.New(ERR_CLOUD_CSV_MISSING_CREDENTIALS)
 	ErrCloudCSVSizeInvalid         = errors.New(ERR_CLOUD_CSV_SIZE_INVALID)
+	ErrCloudInvalidOffset          = errors.New(ERR_CLOUD_INVALID_OFFSET)
 )
 
 type CloudSource string
@@ -99,13 +101,19 @@ func (s *cloudCSVSource) Size(ctx context.Context) int64 {
 // Currently only supports GCP Storage. Ensure the environment variable is set for GCP credentials
 func (s *cloudCSVSource) Next(
 	ctx context.Context,
-	offset string,
+	offset any,
 	size uint,
 ) (*domain.BatchProcess, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		l = logger.GetSlogLogger()
 	}
+
+	offsetStr, ok := offset.(string)
+	if !ok {
+		return nil, ErrCloudInvalidOffset
+	}
+
 	// If size is 0 or negative, return an empty batch.
 	if size <= 0 {
 		return nil, ErrLocalCSVSizeInvalid
@@ -150,7 +158,7 @@ func (s *cloudCSVSource) Next(
 		Reader: rc,
 	}
 
-	offsetInt64, err := utils.ParseInt64(offset)
+	offsetInt64, err := utils.ParseInt64(offsetStr)
 	if err != nil {
 		return nil, fmt.Errorf("cloud csv: invalid offset %s: %w", offset, err)
 	}
@@ -194,12 +202,17 @@ func (s *cloudCSVSource) Next(
 
 func (s *cloudCSVSource) NextStream(
 	ctx context.Context,
-	offset string,
+	offset any,
 	size uint,
 ) (<-chan *domain.BatchRecord, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		l = logger.GetSlogLogger()
+	}
+
+	offsetStr, ok := offset.(string)
+	if !ok {
+		return nil, ErrCloudInvalidOffset
 	}
 
 	// If size is 0 or negative, return an empty batch.
@@ -229,7 +242,7 @@ func (s *cloudCSVSource) NextStream(
 		}
 	}()
 
-	offsetInt64, err := utils.ParseInt64(offset)
+	offsetInt64, err := utils.ParseInt64(offsetStr)
 	if err != nil {
 		return nil, fmt.Errorf("cloud csv: invalid offset %s: %w", offset, err)
 	}

@@ -78,9 +78,9 @@ services:
     env_file:
       - ../../../env/mongo3n2.env
     volumes:
-      # - scheduler-mongo-data:/data/db
+      - scheduler-mongo-data:/data/db
       - ./mongo-keyfile:/etc/mongo-keyfile:ro
-      - ./data/mongo/leader:/data/db
+      # - ./data/mongo/leader:/data/db:rw
     ports:
       - "27017:27017"
     healthcheck: *hc
@@ -108,9 +108,9 @@ services:
     env_file:
       - ../../../env/mongo3n2.env
     volumes:
-      # - scheduler-mongo-rep1-data:/data/db
+      - scheduler-mongo-rep1-data:/data/db
       - ./mongo-keyfile:/etc/mongo-keyfile:ro
-      - ./data/mongo/rep1:/data/db
+      # - ./data/mongo/rep1:/data/db:rw
     healthcheck: *hc
     command:
       [
@@ -136,9 +136,9 @@ services:
     env_file:
       - ../../../env/mongo3n2.env
     volumes:
-      # - scheduler-mongo-rep2-data:/data/db
+      - scheduler-mongo-rep2-data:/data/db
       - ./mongo-keyfile:/etc/mongo-keyfile:ro
-      - ./data/mongo/rep2:/data/db
+      # - ./data/mongo/rep2:/data/db:rw
     healthcheck: *hc
     command:
       [

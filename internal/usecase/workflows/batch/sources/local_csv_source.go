@@ -22,6 +22,8 @@ const (
 	ERR_LOCAL_CSV_TRANSFORMER_NIL = "local csv: transformer function is not set for local CSV source with headers"
 	ERR_LOCAL_CSV_FILE_OPEN       = "local csv: open"
 	ERR_LOCAL_CSV_SIZE_INVALID    = "local csv: size must be greater than 0"
+	ERR_INVALID_OFFSET            = "local csv: invalid offset, must be string"
+	ERR_PARSING_OFFSET            = "local csv: error parsing offset, must be int64"
 )
 
 var (
@@ -29,6 +31,8 @@ var (
 	ErrLocalCSVFileOpen     = errors.New(ERR_LOCAL_CSV_FILE_OPEN)
 	ErrLocalCSVSizeInvalid  = errors.New(ERR_LOCAL_CSV_SIZE_INVALID)
 	ErrNilTransformer       = errors.New(ERR_LOCAL_CSV_TRANSFORMER_NIL)
+	ErrInvalidOffset        = errors.New(ERR_INVALID_OFFSET)
+	ErrParsingOffset        = errors.New(ERR_PARSING_OFFSET)
 )
 
 // Local CSV source.
@@ -56,10 +60,15 @@ func (s *localCSVSource) Size(ctx context.Context) int64 {
 
 // Next reads the next batch of CSV rows from the local file.
 // It reads from the file at the specified offset and returns a batch of CSVRow.
-func (s *localCSVSource) Next(ctx context.Context, offset string, size uint) (*domain.BatchProcess, error) {
+func (s *localCSVSource) Next(ctx context.Context, offset any, size uint) (*domain.BatchProcess, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		l = logger.GetSlogLogger()
+	}
+
+	offsetStr, ok := offset.(string)
+	if !ok {
+		return nil, ErrInvalidOffset
 	}
 
 	// If size is 0 or negative, return an empty batch.
@@ -74,8 +83,8 @@ func (s *localCSVSource) Next(ctx context.Context, offset string, size uint) (*d
 
 	bp := &domain.BatchProcess{
 		Records:     nil,
-		NextOffset:  offset,
-		StartOffset: offset,
+		NextOffset:  offsetStr,
+		StartOffset: offsetStr,
 		Done:        false,
 	}
 
@@ -87,9 +96,9 @@ func (s *localCSVSource) Next(ctx context.Context, offset string, size uint) (*d
 	}
 	defer f.Close()
 
-	offsetInt64, err := utils.ParseInt64(offset)
+	offsetInt64, err := utils.ParseInt64(offsetStr)
 	if err != nil {
-		return bp, fmt.Errorf("local csv: invalid offset %s: %w", offset, err)
+		return bp, err
 	}
 
 	// Read data bytes from the file at the specified offset
@@ -134,12 +143,17 @@ func (s *localCSVSource) Next(ctx context.Context, offset string, size uint) (*d
 
 func (s *localCSVSource) NextStream(
 	ctx context.Context,
-	offset string,
+	offset any,
 	size uint,
 ) (<-chan *domain.BatchRecord, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		l = logger.GetSlogLogger()
+	}
+
+	offsetStr, ok := offset.(string)
+	if !ok {
+		return nil, ErrInvalidOffset
 	}
 
 	// If size is 0 or negative, return an empty batch.
@@ -155,9 +169,9 @@ func (s *localCSVSource) NextStream(
 	}
 	defer f.Close()
 
-	offsetInt64, err := utils.ParseInt64(offset)
+	offsetInt64, err := utils.ParseInt64(offsetStr)
 	if err != nil {
-		return nil, fmt.Errorf("local csv: invalid offset %s: %w", offset, err)
+		return nil, err
 	}
 
 	// Set start index to the specified offset.

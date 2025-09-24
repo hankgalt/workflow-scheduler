@@ -23,6 +23,7 @@ import (
 	"github.com/comfforts/logger"
 	bo "github.com/hankgalt/batch-orchestra"
 	"github.com/hankgalt/batch-orchestra/pkg/domain"
+	"github.com/hankgalt/batch-orchestra/pkg/utils"
 
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
 	sinks "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sinks"
@@ -984,7 +985,18 @@ func Test_ProcessBatchWorkflow_LocalCSV_Mongo_ContinueAsNewError(t *testing.T) {
 		require.True(t, ok, "expected to extract continue-as-new input, got error: %v", decErr)
 		require.NoError(t, decErr, "error extracting continue-as-new input")
 		require.NotNil(t, &next, "expected non-nil continue-as-new input")
-		require.True(t, next.StartAt > req.StartAt, "expected next.StartAt > req.StartAt")
+
+		nextStartAtStr, ok := next.StartAt.(string)
+		require.True(t, ok, "expected next.StartAt to be string")
+		nextStartAt, err := utils.ParseInt64(nextStartAtStr)
+		require.NoError(t, err, "error parsing next.StartAt to int64")
+
+		reqStartAtStr, ok := req.StartAt.(string)
+		require.True(t, ok, "expected req.StartAt to be string")
+		reqStartAt, err := utils.ParseInt64(reqStartAtStr)
+		require.NoError(t, err, "error parsing req.StartAt to int64")
+
+		require.True(t, nextStartAt > reqStartAt, "expected next.StartAt > req.StartAt")
 	}()
 
 	env.ExecuteWorkflow(btchwkfl.ProcessLocalCSVMongoLocalWorkflowAlias, req)

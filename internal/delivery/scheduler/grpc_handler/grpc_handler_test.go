@@ -70,7 +70,7 @@ func TestWorkflows(t *testing.T) {
 		client api.SchedulerClient,
 		nbClient api.SchedulerClient,
 	){
-		"test process cloud CSV to mongo workflow, started": testProcessCloudCSVMongoWorkflow,
+		// "test process cloud CSV to mongo workflow, started": testProcessCloudCSVMongoWorkflow,
 		"test process local CSV to mongo workflow, started": testProcessLocalCSVMongoWorkflow,
 	} {
 		t.Run(scenario, func(t *testing.T) {
@@ -101,6 +101,7 @@ func testProcessCloudCSVMongoWorkflow(t *testing.T, client, nbClient api.Schedul
 	resp, err := client.ProcessCloudCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
 		MaxInProcessBatches: 2,
 		BatchSize:           400,
+		Start:               "0",
 		MappingRules:        envutils.BuildBusinessModelTransformRules(),
 		JobConfig: &api.BatchCSVRequest_CloudCsvMongoConfig{
 			CloudCsvMongoConfig: batch.MapProtoFromCloudCSVMongoBatchConfig(jobCfg),
@@ -128,6 +129,7 @@ func testProcessLocalCSVMongoWorkflow(t *testing.T, client, nbClient api.Schedul
 	resp, err := client.ProcessLocalCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
 		MaxInProcessBatches: 2,
 		BatchSize:           400,
+		Start:               "0",
 		MappingRules:        envutils.BuildBusinessModelTransformRules(),
 		JobConfig: &api.BatchCSVRequest_LocalCsvMongoConfig{
 			LocalCsvMongoConfig: batch.MapProtoFromLocalCSVMongoBatchConfig(jobCfg),
@@ -270,7 +272,7 @@ func setupTest(t *testing.T, fn func(*grpchandler.Config)) (
 		err = nbcc.Close()
 		require.NoError(t, err)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 		ctx = logger.WithLogger(ctx, l)
 

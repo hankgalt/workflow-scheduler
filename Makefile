@@ -68,7 +68,7 @@ start-custom-mongo: network
 # stop custom mongo
 stop-custom-mongo:
 	@echo "Stopping MongoDB cluster..."
-	@set -a; . env/mongo3n2.env; set +a; docker-compose -f deploy/scheduler/mongo/docker-compose-mongo-3-node-2-phase.yml --profile secure down -v
+	@set -a; . env/mongo3n2.env; set +a; docker-compose -f deploy/scheduler/mongo/docker-compose-mongo-3-node-2-phase.yml --profile secure down
 
 # start mongo cluster
 mongo:
@@ -182,11 +182,10 @@ stop-scheduler:
 
 ######## - Infra - #######
 # start infrastructure components
-start-infra: network obs temporal mongo wait-30 register-domain wait-10
-	docker logs scheduler-mongo-setup
+start-infra: network obs temporal wait-30 register-domain
 
 # stop infrastructure components
-stop-infra: stop-temporal stop-mongo stop-obs
+stop-infra: stop-temporal stop-obs
 
 ######## - Utilities - #######
 # wait for 10 seconds

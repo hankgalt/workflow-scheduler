@@ -59,7 +59,7 @@ func main() {
 
 	// Build MongoDB and Temporal configurations for the scheduler service, using env vars
 	l.Info("setting up scheduler server config")
-	mCfg := envutils.BuildMongoStoreConfig(true)
+	mCfg := envutils.BuildMongoStoreConfig(false)
 	tCfg := envutils.BuildTemporalConfig(host)
 	svcCfg := scheduler.NewSchedulerServiceConfig(tCfg, mCfg)
 

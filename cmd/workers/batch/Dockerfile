@@ -9,7 +9,7 @@
 # ARG BUILDOS
 # ARG BUILDARCH
 # ARG BUILDVARIANT
-ARG GO_VERSION=1.23.6
+ARG GO_VERSION=1.24.7
 
 ############################
 # Builder stage (Go + Alpine)

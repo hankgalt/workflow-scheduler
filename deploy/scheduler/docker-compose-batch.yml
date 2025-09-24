@@ -7,7 +7,7 @@ services:
       context: ../..
       dockerfile: cmd/workers/batch/Dockerfile
       args:
-        GO_VERSION: "1.23.6"
+        GO_VERSION: "1.24.7"
     env_file:
       - ../../env/batch.env
     volumes:

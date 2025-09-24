@@ -305,6 +305,7 @@ func (s *grpcServer) DeleteRun(ctx context.Context, req *api.DeleteRunRequest) (
 func authenticate(ctx context.Context) (context.Context, error) {
 	peer, ok := peer.FromContext(ctx)
 	if !ok {
+		fmt.Println("authenticate: Peer info nil")
 		return ctx, status.New(
 			codes.PermissionDenied,
 			"couldn't find peer info",
@@ -312,6 +313,7 @@ func authenticate(ctx context.Context) (context.Context, error) {
 	}
 
 	if peer.AuthInfo == nil {
+		fmt.Println("authenticate: Auth info nil")
 		return context.WithValue(ctx, subjectContextKey{}, ""), nil
 	}
 
@@ -319,6 +321,7 @@ func authenticate(ctx context.Context) (context.Context, error) {
 	subject := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
 	ctx = context.WithValue(ctx, subjectContextKey{}, subject)
 
+	fmt.Println("authenticate: Auth subject: ", subject)
 	return ctx, nil
 }
 
@@ -327,15 +330,17 @@ func decorateContext(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		// If there's no logger in the context, add a new one
 		// TODO: setup context
+		fmt.Println("decorateContext: missing logger in context, providing default logger")
 		ctx = logger.WithLogger(ctx, logger.GetSlogLogger())
 	}
 	return ctx, nil
 }
 
 func metadataLogger(ctx context.Context) (context.Context, error) {
-	_, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		fmt.Println("missing metadata")
+	if md, ok := metadata.FromIncomingContext(ctx); !ok {
+		fmt.Println("metadataLogger: missing metadata")
+	} else {
+		fmt.Println("metadataLogger: metadata found: ", md)
 	}
 	return ctx, nil
 }

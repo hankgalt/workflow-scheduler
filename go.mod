@@ -1,6 +1,6 @@
 module github.com/hankgalt/workflow-scheduler
 
-go 1.23.6
+go 1.24.7
 
 require (
 	github.com/stretchr/testify v1.11.1
@@ -11,13 +11,13 @@ require (
 
 require github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 
-require github.com/comfforts/comff-config v0.1.11
+require github.com/comfforts/comff-config v0.1.12
 
 require (
 	cloud.google.com/go/storage v1.55.0
-	github.com/comfforts/logger v0.2.12
+	github.com/comfforts/logger v0.2.13
 	github.com/google/uuid v1.6.0
-	github.com/hankgalt/batch-orchestra v0.2.16
+	github.com/hankgalt/batch-orchestra v0.3.12
 	github.com/prometheus/client_golang v1.23.0
 	go.mongodb.org/mongo-driver v1.17.4
 	go.opentelemetry.io/otel v1.37.0
@@ -27,7 +27,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.37.0
 	go.temporal.io/sdk v1.35.0
 	go.temporal.io/sdk/contrib/opentelemetry v0.6.0
-	golang.org/x/exp v0.0.0-20231127185646-65229373498e
+	golang.org/x/exp v0.0.0-20250911091902-df9299821621
 )
 
 require (
@@ -58,7 +58,7 @@ require (
 	golang.org/x/crypto v0.40.0 // indirect
 	golang.org/x/net v0.42.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/time v0.12.0 // indirect

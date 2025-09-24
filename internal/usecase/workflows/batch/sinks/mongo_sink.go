@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"sync"
 	"time"
 
 	"github.com/comfforts/logger"
@@ -29,16 +29,16 @@ const (
 )
 
 var (
-	ErrMongoSinkNil        = errors.New(ERR_MONGO_SINK_NIL)
-	ErrMongoSinkNilClient  = errors.New(ERR_MONGO_SINK_NIL_CLIENT)
-	ErrMongoSinkEmptyColl  = errors.New(ERR_MONGO_SINK_EMPTY_COLL)
-	ErrMongoSinkEmptyData  = errors.New(ERR_MONGO_SINK_EMPTY_DATA)
-	ErrMongoSinkDBProtocol = errors.New(ERR_MONGO_SINK_DB_PROTOCOL)
-	ErrMongoSinkDBHost     = errors.New(ERR_MONGO_SINK_DB_HOST)
-	ErrMongoSinkDBName     = errors.New(ERR_MONGO_SINK_DB_NAME)
-	ErrMongoSinkDBUser     = errors.New(ERR_MONGO_SINK_DB_USER)
-	ErrMongoSinkDBPwd      = errors.New(ERR_MONGO_SINK_DB_PWD)
-	ErrAllBatchRecords     = errors.New(ERR_MONGO_SINK_ALL_BATCH_RECORDS)
+	ErrMongoSinkNil             = errors.New(ERR_MONGO_SINK_NIL)
+	ErrMongoSinkNilClient       = errors.New(ERR_MONGO_SINK_NIL_CLIENT)
+	ErrMongoSinkEmptyColl       = errors.New(ERR_MONGO_SINK_EMPTY_COLL)
+	ErrMongoSinkEmptyData       = errors.New(ERR_MONGO_SINK_EMPTY_DATA)
+	ErrMongoSinkDBProtocol      = errors.New(ERR_MONGO_SINK_DB_PROTOCOL)
+	ErrMongoSinkDBHost          = errors.New(ERR_MONGO_SINK_DB_HOST)
+	ErrMongoSinkDBName          = errors.New(ERR_MONGO_SINK_DB_NAME)
+	ErrMongoSinkDBUser          = errors.New(ERR_MONGO_SINK_DB_USER)
+	ErrMongoSinkDBPwd           = errors.New(ERR_MONGO_SINK_DB_PWD)
+	ErrMongoSinkAllBatchRecords = errors.New(ERR_MONGO_SINK_ALL_BATCH_RECORDS)
 )
 
 // MongoDocWriter is the tiny capability we need.
@@ -136,65 +136,133 @@ func (s *mongoSink[T]) Write(ctx context.Context, b *domain.BatchProcess) (*doma
 
 	if errCount >= len(b.Records) {
 		l.Error("all batch records failed", "batch-id", b.BatchId, "errors", errs)
-		return b, ErrAllBatchRecords
+		return b, ErrMongoSinkAllBatchRecords
 	}
 	return b, nil
 }
 
-func (s *mongoSink[T]) WriteStream(ctx context.Context, start uint64, data []T) (<-chan domain.BatchResult, error) {
+// WriteStream writes the batch of records to MongoDB.
+func (s *mongoSink[T]) WriteStream(ctx context.Context, b *domain.BatchProcess) (*domain.BatchProcess, error) {
 	l, err := logger.LoggerFromContext(ctx)
 	if err != nil {
 		l = logger.GetSlogLogger()
 	}
-
 	if s == nil {
-		return nil, ErrMongoSinkNil
+		return b, ErrMongoSinkNil
 	}
 	if s.client == nil {
-		return nil, ErrMongoSinkNilClient
+		return b, ErrMongoSinkNilClient
 	}
 	if s.collection == "" {
-		return nil, ErrMongoSinkEmptyColl
+		return b, ErrMongoSinkEmptyColl
 	}
 
-	if len(data) == 0 {
-		return nil, ErrMongoSinkEmptyData
+	if len(b.Records) == 0 {
+		return b, ErrMongoSinkEmptyData
 	}
 
-	resStream := make(chan domain.BatchResult)
+	type out struct {
+		idx int
+		res string
+		err error
+	}
 
-	go func() {
-		defer close(resStream)
+	const maxConcurrent = 8
+	sem := make(chan struct{}, maxConcurrent) // semaphore to cap concurrency
+	ch := make(chan out)
+	var wg sync.WaitGroup
+	launched := 0
 
-		for i, rec := range data {
-			// allow cancellation
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
+	var errCount int
+	errs := map[string]int{}
+	for i, rec := range b.Records {
+		// allow cancellation before launching work
+		select {
+		case <-ctx.Done():
+			// Stop launching new work; we'll still drain anything already launched.
+			goto waitAndCollect
+		default:
+		}
 
-			doc, err := toMapAny(rec)
+		if rec.BatchResult.Error != "" {
+			// TODO Differentiate between transient and permanent errors
+			l.Debug(
+				"skipping record with existing error",
+				"batch-id", b.BatchId,
+				"rec-start", rec.Start,
+				"rec-end", rec.End,
+				"error", rec.BatchResult.Error)
+			continue // skip already errored records
+		}
+
+		launched++
+		wg.Add(1)
+		sem <- struct{}{} // acquire slot
+
+		go func(i int) {
+			defer wg.Done()
+			defer func() { <-sem }() // release slot
+
+			doc, err := toMapAny(rec.Data)
 			if err != nil {
-				resStream <- domain.BatchResult{
-					Error: fmt.Sprintf("record %d convert: %s", i, err.Error()),
+				select {
+				case ch <- out{idx: i, err: err}:
+				case <-ctx.Done():
 				}
-				continue
+				return
 			}
 
 			res, err := s.client.AddCollectionDoc(ctx, s.collection, doc)
 			if err != nil {
-				l.Error("mongoSink:WriteStream - error adding document to collection", "error", err.Error())
-				resStream <- domain.BatchResult{Error: fmt.Sprintf("record %d insert: %s", i, err.Error())}
-				continue
+				select {
+				case ch <- out{idx: i, err: err}:
+				case <-ctx.Done():
+				}
+				return
 			}
-			resStream <- domain.BatchResult{
-				Result: res,
+
+			select {
+			case ch <- out{idx: i, res: res}:
+			case <-ctx.Done():
 			}
-		}
+		}(i)
+	}
+
+waitAndCollect:
+	// Close ch after all launched goroutines finish.
+	go func() {
+		wg.Wait()
+		close(ch)
 	}()
 
-	return resStream, nil
+	// Collect results and update b in a single goroutine (this one).
+	for r := range ch {
+		if r.err != nil {
+			b.Records[r.idx].BatchResult.Error = r.err.Error()
+			// skip duplicate record errors
+			if r.err != mongostore.ErrDuplicateRecord {
+				errs[r.err.Error()]++
+				errCount++
+			}
+			continue
+		}
+		b.Records[r.idx].BatchResult.Result = r.res
+	}
+
+	// Set the error map on the batch
+	b.Error = errs
+
+	// If we aborted launches due to cancellation, surface that.
+	if err := ctx.Err(); err != nil {
+		l.Error("context error", "batch-id", b.BatchId, "error", err)
+		return b, err
+	}
+
+	if errCount >= len(b.Records) {
+		l.Error("all batch records failed", "batch-id", b.BatchId, "errors", errs)
+		return b, ErrMongoSinkAllBatchRecords
+	}
+	return b, nil
 }
 
 // Close closes the mongo sink.
