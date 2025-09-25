@@ -122,7 +122,7 @@ func (bs *schedulerService) ProcessCloudCSVToMongoWorkflow(ctx context.Context, 
 	workflowOptions := client.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("cloud-csv-mongo-cloud-%s-%s", runId, req.Start),
 		TaskQueue:                btchwkfl.ApplicationName,
-		WorkflowExecutionTimeout: time.Duration(6 * time.Hour),
+		WorkflowExecutionTimeout: time.Duration(72 * time.Hour),
 		WorkflowTaskTimeout:      time.Minute * 60, // set to max, as there are decision tasks that'll take as long as max
 		WorkflowIDReusePolicy:    2,
 		WorkflowIDConflictPolicy: 1,
@@ -263,7 +263,7 @@ func (bs *schedulerService) ProcessLocalCSVToMongoWorkflow(ctx context.Context, 
 	workflowOptions := client.StartWorkflowOptions{
 		ID:                       fmt.Sprintf("local-csv-mongo-%s-%s", runId, req.Start),
 		TaskQueue:                btchwkfl.ApplicationName,
-		WorkflowExecutionTimeout: time.Duration(24 * time.Hour),
+		WorkflowExecutionTimeout: time.Duration(72 * time.Hour),
 		WorkflowTaskTimeout:      time.Minute * 60, // set to max, as there are decision tasks that'll take as long as max
 		WorkflowIDReusePolicy:    2,
 		WorkflowIDConflictPolicy: 1,

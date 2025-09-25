@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
@@ -141,7 +142,7 @@ func (s *grpcServer) ProcessLocalCSVMongoWorkflow(ctx context.Context, req *api.
 				MaxInProcessBatches: uint(req.MaxInProcessBatches),
 				BatchSize:           uint(req.BatchSize),
 				Start:               req.Start,
-				PauseDuration:       batch.MapProtoTimeDuration(req.PauseDuration),
+				PauseDuration:       time.Duration(req.PauseDuration) * time.Second,
 				PauseRecordCount:    req.PauseRecordCount,
 				MappingRules:        batch.MapRulesFromProto(req.MappingRules),
 			},
@@ -188,7 +189,7 @@ func (s *grpcServer) ProcessCloudCSVMongoWorkflow(ctx context.Context, req *api.
 				MaxBatches:          uint(req.MaxBatches),
 				Start:               req.Start,
 				MaxInProcessBatches: uint(req.MaxInProcessBatches),
-				PauseDuration:       batch.MapProtoTimeDuration(req.PauseDuration),
+				PauseDuration:       time.Duration(req.PauseDuration) * time.Second,
 				PauseRecordCount:    req.PauseRecordCount,
 				MappingRules:        batch.MapRulesFromProto(req.MappingRules),
 			},

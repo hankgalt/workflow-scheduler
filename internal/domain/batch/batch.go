@@ -3,8 +3,6 @@ package batch
 import (
 	"time"
 
-	"google.golang.org/protobuf/types/known/durationpb"
-
 	"github.com/hankgalt/batch-orchestra/pkg/domain"
 
 	api "github.com/hankgalt/workflow-scheduler/api/scheduler/v1"
@@ -187,15 +185,4 @@ func MapRulesToProto(rules []domain.Rule) []*api.Rule {
 		protoRules = append(protoRules, MapRuleToProto(rule))
 	}
 	return protoRules
-}
-
-func MapDurationProto(d time.Duration) *durationpb.Duration {
-	return durationpb.New(d)
-}
-
-func MapProtoTimeDuration(pbDuration *durationpb.Duration) time.Duration {
-	if pbDuration == nil {
-		return 0 // Or handle as appropriate for nil
-	}
-	return pbDuration.AsDuration()
 }

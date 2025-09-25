@@ -5,8 +5,6 @@ package scheduler.v1;
 
 option go_package = "github.com/hankgalt/workflow-scheduler/api/scheduler_v1";
 
-import "google/protobuf/duration.proto";
-
 message WorkflowRun {
     string run_id = 1;
     string workflow_id = 2;
@@ -81,7 +79,7 @@ message BatchCSVRequest {
     uint64 batch_size = 2;
     uint32 max_in_process_batches = 3;
     string start = 4;
-    google.protobuf.Duration pause_duration = 5;
+    uint32 pause_duration = 5; // in seconds
     int64 pause_record_count = 6;
     map<string, Rule> mapping_rules = 7;
     oneof job_config {

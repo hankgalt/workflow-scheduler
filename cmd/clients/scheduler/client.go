@@ -3,11 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/protobuf/types/known/durationpb"
 
 	config "github.com/comfforts/comff-config"
 	"github.com/comfforts/logger"
@@ -106,7 +104,7 @@ func testProcessCloudCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 		MaxInProcessBatches: 2,
 		BatchSize:           1000,
 		Start:               "0",
-		PauseDuration:       durationpb.New(45 * time.Second),
+		PauseDuration:       45,
 		PauseRecordCount:    2000,
 		MappingRules:        envutils.BuildBusinessModelTransformRules(),
 		JobConfig: &api.BatchCSVRequest_CloudCsvMongoConfig{
@@ -134,11 +132,12 @@ func testProcessLocalCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 	}
 
 	resp, err := client.ProcessLocalCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
-		MaxInProcessBatches: 3,
+		MaxInProcessBatches: 4,
+		MaxBatches:          200,
 		BatchSize:           1000,
-		Start:               "0",
-		PauseDuration:       durationpb.New(45 * time.Second),
-		PauseRecordCount:    2000,
+		Start:               "148604836",
+		PauseDuration:       30,
+		PauseRecordCount:    4000,
 		MappingRules:        envutils.BuildBusinessModelTransformRules(),
 		JobConfig: &api.BatchCSVRequest_LocalCsvMongoConfig{
 			LocalCsvMongoConfig: batch.MapProtoFromLocalCSVMongoBatchConfig(jobCfg),

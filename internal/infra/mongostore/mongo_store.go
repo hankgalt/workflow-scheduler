@@ -17,7 +17,7 @@ import (
 	"github.com/hankgalt/workflow-scheduler/internal/domain/infra"
 )
 
-const DEFAULT_MONGO_POOL_SIZE = 10
+const DEFAULT_MONGO_POOL_SIZE = 20
 
 const ERR_DUPLICATE_RECORD = "mongostore: error duplicate record"
 

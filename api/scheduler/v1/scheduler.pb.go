@@ -9,7 +9,6 @@ package scheduler_v1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	durationpb "google.golang.org/protobuf/types/known/durationpb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -712,7 +711,7 @@ type BatchCSVRequest struct {
 	BatchSize           uint64                 `protobuf:"varint,2,opt,name=batch_size,json=batchSize,proto3" json:"batch_size,omitempty"`
 	MaxInProcessBatches uint32                 `protobuf:"varint,3,opt,name=max_in_process_batches,json=maxInProcessBatches,proto3" json:"max_in_process_batches,omitempty"`
 	Start               string                 `protobuf:"bytes,4,opt,name=start,proto3" json:"start,omitempty"`
-	PauseDuration       *durationpb.Duration   `protobuf:"bytes,5,opt,name=pause_duration,json=pauseDuration,proto3" json:"pause_duration,omitempty"`
+	PauseDuration       uint32                 `protobuf:"varint,5,opt,name=pause_duration,json=pauseDuration,proto3" json:"pause_duration,omitempty"` // in seconds
 	PauseRecordCount    int64                  `protobuf:"varint,6,opt,name=pause_record_count,json=pauseRecordCount,proto3" json:"pause_record_count,omitempty"`
 	MappingRules        map[string]*Rule       `protobuf:"bytes,7,rep,name=mapping_rules,json=mappingRules,proto3" json:"mapping_rules,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Types that are valid to be assigned to JobConfig:
@@ -782,11 +781,11 @@ func (x *BatchCSVRequest) GetStart() string {
 	return ""
 }
 
-func (x *BatchCSVRequest) GetPauseDuration() *durationpb.Duration {
+func (x *BatchCSVRequest) GetPauseDuration() uint32 {
 	if x != nil {
 		return x.PauseDuration
 	}
-	return nil
+	return 0
 }
 
 func (x *BatchCSVRequest) GetPauseRecordCount() int64 {
@@ -848,7 +847,7 @@ var File_api_scheduler_v1_scheduler_proto protoreflect.FileDescriptor
 
 const file_api_scheduler_v1_scheduler_proto_rawDesc = "" +
 	"\n" +
-	" api/scheduler/v1/scheduler.proto\x12\fscheduler.v1\x1a\x1egoogle/protobuf/duration.proto\"\xb7\x01\n" +
+	" api/scheduler/v1/scheduler.proto\x12\fscheduler.v1\"\xb7\x01\n" +
 	"\vWorkflowRun\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12\x1f\n" +
 	"\vworkflow_id\x18\x02 \x01(\tR\n" +
@@ -904,15 +903,15 @@ const file_api_scheduler_v1_scheduler_proto_rawDesc = "" +
 	"\fmongo_config\x18\x02 \x01(\v2\x19.scheduler.v1.MongoConfigR\vmongoConfig\x12\x1e\n" +
 	"\n" +
 	"collection\x18\x03 \x01(\tR\n" +
-	"collection\"\xf9\x04\n" +
+	"collection\"\xde\x04\n" +
 	"\x0fBatchCSVRequest\x12\x1f\n" +
 	"\vmax_batches\x18\x01 \x01(\rR\n" +
 	"maxBatches\x12\x1d\n" +
 	"\n" +
 	"batch_size\x18\x02 \x01(\x04R\tbatchSize\x123\n" +
 	"\x16max_in_process_batches\x18\x03 \x01(\rR\x13maxInProcessBatches\x12\x14\n" +
-	"\x05start\x18\x04 \x01(\tR\x05start\x12@\n" +
-	"\x0epause_duration\x18\x05 \x01(\v2\x19.google.protobuf.DurationR\rpauseDuration\x12,\n" +
+	"\x05start\x18\x04 \x01(\tR\x05start\x12%\n" +
+	"\x0epause_duration\x18\x05 \x01(\rR\rpauseDuration\x12,\n" +
 	"\x12pause_record_count\x18\x06 \x01(\x03R\x10pauseRecordCount\x12T\n" +
 	"\rmapping_rules\x18\a \x03(\v2/.scheduler.v1.BatchCSVRequest.MappingRulesEntryR\fmappingRules\x12X\n" +
 	"\x16cloud_csv_mongo_config\x18\b \x01(\v2!.scheduler.v1.CloudCSVMongoConfigH\x00R\x13cloudCsvMongoConfig\x12X\n" +
@@ -956,7 +955,6 @@ var file_api_scheduler_v1_scheduler_proto_goTypes = []any{
 	(*CloudCSVMongoConfig)(nil), // 10: scheduler.v1.CloudCSVMongoConfig
 	(*BatchCSVRequest)(nil),     // 11: scheduler.v1.BatchCSVRequest
 	nil,                         // 12: scheduler.v1.BatchCSVRequest.MappingRulesEntry
-	(*durationpb.Duration)(nil), // 13: google.protobuf.Duration
 }
 var file_api_scheduler_v1_scheduler_proto_depIdxs = []int32{
 	0,  // 0: scheduler.v1.RunResponse.run:type_name -> scheduler.v1.WorkflowRun
@@ -964,26 +962,25 @@ var file_api_scheduler_v1_scheduler_proto_depIdxs = []int32{
 	8,  // 2: scheduler.v1.LocalCSVMongoConfig.mongo_config:type_name -> scheduler.v1.MongoConfig
 	7,  // 3: scheduler.v1.CloudCSVMongoConfig.csv_config:type_name -> scheduler.v1.CloudCSVConfig
 	8,  // 4: scheduler.v1.CloudCSVMongoConfig.mongo_config:type_name -> scheduler.v1.MongoConfig
-	13, // 5: scheduler.v1.BatchCSVRequest.pause_duration:type_name -> google.protobuf.Duration
-	12, // 6: scheduler.v1.BatchCSVRequest.mapping_rules:type_name -> scheduler.v1.BatchCSVRequest.MappingRulesEntry
-	10, // 7: scheduler.v1.BatchCSVRequest.cloud_csv_mongo_config:type_name -> scheduler.v1.CloudCSVMongoConfig
-	9,  // 8: scheduler.v1.BatchCSVRequest.local_csv_mongo_config:type_name -> scheduler.v1.LocalCSVMongoConfig
-	5,  // 9: scheduler.v1.BatchCSVRequest.MappingRulesEntry.value:type_name -> scheduler.v1.Rule
-	11, // 10: scheduler.v1.Scheduler.ProcessLocalCSVMongoWorkflow:input_type -> scheduler.v1.BatchCSVRequest
-	11, // 11: scheduler.v1.Scheduler.ProcessCloudCSVMongoWorkflow:input_type -> scheduler.v1.BatchCSVRequest
-	2,  // 12: scheduler.v1.Scheduler.CreateRun:input_type -> scheduler.v1.RunRequest
-	2,  // 13: scheduler.v1.Scheduler.GetRun:input_type -> scheduler.v1.RunRequest
-	3,  // 14: scheduler.v1.Scheduler.DeleteRun:input_type -> scheduler.v1.DeleteRunRequest
-	1,  // 15: scheduler.v1.Scheduler.ProcessLocalCSVMongoWorkflow:output_type -> scheduler.v1.RunResponse
-	1,  // 16: scheduler.v1.Scheduler.ProcessCloudCSVMongoWorkflow:output_type -> scheduler.v1.RunResponse
-	1,  // 17: scheduler.v1.Scheduler.CreateRun:output_type -> scheduler.v1.RunResponse
-	1,  // 18: scheduler.v1.Scheduler.GetRun:output_type -> scheduler.v1.RunResponse
-	4,  // 19: scheduler.v1.Scheduler.DeleteRun:output_type -> scheduler.v1.DeleteResponse
-	15, // [15:20] is the sub-list for method output_type
-	10, // [10:15] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	12, // 5: scheduler.v1.BatchCSVRequest.mapping_rules:type_name -> scheduler.v1.BatchCSVRequest.MappingRulesEntry
+	10, // 6: scheduler.v1.BatchCSVRequest.cloud_csv_mongo_config:type_name -> scheduler.v1.CloudCSVMongoConfig
+	9,  // 7: scheduler.v1.BatchCSVRequest.local_csv_mongo_config:type_name -> scheduler.v1.LocalCSVMongoConfig
+	5,  // 8: scheduler.v1.BatchCSVRequest.MappingRulesEntry.value:type_name -> scheduler.v1.Rule
+	11, // 9: scheduler.v1.Scheduler.ProcessLocalCSVMongoWorkflow:input_type -> scheduler.v1.BatchCSVRequest
+	11, // 10: scheduler.v1.Scheduler.ProcessCloudCSVMongoWorkflow:input_type -> scheduler.v1.BatchCSVRequest
+	2,  // 11: scheduler.v1.Scheduler.CreateRun:input_type -> scheduler.v1.RunRequest
+	2,  // 12: scheduler.v1.Scheduler.GetRun:input_type -> scheduler.v1.RunRequest
+	3,  // 13: scheduler.v1.Scheduler.DeleteRun:input_type -> scheduler.v1.DeleteRunRequest
+	1,  // 14: scheduler.v1.Scheduler.ProcessLocalCSVMongoWorkflow:output_type -> scheduler.v1.RunResponse
+	1,  // 15: scheduler.v1.Scheduler.ProcessCloudCSVMongoWorkflow:output_type -> scheduler.v1.RunResponse
+	1,  // 16: scheduler.v1.Scheduler.CreateRun:output_type -> scheduler.v1.RunResponse
+	1,  // 17: scheduler.v1.Scheduler.GetRun:output_type -> scheduler.v1.RunResponse
+	4,  // 18: scheduler.v1.Scheduler.DeleteRun:output_type -> scheduler.v1.DeleteResponse
+	14, // [14:19] is the sub-list for method output_type
+	9,  // [9:14] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_api_scheduler_v1_scheduler_proto_init() }

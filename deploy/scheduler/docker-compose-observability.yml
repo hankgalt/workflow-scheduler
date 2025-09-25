@@ -47,9 +47,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2g
+          memory: 4g
         reservations:
-          memory: 1g
+          memory: 2g
     networks:
       - schenet
 
