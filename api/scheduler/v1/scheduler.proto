@@ -2,7 +2,10 @@ syntax = "proto3";
 
 package scheduler.v1;
 
+
 option go_package = "github.com/hankgalt/workflow-scheduler/api/scheduler_v1";
+
+import "google/protobuf/duration.proto";
 
 message WorkflowRun {
     string run_id = 1;
@@ -78,10 +81,12 @@ message BatchCSVRequest {
     uint64 batch_size = 2;
     uint32 max_in_process_batches = 3;
     string start = 4;
-    map<string, Rule> mapping_rules = 5;
+    google.protobuf.Duration pause_duration = 5;
+    int64 pause_record_count = 6;
+    map<string, Rule> mapping_rules = 7;
     oneof job_config {
-        CloudCSVMongoConfig cloud_csv_mongo_config = 6;
-        LocalCSVMongoConfig local_csv_mongo_config = 7;
+        CloudCSVMongoConfig cloud_csv_mongo_config = 8;
+        LocalCSVMongoConfig local_csv_mongo_config = 9;
     }
 }
 

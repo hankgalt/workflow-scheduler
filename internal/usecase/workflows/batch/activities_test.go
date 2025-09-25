@@ -21,7 +21,7 @@ import (
 	"github.com/hankgalt/batch-orchestra/pkg/utils"
 
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
-	sinks "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sinks"
+	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sinks"
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sources"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"
 )
@@ -566,19 +566,13 @@ func Test_FetchAndWrite_LocalCSVSource_MongoSink_Queue(t *testing.T) {
 			etlReq.Done = fOut.Batch.Done
 			etlReq.Offsets = append(etlReq.Offsets, fOut.Batch.NextOffset)
 
-			nextOffsetStr, ok := fOut.Batch.NextOffset.(string)
-			if !ok {
-				l.Error("invalid offset type", "type", fmt.Sprintf("%T", fOut.Batch.NextOffset))
+			batchId, err := domain.GetBatchId(fOut.Batch.StartOffset, fOut.Batch.NextOffset, "", "")
+			if err != nil {
+				l.Error("failed to get batch id", "error", err)
 				t.FailNow()
 			}
 
-			startOffsetStr, ok := fOut.Batch.StartOffset.(string)
-			if !ok {
-				l.Error("invalid offset type", "type", fmt.Sprintf("%T", fOut.Batch.StartOffset))
-				t.FailNow()
-			}
-
-			etlReq.Batches[fmt.Sprintf("batch-%s-%s", startOffsetStr, nextOffsetStr)] = fOut.Batch
+			etlReq.Batches[batchId] = fOut.Batch
 
 			wIn = &domain.WriteInput[domain.CSVRow, *sinks.MongoSinkConfig[domain.CSVRow]]{
 				Sink:  sinkCfg,
@@ -602,19 +596,12 @@ func Test_FetchAndWrite_LocalCSVSource_MongoSink_Queue(t *testing.T) {
 			require.NoError(t, wVal.Get(&wOut))
 			require.Equal(t, true, len(wOut.Batch.Records) > 0)
 
-			nextOffsetStr, ok := wOut.Batch.NextOffset.(string)
-			if !ok {
-				l.Error("invalid offset type", "type", fmt.Sprintf("%T", wOut.Batch.NextOffset))
+			batchId, err := domain.GetBatchId(wOut.Batch.StartOffset, wOut.Batch.NextOffset, "", "")
+			if err != nil {
+				l.Error("failed to get batch id", "error", err)
 				t.FailNow()
 			}
 
-			startOffsetStr, ok := wOut.Batch.StartOffset.(string)
-			if !ok {
-				l.Error("invalid offset type", "type", fmt.Sprintf("%T", wOut.Batch.StartOffset))
-				t.FailNow()
-			}
-
-			batchId := fmt.Sprintf("batch-%s-%s", startOffsetStr, nextOffsetStr)
 			if _, ok := etlReq.Batches[batchId]; !ok {
 				etlReq.Batches[batchId] = wOut.Batch
 			} else {
@@ -744,19 +731,13 @@ func Test_FetchAndWrite_CloudCSVSource_MongoSink_Queue(t *testing.T) {
 			etlReq.Done = fOut.Batch.Done
 			etlReq.Offsets = append(etlReq.Offsets, fOut.Batch.NextOffset)
 
-			nextOffsetStr, ok := fOut.Batch.NextOffset.(string)
-			if !ok {
-				l.Error("invalid offset type", "type", fmt.Sprintf("%T", fOut.Batch.NextOffset))
+			batchId, err := domain.GetBatchId(fOut.Batch.StartOffset, fOut.Batch.NextOffset, "", "")
+			if err != nil {
+				l.Error("failed to get batch id", "error", err)
 				t.FailNow()
 			}
 
-			startOffsetStr, ok := fOut.Batch.StartOffset.(string)
-			if !ok {
-				l.Error("invalid offset type", "type", fmt.Sprintf("%T", fOut.Batch.StartOffset))
-				t.FailNow()
-			}
-
-			etlReq.Batches[fmt.Sprintf("batch-%s-%s", startOffsetStr, nextOffsetStr)] = fOut.Batch
+			etlReq.Batches[batchId] = fOut.Batch
 
 			wIn = &domain.WriteInput[domain.CSVRow, *sinks.MongoSinkConfig[domain.CSVRow]]{
 				Sink:  sinkCfg,
@@ -780,19 +761,171 @@ func Test_FetchAndWrite_CloudCSVSource_MongoSink_Queue(t *testing.T) {
 			require.NoError(t, wVal.Get(&wOut))
 			require.Equal(t, true, len(wOut.Batch.Records) > 0)
 
-			nextOffsetStr, ok := wOut.Batch.NextOffset.(string)
-			if !ok {
-				l.Error("invalid offset type", "type", fmt.Sprintf("%T", wOut.Batch.NextOffset))
+			batchId, err := domain.GetBatchId(wOut.Batch.StartOffset, wOut.Batch.NextOffset, "", "")
+			if err != nil {
+				l.Error("failed to get batch id", "error", err)
 				t.FailNow()
 			}
 
-			startOffsetStr, ok := wOut.Batch.StartOffset.(string)
-			if !ok {
-				l.Error("invalid offset type", "type", fmt.Sprintf("%T", wOut.Batch.StartOffset))
+			if _, ok := etlReq.Batches[batchId]; !ok {
+				etlReq.Batches[batchId] = wOut.Batch
+			} else {
+				etlReq.Batches[batchId] = wOut.Batch
+			}
+		}
+	}
+}
+
+func Test_FetchAndWrite_LocalJSONSource_LocalJSONSink_Queue(t *testing.T) {
+	// setup test environment
+	var suite testsuite.WorkflowTestSuite
+	env := suite.NewTestActivityEnvironment()
+
+	// setup logger & global activity execution context
+	l := logger.GetSlogLogger()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	ctx = logger.WithLogger(ctx, l)
+
+	env.SetWorkerOptions(worker.Options{
+		BackgroundActivityContext: ctx,
+		DeadlockDetectionTimeout:  24 * time.Hour, // set a long timeout to avoid deadlock detection during tests
+	})
+
+	env.SetTestTimeout(24 * time.Hour)
+
+	// Register activities.
+	env.RegisterActivityWithOptions(
+		bo.FetchNextActivity[any, *sources.LocalJSONSourceConfig],
+		activity.RegisterOptions{
+			Name: btchwkfl.FetchNextLocalJSONSourceBatchActivityAlias,
+		},
+	)
+	env.RegisterActivityWithOptions(
+		bo.WriteActivity[any, *sinks.LocalJSONSinkConfig[any]],
+		activity.RegisterOptions{
+			Name: btchwkfl.WriteNextLocalJSONSinkBatchActivityAlias,
+		},
+	)
+
+	// Build source & sink configurations
+	// Source - local JSON
+	sourceCfg := &sources.LocalJSONSourceConfig{
+		Path:    "sources/data/scheduler",
+		FileKey: "dummy-job-multiple-key",
+	}
+
+	// Sink - Local JSON
+	sinkCfg := &sinks.LocalJSONSinkConfig[any]{}
+
+	// Build ETL request
+	// batchSize should be larger than the largest row size in bytes
+	etlReq := &ETLRequest[any]{
+		MaxBatches: 2,
+		BatchSize:  1,
+		Done:       false,
+		Offsets:    []any{},
+		Batches:    map[string]*domain.BatchProcess{},
+	}
+
+	startOffset := map[string]any{
+		"id": "0",
+	}
+
+	etlReq.Offsets = append(etlReq.Offsets, startOffset)
+
+	// initiate a new queue
+	q := list.New()
+
+	// setup first batch request
+	fIn := &domain.FetchInput[any, *sources.LocalJSONSourceConfig]{
+		Source:    sourceCfg,
+		Offset:    etlReq.Offsets[len(etlReq.Offsets)-1],
+		BatchSize: etlReq.BatchSize,
+	}
+
+	// Execute the fetch activity for first batch
+	fVal, err := env.ExecuteActivity(btchwkfl.FetchNextLocalJSONSourceBatchActivityAlias, fIn)
+	require.NoError(t, err)
+
+	var fOut domain.FetchOutput[any]
+	require.NoError(t, fVal.Get(&fOut))
+	require.Equal(t, true, len(fOut.Batch.Records) > 0)
+
+	// Store the fetched batch in ETL request
+	etlReq.Offsets = append(etlReq.Offsets, fOut.Batch.NextOffset)
+	etlReq.Done = fOut.Batch.Done
+
+	// setup first write request
+	wIn := &domain.WriteInput[any, *sinks.LocalJSONSinkConfig[any]]{
+		Sink:  sinkCfg,
+		Batch: fOut.Batch,
+	}
+
+	// Execute async the write activity for first batch
+	wVal, err := env.ExecuteActivity(btchwkfl.WriteNextLocalJSONSinkBatchActivityAlias, wIn)
+	require.NoError(t, err)
+
+	// Push the write activity future to the queue
+	q.PushBack(wVal)
+
+	// while there are items in queue
+	count := 0
+	for q.Len() > 0 {
+		// if queue has less than max batches and batches are not done
+		if q.Len() < int(etlReq.MaxBatches) && !etlReq.Done {
+			fIn = &domain.FetchInput[any, *sources.LocalJSONSourceConfig]{
+				Source:    sourceCfg,
+				Offset:    etlReq.Offsets[len(etlReq.Offsets)-1],
+				BatchSize: etlReq.BatchSize,
+			}
+
+			fVal, err := env.ExecuteActivity(btchwkfl.FetchNextLocalJSONSourceBatchActivityAlias, fIn)
+			require.NoError(t, err)
+
+			var fOut domain.FetchOutput[any]
+			require.NoError(t, fVal.Get(&fOut))
+			require.Equal(t, true, len(fOut.Batch.Records) > 0)
+
+			etlReq.Done = fOut.Batch.Done
+			etlReq.Offsets = append(etlReq.Offsets, fOut.Batch.NextOffset)
+
+			batchId, err := domain.GetBatchId(fOut.Batch.StartOffset, fOut.Batch.NextOffset, "", "")
+			if err != nil {
+				l.Error("failed to get batch id", "error", err)
 				t.FailNow()
 			}
 
-			batchId := fmt.Sprintf("batch-%s-%s", startOffsetStr, nextOffsetStr)
+			etlReq.Batches[batchId] = fOut.Batch
+
+			wIn = &domain.WriteInput[any, *sinks.LocalJSONSinkConfig[any]]{
+				Sink:  sinkCfg,
+				Batch: fOut.Batch,
+			}
+
+			wVal, err := env.ExecuteActivity(btchwkfl.WriteNextLocalJSONSinkBatchActivityAlias, wIn)
+			require.NoError(t, err)
+
+			q.PushBack(wVal)
+		} else {
+			if count < int(etlReq.MaxBatches) {
+				count++
+			} else {
+				count = 0
+				// Pause execution for 1 second
+				time.Sleep(1 * time.Second)
+			}
+			wVal := q.Remove(q.Front()).(converter.EncodedValue)
+			var wOut domain.WriteOutput[any]
+			require.NoError(t, wVal.Get(&wOut))
+			require.Equal(t, true, len(wOut.Batch.Records) > 0)
+
+			batchId, err := domain.GetBatchId(wOut.Batch.StartOffset, wOut.Batch.NextOffset, "", "")
+			if err != nil {
+				l.Error("failed to get batch id", "error", err)
+				t.FailNow()
+			}
+
 			if _, ok := etlReq.Batches[batchId]; !ok {
 				etlReq.Batches[batchId] = wOut.Batch
 			} else {
@@ -801,6 +934,7 @@ func Test_FetchAndWrite_CloudCSVSource_MongoSink_Queue(t *testing.T) {
 		}
 	}
 
+	require.Equal(t, true, len(etlReq.Offsets) > 0)
 }
 
 func writeTempCSV(t *testing.T, header []string, rows [][]string) string {

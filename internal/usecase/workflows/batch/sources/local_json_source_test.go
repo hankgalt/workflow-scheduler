@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/comfforts/logger"
-	"github.com/hankgalt/batch-orchestra/pkg/domain"
 
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sources"
 )
@@ -19,7 +18,7 @@ func Test_LocalJSONConfig_BuildSource(t *testing.T) {
 	defer cancel()
 	ctx = logger.WithLogger(ctx, l)
 
-	ljsoncfg := sources.LocalJSONConfig{
+	ljsoncfg := sources.LocalJSONSourceConfig{
 		Path:    "./data/scheduler",
 		FileKey: "dummy-job-multiple-key",
 	}
@@ -31,8 +30,9 @@ func Test_LocalJSONConfig_BuildSource(t *testing.T) {
 		require.NoError(t, source.Close(ctx), "error closing local json source")
 	}()
 
-	u := domain.JSONOffset{WithId: domain.WithId{Id: "0"}, Value: "0"}
-	co := domain.CustomOffset[domain.HasId]{Val: u}
+	co := map[string]any{
+		"id": "0",
+	}
 
 	bp, err := source.Next(ctx, co, 1)
 	require.NoError(t, err, "error getting next batch from local json source")
@@ -71,7 +71,7 @@ func Test_Live_JSONConfig_BuildSource(t *testing.T) {
 	defer cancel()
 	ctx = logger.WithLogger(ctx, l)
 
-	ljsoncfg := sources.LocalJSONConfig{
+	ljsoncfg := sources.LocalJSONSourceConfig{
 		Path:    "../../../../../cmd/workers/batch/data/scheduler",
 		FileKey: "local-csv-mongo-local-data-scheduler-Agents.csv",
 	}
@@ -83,8 +83,9 @@ func Test_Live_JSONConfig_BuildSource(t *testing.T) {
 		require.NoError(t, source.Close(ctx), "error closing local json source")
 	}()
 
-	u := domain.JSONOffset{WithId: domain.WithId{Id: "0"}, Value: "0"}
-	co := domain.CustomOffset[domain.HasId]{Val: u}
+	co := map[string]any{
+		"id": "0",
+	}
 
 	bp, err := source.Next(ctx, co, 1)
 	require.NoError(t, err, "error getting next batch from local json source")

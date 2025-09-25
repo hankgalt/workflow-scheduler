@@ -26,7 +26,7 @@ import (
 	"github.com/hankgalt/batch-orchestra/pkg/utils"
 
 	btchwkfl "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch"
-	sinks "github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sinks"
+	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sinks"
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/snapshotters"
 	"github.com/hankgalt/workflow-scheduler/internal/usecase/workflows/batch/sources"
 	envutils "github.com/hankgalt/workflow-scheduler/pkg/utils/environment"

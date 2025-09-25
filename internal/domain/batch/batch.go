@@ -1,6 +1,10 @@
 package batch
 
 import (
+	"time"
+
+	"google.golang.org/protobuf/types/known/durationpb"
+
 	"github.com/hankgalt/batch-orchestra/pkg/domain"
 
 	api "github.com/hankgalt/workflow-scheduler/api/scheduler/v1"
@@ -43,6 +47,8 @@ type RequestConfig struct {
 	MaxInProcessBatches uint                   `json:"maxInProcessBatches"` // Maximum number of batches to process concurrently
 	BatchSize           uint                   `json:"batchSize"`           // Size of each batch
 	Start               string                 `json:"start"`               // Start position for processing
+	PauseDuration       time.Duration          `json:"pauseDuration"`       // Duration to pause between processing batches
+	PauseRecordCount    int64                  `json:"pauseRecordCount"`    // Number of records to process before pausing
 	MappingRules        map[string]domain.Rule `json:"mappingRules"`        // Optional mappings for CSV headers to MongoDB fields
 }
 
@@ -181,4 +187,15 @@ func MapRulesToProto(rules []domain.Rule) []*api.Rule {
 		protoRules = append(protoRules, MapRuleToProto(rule))
 	}
 	return protoRules
+}
+
+func MapDurationProto(d time.Duration) *durationpb.Duration {
+	return durationpb.New(d)
+}
+
+func MapProtoTimeDuration(pbDuration *durationpb.Duration) time.Duration {
+	if pbDuration == nil {
+		return 0 // Or handle as appropriate for nil
+	}
+	return pbDuration.AsDuration()
 }

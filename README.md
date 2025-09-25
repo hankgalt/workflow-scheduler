@@ -85,14 +85,12 @@
 
 ### Maintenance
 - protoc
-    - `curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v28.3/protoc-28.3-osx-aarch_64.zip`, update version, os & arch.
+    - `curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v32.1/protoc-32.1-osx-aarch_64.zip`, update version, os & arch.
     - `mv protoc-<version>-<os>-<arch>.zip $HOME/.local/bin/`
     - `unzip protoc-<version>-<os>-<arch>.zip`
     - `export PATH="$HOME/.local/bin:$PATH"`
     - `make setup-proto`
     - `make build-proto`
-- module
-    - `export GOPRIVATE=github.com/comfforts/comff-config`
 
 ### dev notes
 - `openssl rand -base64 32`
