@@ -83,33 +83,33 @@ func ReadCSVBatch(
 			// Attempt record cleanup if error occurs
 			cleanedStr := strutils.CleanRecord(string(data[nextOffset:csvReader.InputOffset()]))
 			if record, err := strutils.ReadSingleRecord(cleanedStr); err != nil {
-				l.Error(
-					"error reading record from csv",
-					"start", nextOffset,
-					"end", csvReader.InputOffset(),
-					"error", err.Error(),
-				)
 				if errs == nil {
 					errs = make(map[string]int)
 				}
 				errs[err.Error()]++
 				errCount++
 
-				records = append(records, &domain.BatchRecord{
-					Start: utils.Int64ToString(nextOffset),
-					End:   utils.Int64ToString(csvReader.InputOffset()),
-					BatchResult: domain.BatchResult{
-						Error: err.Error(),
-					},
-				})
-
 				// Update startIndex to the next record's offset
 				startIndex = nextOffset
-
 				// update nextOffset to the next record's offset
 				nextOffset = csvReader.InputOffset()
 				// update row read count
 				readCount++
+
+				l.Error(
+					"error reading record from csv",
+					"start", offset+startIndex,
+					"end", offset+nextOffset,
+					"error", err.Error(),
+				)
+
+				records = append(records, &domain.BatchRecord{
+					Start: utils.Int64ToString(offset + startIndex),
+					End:   utils.Int64ToString(offset + nextOffset),
+					BatchResult: domain.BatchResult{
+						Error: err.Error(),
+					},
+				})
 
 				continue
 			} else {
@@ -137,23 +137,11 @@ func ReadCSVBatch(
 		}
 
 		if len(rec) == 0 {
-			// Create a BatchRecord for the current csv record
-			br := domain.BatchRecord{
-				Start: utils.Int64ToString(startIndex),
-				End:   utils.Int64ToString(csvReader.InputOffset()),
-				BatchResult: domain.BatchResult{
-					Error: ERR_EMPTY_RECORD,
-				},
-			}
-
 			if errs == nil {
 				errs = make(map[string]int)
 			}
 			errs[ERR_EMPTY_RECORD]++
 			errCount++
-
-			// Update records slice & read count
-			records = append(records, &br)
 
 			// Update startIndex to the next record's offset
 			startIndex = nextOffset
@@ -163,6 +151,18 @@ func ReadCSVBatch(
 
 			// update row read count
 			readCount++
+
+			// Create a BatchRecord for the current csv record
+			br := domain.BatchRecord{
+				Start: utils.Int64ToString(offset + startIndex),
+				End:   utils.Int64ToString(offset + nextOffset),
+				BatchResult: domain.BatchResult{
+					Error: ERR_EMPTY_RECORD,
+				},
+			}
+
+			// Update records slice & read count
+			records = append(records, &br)
 
 			continue
 		}
@@ -177,16 +177,6 @@ func ReadCSVBatch(
 			row[k] = st
 		}
 
-		// Create a BatchRecord for the current csv record
-		br := domain.BatchRecord{
-			Start: utils.Int64ToString(startIndex),
-			End:   utils.Int64ToString(csvReader.InputOffset()),
-			Data:  row,
-		}
-
-		// Update records slice & read count
-		records = append(records, &br)
-
 		// Update startIndex to the next record's offset
 		startIndex = nextOffset
 
@@ -195,6 +185,16 @@ func ReadCSVBatch(
 
 		// update row read count
 		readCount++
+
+		// Create a BatchRecord for the current csv record
+		br := domain.BatchRecord{
+			Start: utils.Int64ToString(offset + startIndex),
+			End:   utils.Int64ToString(offset + nextOffset),
+			Data:  row,
+		}
+
+		// Update records slice & read count
+		records = append(records, &br)
 
 	}
 
@@ -267,15 +267,6 @@ func ReadCSVStream(
 			cleanedStr := strutils.CleanRecord(string(data[nextOffset:csvReader.InputOffset()]))
 			record, err := strutils.ReadSingleRecord(cleanedStr)
 			if err != nil {
-				l.Error("error reading record from csv", "start", nextOffset, "end", csvReader.InputOffset(), "error", err.Error())
-				resStream <- &domain.BatchRecord{
-					Start: utils.Int64ToString(nextOffset),
-					End:   utils.Int64ToString(csvReader.InputOffset()),
-					BatchResult: domain.BatchResult{
-						Error: fmt.Sprintf("read data row: %v", err),
-					},
-				}
-
 				// Update startIndex to the next record's offset
 				startIndex = nextOffset
 
@@ -283,6 +274,15 @@ func ReadCSVStream(
 				nextOffset = csvReader.InputOffset()
 				// update row read count
 				readCount++
+
+				l.Error("error reading record from csv", "start", offset+startIndex, "end", offset+nextOffset, "error", err.Error())
+				resStream <- &domain.BatchRecord{
+					Start: utils.Int64ToString(offset + startIndex),
+					End:   utils.Int64ToString(offset + nextOffset),
+					BatchResult: domain.BatchResult{
+						Error: fmt.Sprintf("read data row: %v", err),
+					},
+				}
 
 				continue
 			}
@@ -327,8 +327,8 @@ func ReadCSVStream(
 		}
 
 		resStream <- &domain.BatchRecord{
-			Start: utils.Int64ToString(startIndex),
-			End:   utils.Int64ToString(csvReader.InputOffset()),
+			Start: utils.Int64ToString(offset + startIndex),
+			End:   utils.Int64ToString(offset + nextOffset),
 			Data:  row,
 		}
 	}

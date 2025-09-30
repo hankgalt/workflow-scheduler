@@ -124,6 +124,11 @@ register-domain:
 start-worker:
 	scripts/start-worker.sh ${TARGET}
 
+# build batch worker with docker compose
+build-batch-worker:
+	@echo "building batch worker docker image with IMG_TAG=$(IMG_TAG) on BRANCH=$(BRANCH)"
+	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose -f deploy/scheduler/docker-compose-batch.yml build --no-cache
+
 # start batch worker with docker compose
 start-batch-worker:
 	@echo "starting batch worker with IMG_TAG=$(IMG_TAG) on BRANCH=$(BRANCH)"
@@ -169,6 +174,11 @@ start-server:
 test-server:
 	@echo " - testing $(TARGET) server"
 	cd cmd/scheduler/client && grpcurl -key certs/client-key.pem -cert certs/client.pem -cacert certs/ca.pem localhost:65051 list scheduler.v1.Scheduler
+
+# build scheduler service docker image with docker compose
+build-scheduler:
+	@echo "building scheduler service docker image with IMG_TAG=$(IMG_TAG) on BRANCH=$(BRANCH)"
+	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1  docker-compose -f deploy/scheduler/docker-compose-scheduler.yml build --no-cache
 
 # start scheduler service with docker compose
 start-scheduler:

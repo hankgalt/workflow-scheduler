@@ -132,12 +132,12 @@ func testProcessLocalCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 	}
 
 	resp, err := client.ProcessLocalCSVMongoWorkflow(ctx, &api.BatchCSVRequest{
-		MaxInProcessBatches: 4,
-		MaxBatches:          200,
+		MaxInProcessBatches: 3,
+		MaxBatches:          100,
 		BatchSize:           1000,
-		Start:               "148604836",
+		Start:               "539989073",
 		PauseDuration:       30,
-		PauseRecordCount:    4000,
+		PauseRecordCount:    3000,
 		MappingRules:        envutils.BuildBusinessModelTransformRules(),
 		JobConfig: &api.BatchCSVRequest_LocalCsvMongoConfig{
 			LocalCsvMongoConfig: batch.MapProtoFromLocalCSVMongoBatchConfig(jobCfg),
