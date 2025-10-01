@@ -98,7 +98,7 @@ start-neo4j: network neo4j
 # stop neo4j cluster
 stop-neo4j:
 	@echo "Stopping Neo4j cluster..."
-	@set -a; . env/neo4j.env; set +a; docker-compose -f deploy/scheduler/docker-compose-neo4j.yml down -v
+	@set -a; . env/neo4j.env; set +a; docker-compose -f deploy/scheduler/docker-compose-neo4j.yml down
 
 ######## - Temporal - #######
 # start Temporal server

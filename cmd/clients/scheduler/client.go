@@ -22,6 +22,7 @@ func main() {
 
 	// initialize app logger instance
 	l := logger.GetSlogLogger()
+	ctx := logger.WithLogger(context.Background(), l)
 
 	tlsConfig, err := config.SetupTLSConfig(&config.ConfigOpts{Target: config.CLIENT})
 	if err != nil {
@@ -41,27 +42,30 @@ func main() {
 
 	client := api.NewSchedulerClient(conn)
 
-	err = testWorkflowCRUD(client, l)
+	err = testWorkflowCRUD(ctx, client)
 	if err != nil {
 		l.Error("error: workflow CRUD", "error", err.Error())
 		return
 	}
 
-	// err = testProcessCloudCSVMongoWorkflow(client, l)
+	// err = testProcessCloudCSVMongoWorkflow(ctx, client)
 	// if err != nil {
 	// 	l.Error("error: process cloud CSV Mongo workflow", "error", err.Error())
 	// 	return
 	// }
 
-	err = testProcessLocalCSVMongoWorkflow(client, l)
+	err = testProcessLocalCSVMongoWorkflow(ctx, client)
 	if err != nil {
 		l.Error("error: process local CSV Mongo workflow", "error", err.Error())
 		return
 	}
 }
 
-func testWorkflowCRUD(client api.SchedulerClient, l logger.Logger) error {
-	ctx := context.Background()
+func testWorkflowCRUD(ctx context.Context, client api.SchedulerClient) error {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		l = logger.GetSlogLogger()
+	}
 
 	wfRun, err := client.CreateRun(ctx, &api.RunRequest{
 		WorkflowId: "S3r43r-T3s73k7l0w",
@@ -90,8 +94,11 @@ func testWorkflowCRUD(client api.SchedulerClient, l logger.Logger) error {
 	return nil
 }
 
-func testProcessCloudCSVMongoWorkflow(client api.SchedulerClient, l logger.Logger) error {
-	ctx := context.Background()
+func testProcessCloudCSVMongoWorkflow(ctx context.Context, client api.SchedulerClient) error {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		l = logger.GetSlogLogger()
+	}
 
 	// build cloud csv to mongo job config
 	jobCfg, err := envutils.BuildCloudCSVMongoBatchConfig(false)
@@ -121,8 +128,11 @@ func testProcessCloudCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 	return nil
 }
 
-func testProcessLocalCSVMongoWorkflow(client api.SchedulerClient, l logger.Logger) error {
-	ctx := context.Background()
+func testProcessLocalCSVMongoWorkflow(ctx context.Context, client api.SchedulerClient) error {
+	l, err := logger.LoggerFromContext(ctx)
+	if err != nil {
+		l = logger.GetSlogLogger()
+	}
 
 	// build local csv to mongo job config
 	jobCfg, err := envutils.BuildLocalCSVMongoBatchConfig(false)
@@ -135,8 +145,8 @@ func testProcessLocalCSVMongoWorkflow(client api.SchedulerClient, l logger.Logge
 		MaxInProcessBatches: 3,
 		MaxBatches:          100,
 		BatchSize:           1000,
-		Start:               "539989073",
-		PauseDuration:       30,
+		Start:               "635918979",
+		PauseDuration:       45,
 		PauseRecordCount:    3000,
 		MappingRules:        envutils.BuildBusinessModelTransformRules(),
 		JobConfig: &api.BatchCSVRequest_LocalCsvMongoConfig{
