@@ -2,6 +2,8 @@ package sources_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -71,9 +73,19 @@ func Test_Live_JSONConfig_BuildSource(t *testing.T) {
 	defer cancel()
 	ctx = logger.WithLogger(ctx, l)
 
+	path := "../../../../../cmd/workers/batch/data/scheduler"
+	fileKey := "local-csv-mongo-local-data-scheduler-Agents.csv"
+	fileName := "Agents.csv"
+
+	if fileInfo, err := os.Stat(filepath.Join(path, fileName)); err != nil {
+		l.Error("error getting file info", "error", err.Error())
+	} else {
+		l.Debug("file info", "file-size", fileInfo.Size())
+	}
+
 	ljsoncfg := sources.LocalJSONSourceConfig{
-		Path:    "../../../../../cmd/workers/batch/data/scheduler",
-		FileKey: "local-csv-mongo-local-data-scheduler-Agents.csv",
+		Path:    path,
+		FileKey: fileKey,
 	}
 
 	// Build the source
@@ -88,7 +100,22 @@ func Test_Live_JSONConfig_BuildSource(t *testing.T) {
 	}
 
 	bp, err := source.Next(ctx, co, 1)
-	require.NoError(t, err, "error getting next batch from local json source")
+	require.NoError(t, err, "error getting first batch from local json source")
+	l.Debug(
+		"fetched batch from local json source",
+		"num-records", len(bp.Records),
+		"start-offset", bp.StartOffset,
+		"next-offset", bp.NextOffset,
+		"done", bp.Done,
+	)
+
+	// Simulate a scenario where a brief wait is needed
+	l.Debug("waiting for next run observation...")
+	time.Sleep(60 * time.Second) // Wait for a short duration
+	l.Debug("Wait complete. Proceeding.")
+
+	bp, err = source.Next(ctx, co, 1)
+	require.NoError(t, err, "error getting first batch from local json source")
 	l.Debug(
 		"fetched batch from local json source",
 		"num-records", len(bp.Records),

@@ -255,6 +255,13 @@ func (c *LocalCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.
 		hasHeader: c.HasHeader,
 	}
 
+	if fileInfo, err := os.Stat(c.Path); err != nil {
+		l.Error("error getting local CSV file info", "path", c.Path, "error", err.Error())
+		return nil, ErrLocalCSVFileOpen
+	} else {
+		src.size = fileInfo.Size()
+	}
+
 	// If CSV file has headers, set cleaned headers.
 	if c.HasHeader {
 		f, err := os.Open(c.Path)

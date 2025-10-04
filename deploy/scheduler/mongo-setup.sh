@@ -20,8 +20,8 @@ mongosh --quiet -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD
             rs.initiate({
                 _id: replicaSet,
                 members: [
-                    {_id: 0, host: "scheduler-mongo:27017", priority: 1},
-                    {_id: 1, host: "scheduler-mongo-rep1:27017", priority: 2},
+                    {_id: 0, host: "scheduler-mongo:27017", priority: 2},
+                    {_id: 1, host: "scheduler-mongo-rep1:27017", priority: 1},
                     {_id: 2, host: "scheduler-mongo-rep2:27017", priority: 2}
                 ],
                 settings: { electionTimeoutMillis: 10000 }

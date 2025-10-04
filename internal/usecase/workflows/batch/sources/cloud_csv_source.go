@@ -362,7 +362,6 @@ func (c *CloudCSVConfig) BuildSource(ctx context.Context) (domain.Source[domain.
 
 	obj := client.Bucket(c.Bucket).Object(c.Path)
 	if attrs, err := obj.Attrs(ctx); err != nil {
-		//
 		if err := client.Close(); err != nil {
 			l.Error("cloud csv: error closing client", "error", err.Error())
 		}

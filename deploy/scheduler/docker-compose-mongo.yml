@@ -52,7 +52,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 768m
+          memory: 1g
         reservations:
           memory: 512m
     networks:
@@ -75,7 +75,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 768m
+          memory: 1g
         reservations:
           memory: 512m
     networks:
